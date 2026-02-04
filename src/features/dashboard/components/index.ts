@@ -23,3 +23,6 @@ export { default as SummaryAnalysis } from './analysis/summary-analysis';
 
 // Charts
 export { HistoricalPerformanceChart } from './charts/historical-performance-chart';
+
+// Onboarding
+export { DashboardGuide } from './onboarding/dashboard-guide';

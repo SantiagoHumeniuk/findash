@@ -1,6 +1,6 @@
 // src/features/dashboard/pages/dashboard-page.tsx
 
-import { useEffect, useRef, useMemo, useCallback } from "react";
+import { useEffect, useRef, useMemo, useCallback, useState } from "react";
 import { useDashboard } from "../../../hooks/use-dashboard";
 import { usePortfolio } from "../../../hooks/use-portfolio";
 import { useQueries, useQueryClient } from '@tanstack/react-query';
@@ -12,7 +12,7 @@ import { supabase } from "../../../lib/supabase";
 
 import { Card, CardHeader } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
-import { Briefcase, ChartCandlestick, RefreshCw, Layers } from "lucide-react";
+import { Briefcase, ChartCandlestick, RefreshCw, Layers, HelpCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { PageHeader } from "../../../components/ui/page-header";
 import { TickerAddForm } from "../components/ticker-input/ticker-add-form";
@@ -22,6 +22,7 @@ import { DashboardSkeleton } from "../components/skeleton/dashboard-skeleton";
 import { AssetData } from "../../../types/dashboard";
 import { ErrorBoundary } from "../../../components/error-boundary";
 import { PortfolioSelector } from "../../portfolio/components/portfolio-selector";
+import { DashboardGuide } from "../components/onboarding/dashboard-guide";
 
 function DashboardPageContent() {
     const { addTicker, removeTicker, selectedTickers } = useDashboard();
@@ -29,6 +30,9 @@ function DashboardPageContent() {
     const { user, profile } = useAuth();
     const config = useConfig();
     const queryClient = useQueryClient();
+    
+    // Estado para controlar la guía del dashboard
+    const [showGuide, setShowGuide] = useState(false);
 
     // Referencia para trackear qué tickers han sido cargados automáticamente de este portfolio
     const loadedPortfolioIdRef = useRef<number | null>(null);
@@ -143,6 +147,16 @@ function DashboardPageContent() {
                         <span>Viendo:</span>
                     </div>
                     <PortfolioSelector />
+                    <Button
+                        onClick={() => setShowGuide(true)}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 whitespace-nowrap"
+                        title="Ver guía de uso"
+                    >
+                        <HelpCircle className="w-4 h-4" />
+                        <span className="hidden sm:inline">Guía</span>
+                    </Button>
                 </div>
             </div>
 
@@ -166,6 +180,15 @@ function DashboardPageContent() {
                         Activos de "{currentPortfolio?.name}" se mostrarán automáticamente.<br />
                         O comienza añadiendo un activo manualmente.
                     </p>
+                    <Button
+                        onClick={() => setShowGuide(true)}
+                        variant="outline"
+                        size="sm"
+                        className="mt-4 gap-2"
+                    >
+                        <HelpCircle className="w-4 h-4" />
+                        Ver guía paso a paso
+                    </Button>
                 </motion.div>
             ) : (
                 <>
@@ -186,6 +209,12 @@ function DashboardPageContent() {
                     <DashboardTabs assets={assets} isLoading={isLoading} />
                 </>
             )}
+            
+            {/* Guía del Dashboard */}
+            <DashboardGuide 
+                isVisible={showGuide} 
+                onDismiss={() => setShowGuide(false)} 
+            />
         </div>
     );
 }
