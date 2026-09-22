@@ -315,195 +315,102 @@ interface ExportPortfolioOptions {
   stats: PortfolioStats;
   theme: Theme;
   portfolioName?: string;
+  elementId?: string;
 }
 
 /**
- * Exporta el portafolio actual a un archivo PDF.
- * Incluye estadísticas generales y detalle de cada posición.
- * 
- * @example
- * ```tsx
- * exportPortfolioToPdf({
- *   holdings,
- *   stats: portfolioStats,
- *   theme: 'light'
- * });
- * ```
+ * Exporta el portafolio actual a un archivo PDF (Captura Visual).
+ * Utiliza dom-to-image-more para tomar una "foto" del dashboard y exportarlo tal cual se ve,
+ * soportando las funciones CSS modernas de Tailwind v4 (como oklch).
  */
 export const exportPortfolioToPdf = async ({
-  holdings,
-  stats,
   theme,
   portfolioName = 'Mi Portafolio',
+  elementId = 'portfolio-export-area',
 }: ExportPortfolioOptions) => {
-  const [jsPDFModule, { default: autoTable }] = await Promise.all([
+  const [jsPDFModule, domToImageModule] = await Promise.all([
     import('jspdf'),
-    import('jspdf-autotable'),
+    // @ts-ignore
+    import('dom-to-image-more')
   ]);
 
-  const jsPDF = jsPDFModule.default;
-  const doc = new jsPDF() as unknown as ExtendedJsPDF;
-  const styles = getThemeStyles(theme);
-  let finalY = 0;
+  const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF;
+  const domtoimage = domToImageModule.default || domToImageModule;
 
-  // Fondo de la primera página
-  const resolvedTheme = resolveTheme(theme);
-  if (resolvedTheme === 'dark') {
-    doc.setFillColor(styles.backgroundColor);
-    doc.rect(0, 0, doc.internal.pageSize.width, doc.internal.pageSize.height, 'F');
+  const element = document.getElementById(elementId);
+  if (!element) {
+    throw new Error(`Elemento visual con ID '${elementId}' no encontrado para exportar.`);
   }
 
-  // Título
-  doc.setFontSize(20);
-  doc.setTextColor(styles.headerColor[0], styles.headerColor[1], styles.headerColor[2]);
-  doc.text('Reporte de Portafolio', 14, 22);
+  // Prevenir barras de scroll internas durante la captura forzando altura máxima
+  const originalHeight = element.style.height;
+  const originalOverflow = element.style.overflow;
+  
+  try {
+    element.style.height = 'auto';
+    element.style.overflow = 'visible';
+    
+    // Si hay contenedores con overflow interno en la página, intentamos hacerlos visibles temporalmente
+    const scrollables = element.querySelectorAll('.overflow-auto, .overflow-y-auto');
+    const originalStyles = Array.from(scrollables).map(el => (el as HTMLElement).style.overflow);
+    scrollables.forEach(el => ((el as HTMLElement).style.overflow = 'visible'));
 
-  doc.setFontSize(12);
-  doc.setTextColor(styles.mutedColor[0], styles.mutedColor[1], styles.mutedColor[2]);
-  doc.text(portfolioName, 14, 30);
-
-  finalY = 40;
-
-  // Sección de Estadísticas Generales
-  doc.setFontSize(14);
-  doc.setTextColor(styles.textColor[0], styles.textColor[1], styles.textColor[2]);
-  doc.text('Resumen del Portafolio', 14, finalY);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
-
-  const formatPercentage = (value: number) => {
-    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
-  };
-
-  const statsBody = [
-    ['Inversión Total', formatCurrency(stats.totalInvestment)],
-    ['Valor Actual', formatCurrency(stats.currentValue)],
-    [
-      'Ganancia/Pérdida',
-      `${formatCurrency(stats.totalGainLoss)} (${formatPercentage(stats.totalGainLossPercentage)})`,
-    ],
-    ['Precio Promedio de Compra', formatCurrency(stats.averageBuyPrice)],
-  ];
-
-  autoTable(doc as never, {
-    startY: finalY + 5,
-    head: [['Métrica', 'Valor']],
-    body: statsBody,
-    theme: 'grid',
-    styles: {
-      fillColor: styles.backgroundColor,
-      textColor: styles.textColor,
-      lineColor: styles.borderColor,
-      lineWidth: 0.1,
-    },
-    headStyles: {
-      fillColor: styles.tableHeaderFill,
-      textColor: styles.textColor,
-      fontStyle: 'bold',
-    },
-    willDrawPage: (data: HookData) => {
-      if (data.pageNumber > 1 && resolvedTheme === 'dark') {
-        doc.setFillColor(styles.backgroundColor);
-        doc.rect(0, 0, doc.internal.pageSize.width, doc.internal.pageSize.height, 'F');
-      }
-    },
-  });
-
-  finalY = doc.lastAutoTable?.finalY ?? finalY;
-
-  // Sección de Posiciones Abiertas
-  if (holdings.length > 0) {
-    doc.setFontSize(14);
-    doc.setTextColor(styles.textColor[0], styles.textColor[1], styles.textColor[2]);
-    doc.text('Posiciones Abiertas', 14, finalY + 15);
-
-    const holdingsBody = holdings.map((holding) => {
-      const gainLossText = formatPercentage(holding.gainLossPercentage);
-      const gainLossColor = getPercentageColor(holding.gainLossPercentage, theme);
-
-      return [
-        holding.symbol,
-        holding.name ?? '-',
-        holding.quantity.toString(),
-        formatCurrency(holding.averagePrice),
-        formatCurrency(holding.currentPrice ?? 0),
-        formatCurrency(holding.currentValue),
-        {
-          content: `${formatCurrency(holding.gainLoss)} (${gainLossText})`,
-          styles: { textColor: gainLossColor },
-        },
-      ];
+    // Aumentar la escala para mejorar la resolución de exportación
+    const scale = 2;
+    const style = {
+      transform: 'scale(' + scale + ')',
+      transformOrigin: 'top left',
+      width: element.clientWidth + 'px',
+      height: element.clientHeight + 'px'
+    };
+    
+    const imgData = await domtoimage.toPng(element, {
+      bgcolor: resolveTheme(theme) === 'dark' ? '#0B1120' : '#ffffff',
+      width: element.clientWidth * scale,
+      height: element.clientHeight * scale,
+      style: style
     });
 
-    autoTable(doc as never, {
-      startY: finalY + 20,
-      head: [
-        [
-          'Símbolo',
-          'Nombre',
-          'Cantidad',
-          'Precio Prom.',
-          'Precio Actual',
-          'Valor Actual',
-          'Ganancia/Pérdida',
-        ],
-      ],
-      body: holdingsBody,
-      theme: 'grid',
-      styles: {
-        fillColor: styles.backgroundColor,
-        textColor: styles.textColor,
-        lineColor: styles.borderColor,
-        lineWidth: 0.1,
-        fontSize: 9,
-      },
-      headStyles: {
-        fillColor: styles.tableHeaderFill,
-        textColor: styles.textColor,
-        fontStyle: 'bold',
-      },
-      columnStyles: {
-        0: { cellWidth: 20 },
-        1: { cellWidth: 35 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 25 },
-        4: { cellWidth: 25 },
-        5: { cellWidth: 25 },
-        6: { cellWidth: 35 },
-      },
-      willDrawPage: (data: HookData) => {
-        if (data.pageNumber > 1 && resolvedTheme === 'dark') {
-          doc.setFillColor(styles.backgroundColor);
-          doc.rect(0, 0, doc.internal.pageSize.width, doc.internal.pageSize.height, 'F');
-        }
-      },
-    });
+    // Restaurar estilos de scroll
+    scrollables.forEach((el, i) => ((el as HTMLElement).style.overflow = originalStyles[i] || ''));
 
-    finalY = doc.lastAutoTable?.finalY ?? finalY;
+    // A4 paper dimensions (210x297 mm)
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    
+    // Padding para los bordes del PDF (ej. 10mm)
+    const padding = 10;
+    const innerPdfWidth = pdfWidth - padding * 2;
+    
+    // La imagen está a escala 2x, pero jsPDF se ajusta a las proporciones
+    const imgWidth = innerPdfWidth;
+    
+    // Obtenemos las dimensiones reales del canvas interno para calcular la proporción correcta
+    // Creamos una imagen temporal para obtener width y height
+    const imgProps = pdf.getImageProperties(imgData);
+    const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+    
+    let heightLeft = imgHeight;
+    let position = padding;
+    
+    // Agregar primera página
+    pdf.addImage(imgData, 'PNG', padding, position, imgWidth, imgHeight);
+    heightLeft -= (pdfHeight - padding * 2); // restamos el área utilizable
+    
+    // Si la imagen excede una página, agregar más páginas hacia abajo
+    while (heightLeft > 0) {
+      position = position - (pdfHeight - padding * 2); // Subimos la imagen el equivalente a una hoja
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', padding, position, imgWidth, imgHeight);
+      heightLeft -= (pdfHeight - padding * 2);
+    }
+    
+    const fileName = `Portafolio_${portfolioName.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+    pdf.save(fileName);
+  } finally {
+    // Restaurar el contenedor a su estado original
+    element.style.height = originalHeight;
+    element.style.overflow = originalOverflow;
   }
-
-  // Footer
-  const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(styles.mutedColor[0], styles.mutedColor[1], styles.mutedColor[2]);
-    const text = `Reporte generado por FinDash | ${new Date().toLocaleDateString('es-ES')}`;
-    doc.text(text, 14, doc.internal.pageSize.height - 10);
-    doc.text(
-      `Página ${i} de ${pageCount}`,
-      doc.internal.pageSize.width - 35,
-      doc.internal.pageSize.height - 10
-    );
-  }
-
-  const fileName = `Portafolio_${portfolioName.replace(/\s/g, '_')}_${
-    new Date().toISOString().split('T')[0]
-  }.pdf`;
-  doc.save(fileName);
 };

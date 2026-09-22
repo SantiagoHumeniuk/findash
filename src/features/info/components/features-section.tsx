@@ -23,19 +23,7 @@ interface FeaturesSectionProps {
 /**
  * Sección de características del producto mostradas en un carrusel interactivo.
  * Incluye autoplay que se pausa al hacer hover y es responsive (1 columna en móvil,
- * 2 en tablet, 3 en desktop).
- * 
- * @example
- * ```tsx
- * <FeaturesSection
- *   title="<span class='highlight'>Características</span> Principales"
- *   subtitle="Todo lo que necesitas para invertir mejor"
- *   features={[
- *     { icon: "Brain", title: "IA", description: "Análisis inteligente" },
- *     // ...más características
- *   ]}
- * />
- * ```
+ * 2 en tablet, 3 en desktop). Fondo con degradado coherente con el resto de la landing.
  */
 export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ 
   title, 
@@ -45,7 +33,13 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({
   const autoplayPlugin = useRef(Autoplay({ delay: 3000, stopOnInteraction: true }));
 
   return (
-    <AnimatedSection className="py-8 px-4 sm:py-10 md:py-12 bg-muted/30">
+    <AnimatedSection className="relative py-12 px-4 sm:py-16 md:py-20">
+      {/* Fondo con degradado coherente */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/[0.03] to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_50%,rgba(56,189,248,0.06),transparent)]" />
+      </div>
+
       <div className="max-w-6xl mx-auto text-center">
         {/* Título con soporte para HTML */}
         <h2 
@@ -53,7 +47,7 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({
           dangerouslySetInnerHTML={{ __html: title }} 
         />
         
-        <p className="text-sm sm:text-base text-muted-foreground mb-8 sm:mb-10 max-w-full sm:max-w-xl mx-auto px-2 leading-relaxed">
+        <p className="text-sm sm:text-base text-muted-foreground mb-10 sm:mb-12 max-w-full sm:max-w-xl mx-auto px-2 leading-relaxed">
           {subtitle}
         </p>
 

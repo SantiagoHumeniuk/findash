@@ -11,6 +11,7 @@ export { AuthCard } from './shared/auth-card';
 export { FormInput } from './shared/form-input';
 export { FormFooter } from './shared/form-footer';
 export { AuthButton } from './shared/auth-button';
+export { GoogleAuthButton, GoogleIcon } from './shared/google-auth-button';
 
 // Route guards
 export { ProtectedRoute } from './protected-route';

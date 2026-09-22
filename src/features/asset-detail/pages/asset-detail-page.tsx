@@ -16,6 +16,47 @@ import {
   AssetDetailTabs,
 } from '../components';
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.15,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 24, scale: 0.98, filter: "blur(6px)" },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: "blur(0px)",
+    transition: {
+      type: "spring",
+      stiffness: 300,
+      damping: 24,
+    },
+  },
+};
+
+const heroVariants = {
+  hidden: { opacity: 0, y: 30, scale: 0.96 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring",
+      stiffness: 250,
+      damping: 20,
+      delay: 0.1,
+    },
+  },
+};
+
 /**
  * Página de detalle de un activo financiero.
  * Muestra información completa del activo en tabs:
@@ -47,32 +88,50 @@ export default function AssetDetailPage() {
   return (
     <motion.div
       className="container-wide stack-8"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
     >
       {/* Back button */}
-      <Button variant="outline" asChild>
-        <Link to="/dashboard">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Volver al Dashboard
-        </Link>
-      </Button>
+      <motion.div variants={itemVariants}>
+        <Button variant="outline" asChild className="group">
+          <Link to="/dashboard">
+            <motion.span
+              className="inline-flex items-center"
+              whileHover={{ x: -3 }}
+              transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-0.5" />
+              Volver al Dashboard
+            </motion.span>
+          </Link>
+        </Button>
+      </motion.div>
 
-      {/* Header */}
-      <AssetHeader asset={asset} />
+      {/* Header — hero entrance */}
+      <motion.div variants={heroVariants}>
+        <AssetHeader asset={asset} />
+      </motion.div>
 
       {/* Key Metrics */}
-      <AssetKeyMetrics asset={asset} />
+      <motion.div variants={itemVariants}>
+        <AssetKeyMetrics asset={asset} />
+      </motion.div>
 
       {/* Valuation & Rating Cards */}
       <div className="grid-cards-2">
-        <DCFValuationCard asset={asset} />
-        <RatingScorecard asset={asset} />
+        <motion.div variants={itemVariants}>
+          <DCFValuationCard asset={asset} />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <RatingScorecard asset={asset} />
+        </motion.div>
       </div>
 
       {/* Tabs */}
-      <AssetDetailTabs asset={asset} />
+      <motion.div variants={itemVariants}>
+        <AssetDetailTabs asset={asset} />
+      </motion.div>
     </motion.div>
   );
 }

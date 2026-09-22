@@ -1,6 +1,7 @@
 import { Award, Trophy } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../../components/ui/card";
 import { AssetData } from "../../../../../types/dashboard";
+import { motion } from "framer-motion";
 
 interface RankingListProps {
     // El objeto 'asset' dentro del array es de tipo AssetData completo
@@ -24,9 +25,18 @@ export default function RankingList({ rankedAssets }: RankingListProps) {
                     {rankedAssets.map((item, index) => {
                         const isWinner = index === 0;
                         return (
-                            <div
+                            <motion.div
                                 key={item.asset.profile.symbol}
-                                className={`flex items-center justify-between p-3 rounded-lg border transition-all ${isWinner
+                                initial={{ opacity: 0, x: -15 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{
+                                    delay: index * 0.07,
+                                    type: "spring",
+                                    stiffness: 350,
+                                    damping: 25,
+                                }}
+                                whileHover={{ scale: 1.01, x: 4 }}
+                                className={`flex items-center justify-between p-3 rounded-lg border transition-all cursor-default ${isWinner
                                         ? 'border-primary/50 bg-primary/5 shadow-sm'
                                         : 'hover:bg-muted/40 hover:border-muted-foreground/20'
                                     }`}
@@ -49,14 +59,19 @@ export default function RankingList({ rankedAssets }: RankingListProps) {
                                 </div>
 
                                 <div className="text-right shrink-0 pl-2">
-                                    <div className="text-lg font-bold text-primary tabular-nums">
+                                    <motion.div
+                                        className="text-lg font-bold text-primary tabular-nums"
+                                        initial={{ opacity: 0, scale: 0.5 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: 0.3 + index * 0.07 }}
+                                    >
                                         {item.score}
-                                    </div>
+                                    </motion.div>
                                     <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
                                         Puntos
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         );
                     })}
                 </div>

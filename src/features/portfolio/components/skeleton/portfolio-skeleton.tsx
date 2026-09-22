@@ -1,40 +1,93 @@
 // src/features/portfolio/components/skeleton/portfolio-skeleton.tsx
 
 import { Skeleton } from "../../../../components/ui/skeleton";
+import { motion } from "framer-motion";
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.02,
+    },
+  },
+};
+
+const staggerItem = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 400, damping: 30 },
+  },
+};
 
 /**
  * Componente de carga para el portfolio
+ * Diseño premium tipo glassmorphism con shimmer
  */
 export function PortfolioSkeleton() {
   return (
-    <div className="container-wide space-y-4 sm:space-y-6">
+    <motion.div
+      className="container-wide space-y-4 sm:space-y-6"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Header */}
-      <div className="flex items-center gap-3 sm:gap-4">
-        <Skeleton className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg" />
-        <div>
-          <Skeleton className="h-6 sm:h-8 w-48 sm:w-64 mb-1.5 sm:mb-2" />
-          <Skeleton className="h-3 sm:h-4 w-60 sm:w-80" />
+      <motion.div variants={staggerItem} className="flex items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
+            <Skeleton className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl" />
+            <div>
+            <Skeleton className="h-7 sm:h-9 w-48 sm:w-64 mb-2 rounded-md" />
+            <Skeleton className="h-3 sm:h-4 w-60 sm:w-80 rounded-md" />
+            </div>
         </div>
-      </div>
+        <Skeleton className="hidden sm:block h-10 w-32 rounded-xl" />
+      </motion.div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards (4) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <Skeleton key={i} className="h-20 sm:h-24 w-full" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <motion.div
+            key={i}
+            variants={staggerItem}
+          >
+            <div className="bg-card/40 backdrop-blur-md border border-primary/5 shadow-premium rounded-2xl p-4 sm:p-5 h-24 sm:h-28 flex flex-col justify-between">
+                <Skeleton className="h-4 w-1/2 rounded-md" />
+                <Skeleton className="h-8 w-3/4 rounded-md" />
+            </div>
+          </motion.div>
         ))}
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <Skeleton className="h-64 sm:h-80 w-full" />
-        <Skeleton className="h-64 sm:h-80 w-full" />
+        <motion.div variants={staggerItem}>
+          <div className="bg-card/40 backdrop-blur-md border border-primary/5 shadow-premium rounded-3xl p-5 sm:p-6 h-64 sm:h-80 flex flex-col gap-4">
+            <Skeleton className="h-6 w-40 rounded-md" />
+            <Skeleton className="flex-1 w-full rounded-2xl" />
+          </div>
+        </motion.div>
+        <motion.div variants={staggerItem}>
+          <div className="bg-card/40 backdrop-blur-md border border-primary/5 shadow-premium rounded-3xl p-5 sm:p-6 h-64 sm:h-80 flex flex-col gap-4">
+            <Skeleton className="h-6 w-40 rounded-md" />
+            <Skeleton className="flex-1 w-full rounded-2xl" />
+          </div>
+        </motion.div>
       </div>
 
       {/* Table */}
-      <Skeleton className="h-80 sm:h-96 w-full" />
-
-      {/* Transaction History */}
-      <Skeleton className="h-48 sm:h-64 w-full" />
-    </div>
+      <motion.div variants={staggerItem}>
+        <div className="bg-card/40 backdrop-blur-md border border-primary/5 shadow-premium rounded-3xl p-5 sm:p-6 h-80 sm:h-96 flex flex-col gap-4">
+           <Skeleton className="h-6 w-48 rounded-md mb-2" />
+           <Skeleton className="h-10 w-full rounded-xl" />
+           <Skeleton className="h-10 w-full rounded-xl" />
+           <Skeleton className="h-10 w-full rounded-xl" />
+           <Skeleton className="h-10 w-full rounded-xl" />
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }

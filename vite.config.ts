@@ -9,6 +9,37 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   // Configuración de desarrollo para reducir warnings
   server: {
+    proxy: {
+      '/api/dolarazo': {
+        target: 'https://www.dolarazo.com.ar',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/dolarazo/, ''),
+        secure: false,
+      },
+      '/api/balanz': {
+        target: 'https://calculadora.balanz.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/balanz/, ''),
+        secure: false,
+        cookieDomainRewrite: { '*': '' },
+        cookiePathRewrite: {
+          '/calculadoraDeBonos': '/api/balanz/calculadoraDeBonos',
+          '/': '/'
+        },
+        configure: (proxy) => {
+          proxy.on('proxyRes', (proxyRes) => {
+            let cookies = proxyRes.headers['set-cookie'];
+            if (cookies) {
+              proxyRes.headers['set-cookie'] = cookies.map(c => 
+                c.replace(/;\s*Secure/gi, '')
+                 .replace(/;\s*Domain=[^;]+/gi, '')
+                 .replace(/;\s*SameSite=[^;]+/gi, '; SameSite=Lax')
+              );
+            }
+          });
+        }
+      }
+    },
     warmup: {
       // Pre-cargar estos módulos para evitar warnings de preload
       clientFiles: [

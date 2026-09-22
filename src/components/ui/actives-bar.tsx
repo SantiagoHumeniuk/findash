@@ -1,9 +1,11 @@
 // src/components/actives-bar.tsx
 
 import { useEffect, useState, memo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ArrowDown, ArrowUp, TrendingUp, BookOpen, Lightbulb } from 'lucide-react';
 import { fetchGainers, fetchLosers, fetchActives } from '../../features/market-movers/services/market-movers-service';
 import type { MarketMover } from '../../features/market-movers/types';
+
 // Lista de símbolos populares para priorizar en la visualización
 const KNOWN_SYMBOLS = [
     "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "BRK-B", "LLY", "AVGO", "TSM", "NVO", "V",
@@ -55,6 +57,7 @@ export default function ActivesBar() {
     const [activeAssets, setActiveAssets] = useState<MarketMover[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentTipIndex, setCurrentTipIndex] = useState(0);
+    const location = useLocation();
 
     useEffect(() => {
         const loadAssets = async () => {
@@ -112,9 +115,14 @@ export default function ActivesBar() {
         }
     }, [loading, activeAssets.length]);
 
+    const isHomePage = location.pathname === '/' || location.pathname === '/inicio';
+    const containerClass = isHomePage 
+       ? "relative w-full h-10 overflow-hidden border-b bg-transparent border-white/[0.02]"
+       : "relative w-full h-10 overflow-hidden border-b bg-background/80 backdrop-blur-xl border-border/40 transition-all duration-300";
+
     // Renderiza un placeholder si está cargando
     if (loading) {
-        return <div className="w-full h-10 border-b border-border bg-background/80 backdrop-blur-sm" aria-hidden="true" />;
+        return <div className={containerClass} aria-hidden="true" />;
     }
 
     // Si no hay activos (fallback), mostrar tips educativos
@@ -123,7 +131,7 @@ export default function ActivesBar() {
         const TipIcon = currentTip.icon;
 
         return (
-            <div className="relative w-full h-10 overflow-hidden border-b bg-background/80 backdrop-blur-sm border-border">
+            <div className={containerClass}>
                 <div className="flex items-center justify-center h-full px-4 transition-opacity duration-500">
                     <TipIcon className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
                     <span className="body-sm text-muted-foreground text-center">
@@ -146,7 +154,7 @@ export default function ActivesBar() {
     const items = activeAssets.length > 15 ? activeAssets : [...activeAssets, ...activeAssets];
 
     return (
-        <div className="relative w-full h-10 overflow-hidden border-b bg-background/80 backdrop-blur-sm border-border">
+        <div className={containerClass}>
             <div className="absolute top-0 left-0 flex items-center h-full animate-scroll-infinite hover:pause-animation">
                 {/* Renderizamos el contenido duplicado para el efecto de bucle infinito */}
                 {items.map((asset, index) => (

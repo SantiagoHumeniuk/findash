@@ -10,12 +10,13 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarRail,
 } from "./sidebar";
 import {
   LogIn, UserPlus, Home, ChartCandlestick, LayoutDashboard,
   Divide, Newspaper, BookCopy, BookMarked, FilePenLine, FileEdit,
   MessageSquareHeart, Shield, User, Globe, PiggyBank, Star, Bookmark,
-  Crown, Mail, TrendingUp, Calendar, FactoryIcon
+  Crown, Mail, TrendingUp, Calendar, FactoryIcon, Landmark
 } from "lucide-react";
 import { useAuth } from "../../hooks/use-auth";
 import { useConfig } from "../../hooks/use-config";
@@ -36,14 +37,14 @@ const SidebarHeaderContent = React.memo(({ config }: { config: Config }) => (
   <SidebarHeader>
     <SidebarMenu>
       <SidebarMenuItem>
-        <NavLink to="/" className="flex items-center gap-2">
-          <SidebarMenuButton size="lg">
+        <NavLink to="/" className="flex items-center gap-2 group">
+          <SidebarMenuButton size="lg" className="hover:bg-primary/5 transition-colors">
             <div className="text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
               <img src="/logo.png" alt="Logo" />
             </div>
             <div className="grid flex-1 text-left body-sm leading-tight">
-              <span className="truncate font-medium">{config.app.name}</span>
-              <span className="text-muted-foreground truncate caption">{config.app.version}</span>
+              <span className="truncate font-bold text-gradient-animated tracking-tight">{config.app.name}</span>
+              <span className="text-muted-foreground truncate caption font-medium">3.0</span>
             </div>
           </SidebarMenuButton>
         </NavLink>
@@ -61,7 +62,7 @@ const SidebarNavigation = React.memo(({ isLoaded, config, user, profile }: { isL
   const iconMap = {
     Home, ChartCandlestick, LayoutDashboard, Divide, Newspaper, BookCopy,
     BookMarked, FilePenLine, FileEdit, Bookmark, MessageSquareHeart, Shield,
-    User, Globe, PiggyBank, Star, Crown, Mail, TrendingUp, Calendar, FactoryIcon
+    User, Globe, PiggyBank, Star, Crown, Mail, TrendingUp, Calendar, FactoryIcon, Landmark
   };
 
   if (!isLoaded) {
@@ -152,6 +153,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <SidebarFooterContent {...auth} />
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   );
 }

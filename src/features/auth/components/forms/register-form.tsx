@@ -7,6 +7,7 @@ import { AuthCard } from '../shared/auth-card';
 import { FormInput } from '../shared/form-input';
 import { FormFooter } from '../shared/form-footer';
 import { AuthButton } from '../shared/auth-button';
+import { GoogleAuthButton } from '../shared/google-auth-button';
 import { registerUser } from '../../lib/auth-utils';
 
 /**
@@ -95,6 +96,16 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
 
             <div className="flex flex-col gap-3">
               <AuthButton loading={loading}>Crear Cuenta</AuthButton>
+
+              <div className="flex items-center gap-3 my-1">
+                <div className="h-px flex-1 bg-border/60" />
+                <span className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  o regístrate con
+                </span>
+                <div className="h-px flex-1 bg-border/60" />
+              </div>
+
+              <GoogleAuthButton text="Registrarse con Google" />
             </div>
           </div>
 

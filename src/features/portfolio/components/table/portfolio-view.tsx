@@ -19,11 +19,18 @@ import { HoldingWithMetrics } from '../../../../types/portfolio';
 import { formatCurrency, formatPercent } from '../../../../lib/utils';
 import { formatQuantity } from '../../lib/portfolio.utils';
 
-export const PortfolioView = React.memo(function PortfolioView({ holdings, onDeleteAsset, onAddMore, onSell }: PortfolioViewProps) {
+import { generateAdvisory } from '../../lib/advisory-engine';
+import { RecommendationModal } from '../modals/recommendation-modal';
+
+export const PortfolioView = React.memo(function PortfolioView({ holdings, portfolioData, onDeleteAsset, onAddMore, onSell }: PortfolioViewProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const columns = useMemo<ColumnDef<HoldingWithMetrics>[]>(() => [
-    { accessorKey: 'symbol', header: 'Activo' },
+    {
+      accessorKey: 'symbol',
+      header: 'Activo',
+      cell: ({ getValue }) => <span className="font-semibold">{getValue() as string}</span>,
+    },
     {
       accessorKey: 'quantity',
       header: 'Cantidad',
@@ -49,7 +56,7 @@ export const PortfolioView = React.memo(function PortfolioView({ holdings, onDel
       header: 'G/P ($)',
       cell: ({ getValue }) => {
         const val = Number(getValue());
-        return <span className={val >= 0 ? 'text-green-500' : 'text-red-500'}>{formatCurrency(val)}</span>;
+        return <span className={val >= 0 ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>{formatCurrency(val)}</span>;
       },
     },
     {
@@ -57,16 +64,22 @@ export const PortfolioView = React.memo(function PortfolioView({ holdings, onDel
       header: 'G/P (%)',
       cell: ({ getValue }) => {
         const val = Number(getValue());
-        return <span className={val >= 0 ? 'text-green-500' : 'text-red-500'}>{formatPercent(val)}</span>;
+        return <span className={val >= 0 ? 'text-green-500 font-medium' : 'text-red-500 font-medium'}>{formatPercent(val)}</span>;
       },
     },
     {
       accessorKey: 'holdingDays',
       header: 'Días',
-      cell: ({ getValue }) => {
-        const days = Number(getValue());
-        return <span className="text-muted-foreground">{days}d</span>;
-      },
+      cell: ({ getValue }) => <span>{getValue() as number}d</span>,
+    },
+    {
+      id: 'advisory',
+      header: 'Recomendación IA',
+      cell: ({ row }) => {
+        const holding = row.original;
+        const result = generateAdvisory(holding.symbol, portfolioData, holdings);
+        return <RecommendationModal symbol={holding.symbol} result={result} />;
+      }
     },
     {
       id: 'actions',
@@ -74,7 +87,7 @@ export const PortfolioView = React.memo(function PortfolioView({ holdings, onDel
       cell: ({ row }) => {
         const holding = row.original;
         return (
-          <div className="flex justify-start gap-2">
+          <div className="flex items-center justify-center gap-1 sm:gap-2">
             <Button
               variant="ghost"
               size="icon"
@@ -99,17 +112,17 @@ export const PortfolioView = React.memo(function PortfolioView({ holdings, onDel
                   <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="glass-morphism border-none shadow-premium">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                  <AlertDialogTitle className="heading-premium">¿Estás seguro?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Esta acción eliminará permanentemente el activo <strong>{holding.symbol}</strong> y todo su historial de
-                    transacciones. No podrás deshacerlo.
+                    Esta acción eliminará permanentemente el activo <strong className="text-foreground">{holding.symbol}</strong> y todo su historial de
+                    transacciones.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onDeleteAsset(holding.symbol)}>Eliminar</AlertDialogAction>
+                  <AlertDialogAction onClick={() => onDeleteAsset(holding.symbol)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Eliminar</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
@@ -117,7 +130,7 @@ export const PortfolioView = React.memo(function PortfolioView({ holdings, onDel
         );
       },
     },
-  ], [onAddMore, onSell, onDeleteAsset]);
+  ], [onAddMore, onSell, onDeleteAsset, portfolioData, holdings]);
 
   const table = useReactTable({
     data: holdings,

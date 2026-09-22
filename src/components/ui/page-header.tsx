@@ -32,12 +32,12 @@ export function PageHeader({ icon, title, description, className }: PageHeaderPr
         "flex items-center gap-3 sm:gap-4 pb-4 sm:pb-6 border-b",
         className
       )}>
-        <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg">
+        <div className="p-2 sm:p-3 bg-gradient-to-br from-primary/15 to-cyan-500/10 rounded-xl shadow-md border border-primary/10">
           {icon}
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">{title}</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-0.5 sm:mt-1">{description}</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-gradient-animated pb-1">{title}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-0.5 sm:mt-1 font-medium">{description}</p>
         </div>
       </div>
     </motion.div>

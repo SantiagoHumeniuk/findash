@@ -55,7 +55,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      if (resp.error) throw resp.error;
+      if (resp.error) {
+        // Si el perfil no existe aún (ej: primer login con Google OAuth sin trigger de DB)
+        if (resp.error.code === 'PGRST116') {
+          const userMeta = user.user_metadata || {};
+          const fullName = String(userMeta.full_name || userMeta.name || '').trim();
+          const parts = fullName ? fullName.split(/\s+/) : [];
+          const firstName = parts[0] || null;
+          const lastName = parts.slice(1).join(' ') || null;
+
+          const defaultProfile = {
+            id: user.id,
+            email: user.email ?? '',
+            role: 'basico',
+            first_name: firstName,
+            last_name: lastName,
+            api_calls_made: 0,
+            onboarding_completed: false,
+            onboarding_step: 0,
+          };
+
+          const { data: createdProfile, error: insertError } = await supabase
+            .from('profiles')
+            .upsert(defaultProfile, { onConflict: 'id' })
+            .select('*')
+            .single();
+
+          if (!insertError && createdProfile) {
+            setProfile(createdProfile as unknown as Profile);
+            return;
+          }
+        }
+        throw resp.error;
+      }
+
       const dataUnknown = resp.data as unknown;
       if (dataUnknown && typeof dataUnknown === 'object') {
         setProfile(dataUnknown as Profile);

@@ -1,0 +1,38 @@
+﻿<form id="idForm" class="form-signin" action="/calculadoraDeBonos/login" method="post">
+     
+     	
+
+	<div class="row ">		
+		<div class="col-md-6 order-md-1" >
+			<a href="/calculadoraDeBonos/login" title="Español" ><img src="static/imagenes/espanol.png" style="max-width:52px; max-heigth:33px;" border="0"></a>
+		</div>
+		<div class="col-md-6 order-md-2" >
+			<a href="/bondsCalculator/login" title="Ingles" ><img src="static/imagenes/ingles.png" style="max-width:52px; max-heigth:33px;"  border="0"></a>
+		</div>
+	</div>
+
+	<hr class="mb-5">
+     
+      <img class="mb-4" src="static/imagenes/balanzA.png" alt="" width="285" height="56">
+       
+         
+      <h4 class="h4 mb-3 font-weight-normal">INGRESE A SU CUENTA</h4>
+      
+        
+      <div class="bfh-selectbox bfh-languages" data-language="en_US" data-available="en_US,fr_CA,es_MX" data-flags="true"></div>
+      <div id="login-alert" class="alert alert-danger col-sm-12 login-alert"  >Usuario o Clave Incorrectos</div>
+     
+		<script> $('#login-alert').hide(); </script>
+	     
+      <label for="inputEmail" class="sr-only">Usuario</label>
+      <input id="usu" name="usu" autofocus="autofocus" placeholder="Ingrese su nombre de Usuario" class="form-control" required="required" type="user" value="" autocomplete="off"/>
+      <label for="inputPassword" class="sr-only">Clave</label>
+      <input id="pass" name="pass" placeholder="Ingrese su Clave" class="form-control" required="required" type="password" value="" autocomplete="off"/>
+      
+      <button class="btn btn-lg  btn-block" id="enviarLogin" type="submit">INGRESAR</button>
+      
+   
+    
+     
+     
+    </form>

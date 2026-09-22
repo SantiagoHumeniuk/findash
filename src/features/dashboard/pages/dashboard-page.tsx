@@ -12,7 +12,7 @@ import { supabase } from "../../../lib/supabase";
 
 import { Card, CardHeader } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
-import { Briefcase, ChartCandlestick, RefreshCw, Layers, HelpCircle } from "lucide-react";
+import { Briefcase, ChartCandlestick, RefreshCw, Layers, HelpCircle, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import { PageHeader } from "../../../components/ui/page-header";
 import { TickerAddForm } from "../components/ticker-input/ticker-add-form";
@@ -23,6 +23,22 @@ import { AssetData } from "../../../types/dashboard";
 import { ErrorBoundary } from "../../../components/error-boundary";
 import { PortfolioSelector } from "../../portfolio/components/portfolio-selector";
 import { DashboardGuide } from "../components/onboarding/dashboard-guide";
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+            delayChildren: 0.05
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20, filter: "blur(4px)" },
+    show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { type: "spring", stiffness: 300, damping: 24, mass: 0.8 } }
+};
 
 function DashboardPageContent() {
     const { addTicker, removeTicker, selectedTickers } = useDashboard();
@@ -133,8 +149,13 @@ function DashboardPageContent() {
     }
 
     return (
-        <div className="container-wide stack-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b">
+        <motion.div 
+            className="container-wide stack-6"
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+        >
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b">
                 <PageHeader
                     icon={<ChartCandlestick className="w-8 h-8 text-primary" />}
                     title="Dashboard de Análisis"
@@ -158,40 +179,44 @@ function DashboardPageContent() {
                         <span className="hidden sm:inline">Guía</span>
                     </Button>
                 </div>
-            </div>
+            </motion.div>
 
-            <Card className="card-static">
-                <CardHeader>
-                    <TickerAddForm onAddTicker={addTicker} />
-                    <SelectedTickersList tickers={selectedTickers} onRemoveTicker={removeTicker} />
-                </CardHeader>
-            </Card>
+            <motion.div variants={itemVariants}>
+                <div id="ticker-search-container" className="relative p-[1.5px] rounded-2xl bg-gradient-to-br from-primary/30 via-blue-500/10 to-cyan-400/30 overflow-hidden group hover:from-primary/50 hover:to-cyan-400/50 transition-all duration-500">
+                    <Card className="bg-background/95 backdrop-blur-xl border-0 rounded-2xl shadow-inner h-full">
+                        <CardHeader className="relative z-10">
+                            <TickerAddForm onAddTicker={addTicker} />
+                            <SelectedTickersList tickers={selectedTickers} onRemoveTicker={removeTicker} />
+                        </CardHeader>
+                    </Card>
+                </div>
+            </motion.div>
 
             {selectedTickers.length === 0 ? (
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="text-center py-12 sm:py-20 px-4 sm:px-6 border-2 border-dashed rounded-lg"
+                    variants={itemVariants}
+                    className="relative flex flex-col items-center text-center py-16 sm:py-24 px-6 border border-white/[0.05] rounded-3xl bg-card/30 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden group"
                 >
-                    <Briefcase className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-muted-foreground mb-3 sm:mb-4" />
-                    <h2 className="text-base sm:text-lg font-semibold mb-1.5 sm:mb-2">Tu dashboard está vacío</h2>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                        Activos de "{currentPortfolio?.name}" se mostrarán automáticamente.<br />
-                        O comienza añadiendo un activo manualmente.
+                    {/* Glowing background effect */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-cyan-400/5 opacity-50 group-hover:opacity-100 transition-opacity duration-700" />
+                    
+                    <div className="relative p-5 sm:p-6 bg-background/50 rounded-full border border-white/5 mb-6 shadow-inner">
+                        <Briefcase className="w-12 h-12 sm:w-16 sm:h-16 text-primary drop-shadow-[0_0_15px_rgba(56,189,248,0.5)] transition-transform duration-500 group-hover:scale-110" />
+                    </div>
+                    
+                    <h2 className="text-xl sm:text-2xl font-bold mb-3 tracking-tight text-foreground/90">
+                        Aún no tienes activos en seguimiento
+                    </h2>
+                    
+                    <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto mb-4 leading-relaxed font-medium">
+                        ¡Empezá a analizar tus activos favoritos!
                     </p>
-                    <Button
-                        onClick={() => setShowGuide(true)}
-                        variant="outline"
-                        size="sm"
-                        className="mt-4 gap-2"
-                    >
-                        <HelpCircle className="w-4 h-4" />
-                        Ver guía paso a paso
-                    </Button>
+                    <p className="text-xs sm:text-sm text-muted-foreground/70 max-w-sm mx-auto">
+                        Busca y añade tus primeros activos financieros en la barra superior para comenzar a monitorear su rendimiento en tiempo real.
+                    </p>
                 </motion.div>
             ) : (
-                <>
+                <motion.div variants={itemVariants} className="stack-6">
                     <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-3 mb-4">
                         <Button
                             onClick={handleRefresh}
@@ -207,7 +232,7 @@ function DashboardPageContent() {
                     </div>
 
                     <DashboardTabs assets={assets} isLoading={isLoading} />
-                </>
+                </motion.div>
             )}
             
             {/* Guía del Dashboard */}
@@ -215,7 +240,7 @@ function DashboardPageContent() {
                 isVisible={showGuide} 
                 onDismiss={() => setShowGuide(false)} 
             />
-        </div>
+        </motion.div>
     );
 }
 

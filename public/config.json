@@ -2,7 +2,7 @@
   "useMockData": true,
   "app": {
     "name": "FinDash",
-    "version": "2.0",
+    "version": "3.0",
     "contactEmail": "findash.data@gmail.com",
     "socialMedia": {
       "twitter": "https://twitter.com/findash",
@@ -201,7 +201,7 @@
   },
   "infoPage": {
     "hero": {
-      "title": "Análisis Financiero Inteligente.",
+      "title": "Findash: Analiza con confianza.",
       "subtitle": "Visualiza el mercado, compara activos y toma decisiones informadas con herramientas de nivel profesional, diseñadas para ser intuitivas.",
       "cta": {
         "loggedIn": "Ir al Dashboard",
@@ -231,11 +231,6 @@
           "icon": "Brain",
           "title": "Resumen Inteligente con IA",
           "description": "Nuestra IA analiza todos los indicadores y te dice qué acción destaca en cada métrica con un veredicto."
-        },
-        {
-          "icon": "Coins",
-          "title": "Calendario de Dividendos",
-          "description": "Consulta fechas, pagos, rendimientos y proyecta tus ingresos pasivos con la calculadora integrada."
         },
         {
           "icon": "Newspaper",
@@ -365,62 +360,22 @@
             "icon": "FactoryIcon",
             "requiresAuth": true
           },
-          {
-            "to": "/economic-calendar",
-            "label": "Calendario Económico",
-            "icon": "Calendar",
-            "requiresAuth": true
-          },
-          {
-            "to": "/dividends",
-            "label": "Dividendos",
-            "icon": "Divide",
-            "requiresAuth": true
-          },
-          {
-            "to": "/risk-premium",
-            "label": "Riesgo País",
-            "icon": "Globe",
-            "requiresAuth": true
-          },
+
           {
             "to": "/retirement-calculator",
             "label": "Calculadora de Retiro",
             "icon": "PiggyBank",
             "requiresAuth": true
-          }
-        ]
-      },
-      {
-        "label": "Contenido",
-        "items": [
-          {
-            "to": "/news",
-            "label": "Noticias",
-            "icon": "Newspaper",
-            "requiresAuth": true
           },
           {
-            "to": "/blog",
-            "label": "Blog",
-            "icon": "BookCopy",
-            "requiresAuth": true
-          },
-          {
-            "to": "/mis-blogs",
-            "label": "Mis Artículos",
-            "icon": "FileEdit",
-            "requiresAuth": true,
-            "requiresPermission": "can_upload_blog"
-          },
-          {
-            "to": "/guardados",
-            "label": "Artículos Guardados",
-            "icon": "Bookmark",
+            "to": "/bonos",
+            "label": "Renta Fija & Macro",
+            "icon": "Landmark",
             "requiresAuth": true
           }
         ]
       },
+
       {
         "label": "General",
         "items": [

@@ -1,24 +1,138 @@
 // src/components/ui/loading-screen.tsx
-import { Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface LoadingScreenProps {
-  /** Mensaje opcional a mostrar debajo del spinner */
+  /** Mensaje opcional a mostrar debajo de la animación */
   message?: string;
 }
 
+const linePoints = [0, 12, 6, 18, 10, 22, 8, 28, 16, 14, 24, 20, 30, 18, 26];
+
 /**
- * Pantalla genérica de carga a pantalla completa para evitar pantallas en blanco.
- * Se usa desde Providers y páginas mientras se resuelven efectos iniciales.
- *
- * @param message Texto opcional a mostrar.
- * @returns JSX.Element
+ * Pantalla genérica de carga a pantalla completa con diseño premium FinDash.
+ * Evita el pantallazo blanco mientras se resuelven promesas iniciales.
  */
-export function LoadingScreen({ message = 'Cargando…' }: LoadingScreenProps) {
+export function LoadingScreen({ message = 'Cargando portafolio...' }: LoadingScreenProps) {
   return (
-    <div className="bg-[#010d16] flex h-screen w-full flex-col items-center justify-center gap-3 sm:gap-4 px-4">
-      {/* ✅ Mejora: Spinner accesible y visible con animación */}
-      <Loader2 className="h-8 w-8 sm:h-10 sm:w-10 animate-spin text-primary" aria-label="Cargando" />
-      <p className="text-xs sm:text-sm text-white text-center">{message}</p>
+    <div className="bg-background flex h-screen w-full flex-col items-center justify-center gap-6 px-4 relative overflow-hidden">
+      {/* Luces de fondo (orbes difuminados para dar profundidad) */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-cyan-500/10 rounded-full blur-[80px]" />
+      </div>
+
+      <div className="z-10 flex flex-col items-center gap-6">
+        {/* Logo marca */}
+        <motion.div
+          className="relative"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <motion.h2
+            className="text-3xl sm:text-4xl font-extrabold tracking-tight drop-shadow-xl"
+            style={{
+              background: 'linear-gradient(135deg, hsl(217, 91%, 60%), hsl(192, 91%, 58%), hsl(258, 70%, 58%))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundSize: '200% 200%',
+            }}
+            animate={{
+              backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            FinDash
+          </motion.h2>
+        </motion.div>
+
+        {/* Línea de mercado animada (Premium) */}
+        <div className="relative w-48 sm:w-64 h-12 sm:h-16 overflow-hidden">
+          <svg
+            viewBox="0 0 160 40"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-full h-full drop-shadow-lg"
+          >
+            <defs>
+              <linearGradient id="findash-line-grad" x1="0" y1="0" x2="160" y2="0" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="hsl(217, 91%, 60%)" />
+                <stop offset="50%" stopColor="hsl(192, 91%, 58%)" />
+                <stop offset="100%" stopColor="hsl(258, 70%, 58%)" />
+              </linearGradient>
+              <linearGradient id="findash-glow" x1="0" y1="0" x2="160" y2="0" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="hsl(217, 91%, 60%)" stopOpacity="0.4" />
+                <stop offset="50%" stopColor="hsl(192, 91%, 58%)" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="hsl(258, 70%, 58%)" stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+            {/* Area fill underneath */}
+            <motion.path
+              d={`M${linePoints.map((y, i) => `${(i / (linePoints.length - 1)) * 160},${40 - y}`).join(' L')} L160,40 L0,40 Z`}
+              fill="url(#findash-glow)"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.8, 0] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            {/* Main line */}
+            <motion.path
+              d={`M${linePoints.map((y, i) => `${(i / (linePoints.length - 1)) * 160},${40 - y}`).join(' L')}`}
+              stroke="url(#findash-line-grad)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 1 }}
+              transition={{
+                pathLength: { duration: 2, repeat: Infinity, ease: 'easeInOut', repeatType: 'loop' },
+                opacity: { duration: 0.5 },
+              }}
+            />
+            {/* Moving dot at the tip */}
+            <motion.circle
+              r="3"
+              fill="hsl(192, 91%, 58%)"
+              filter="drop-shadow(0 0 8px hsl(192, 91%, 58%))"
+              initial={{ offsetDistance: '0%' }}
+              animate={{ offsetDistance: '100%' }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              style={{
+                offsetPath: `path("M${linePoints.map((y, i) => `${(i / (linePoints.length - 1)) * 160},${40 - y}`).join(' L')}")`
+              }}
+            />
+          </svg>
+        </div>
+
+        {/* Mensaje de carga con efecto de fading */}
+        <motion.div
+          className="flex flex-col items-center gap-2"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <div className="flex items-center gap-1.5 mb-1">
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className="w-1.5 h-1.5 rounded-full bg-primary"
+                animate={{
+                  scale: [1, 1.5, 1],
+                  opacity: [0.3, 1, 0.3],
+                }}
+                transition={{
+                  duration: 1,
+                  delay: i * 0.2,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              />
+            ))}
+          </div>
+          <p className="text-sm sm:text-base text-muted-foreground font-medium tracking-wide">
+            {message}
+          </p>
+        </motion.div>
+      </div>
     </div>
   );
 }

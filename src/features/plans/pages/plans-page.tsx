@@ -52,7 +52,7 @@ export default function PlansPage() {
       role: 'plus',
       icon: Crown,
       description: 'Para inversores serios que necesitan más análisis',
-      price: '$9.99',
+      price: '$15.000',
       priceDetail: 'por mes',
       features: [
         `Acceso a todos los símbolos (+8,000)`,
@@ -76,7 +76,7 @@ export default function PlansPage() {
       role: 'premium',
       icon: Rocket,
       description: 'Para profesionales que demandan lo mejor',
-      price: '$19.99',
+      price: '$25.000',
       priceDetail: 'por mes',
       features: [
         `Acceso a todos los símbolos (+8,000)`,

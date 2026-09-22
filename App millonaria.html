@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador de Activos Financieros Avanzado</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- jsPDF & html2canvas para exportar a PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        /* Importa la fuente Inter de Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+            background-image: linear-gradient(180deg, #111827 0%, #1a202c 100%);
+            color: #F9FAFB;
+        }
+        .card {
+            background-color: rgba(31, 41, 55, 0.5); /* bg-gray-800 with opacity */
+            border: 1px solid rgba(55, 65, 81, 0.5); /* border-gray-700 with opacity */
+            backdrop-filter: blur(10px);
+        }
+        button, .btn, [role="button"], select, a {
+            cursor: pointer;
+        }
+        button:disabled, .btn:disabled {
+            cursor: not-allowed;
+        }
+        .btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+        .traffic-light-green, .traffic-light-yellow, .traffic-light-red {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
+            color: white;
+            min-width: 80px;
+            text-align: center;
+        }
+        .traffic-light-green { background-color: #10B981; }
+        .traffic-light-yellow { background-color: #F59E0B; }
+        .traffic-light-red { background-color: #EF4444; }
+        .tag {
+            transition: all 0.2s ease-in-out;
+        }
+        #loader {
+            border-top-color: #3498db;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; opacity: 0; visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal.show { opacity: 1; visibility: visible; }
+        .modal-content {
+            background-color: #1F2937; color: #F9FAFB;
+            padding: 2rem; border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            text-align: center; max-width: 90%; width: 500px;
+        }
+        /* Estilos para la navegación por pestañas */
+        .page-section { display: none; }
+        .page-section.active { display: block; }
+        nav .nav-link {
+            transition: background-color 0.2s, color 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+        nav .nav-link.active {
+            border-bottom-color: #3B82F6; /* blue-600 */
+            color: #F9FAFB; /* gray-50 */
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Contenedor de Autenticación -->
+    <div id="auth-container" class="min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full card p-8 rounded-xl shadow-lg">
+            <!-- Formulario de Sign In -->
+            <div id="signin-form">
+                <h2 class="text-2xl font-bold text-center text-white mb-6">Iniciar Sesión</h2>
+                <div class="space-y-4">
+                    <input type="text" id="signin-username" placeholder="Usuario" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="password" id="signin-password" placeholder="Contraseña" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="signin-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors btn">Ingresar</button>
+                </div>
+                <p id="signin-error" class="text-red-400 text-sm mt-4 text-center"></p>
+                <p class="text-center text-gray-400 mt-4 text-sm">¿No tienes cuenta? <a href="#" id="show-signup" class="text-blue-400 hover:underline">Regístrate</a></p>
+            </div>
+            <!-- Formulario de Sign Up -->
+            <div id="signup-form" style="display: none;">
+                <h2 class="text-2xl font-bold text-center text-white mb-6">Crear Cuenta</h2>
+                <div class="space-y-4">
+                    <input type="text" id="signup-username" placeholder="Elige un usuario" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="password" id="signup-password" placeholder="Crea una contraseña" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500">
+                    <div id="api-key-wrapper" style="display: none;">
+                         <p class="text-xs text-gray-400 mb-2">Como primer usuario, serás el administrador. Por favor, ingresa la API Key que usarán todos.</p>
+                         <input type="password" id="api-key-input" placeholder="Tu API Key de Financial Modeling Prep" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <button id="signup-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-colors btn">Registrarse</button>
+                </div>
+                <p id="signup-error" class="text-red-400 text-sm mt-4 text-center"></p>
+                <p class="text-center text-gray-400 mt-4 text-sm">¿Ya tienes cuenta? <a href="#" id="show-signin" class="text-blue-400 hover:underline">Inicia Sesión</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal de la App (oculto por defecto) -->
+    <div id="app-container" class="container mx-auto p-4 md:p-8" style="display: none;">
+        
+        <header class="text-center mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <div id="user-info" class="text-left text-sm"></div>
+                <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg text-sm btn">Cerrar Sesión</button>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">Analizador de Activos Financieros</h1>
+        </header>
+
+        <!-- Sección de Configuración -->
+        <section id="config-section" class="max-w-4xl mx-auto mb-8">
+            <div class="card p-6 rounded-xl shadow-lg space-y-4">
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="text" id="ticker-search" placeholder="Buscar Ticker (Ej: AAPL, MSFT...)" class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 p-2.5 outline-none">
+                    <button id="add-ticker-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-lg flex items-center justify-center gap-2 btn">
+                        <div id="loader" class="w-5 h-5 rounded-full border-2 border-gray-400" style="display: none;"></div>
+                        <span>Agregar</span>
+                    </button>
+                </div>
+                <div id="selected-tickers" class="flex flex-wrap gap-2 pt-2"></div>
+                <div id="error-message" class="text-red-400 mt-2 text-sm"></div>
+            </div>
+        </section>
+
+        <!-- Contenedor de Resultados con Navegación -->
+        <main id="results-container" class="space-y-8" style="display: none;">
+             <!-- Navegación por Pestañas -->
+            <nav class="flex flex-wrap justify-center border-b border-gray-700 mb-6">
+                <a href="#" class="nav-link text-gray-400 hover:text-white hover:bg-gray-700 py-3 px-4 text-sm md:text-base font-medium" data-page="prices">Precios y Volatilidad</a>
+                <a href="#" class="nav-link text-gray-400 hover:text-white hover:bg-gray-700 py-3 px-4 text-sm md:text-base font-medium" data-page="fundamentals">Indicadores</a>
+                <a href="#" class="nav-link text-gray-400 hover:text-white hover:bg-gray-700 py-3 px-4 text-sm md:text-base font-medium" data-page="correlation">Correlación</a>
+                <a href="#" class="nav-link text-gray-400 hover:text-white hover:bg-gray-700 py-3 px-4 text-sm md:text-base font-medium" data-page="summary">Análisis</a>
+                <a href="#" class="nav-link text-gray-400 hover:text-white hover:bg-gray-700 py-3 px-4 text-sm md:text-base font-medium" data-page="plans">Planes</a>
+                <a href="#" id="profile-nav-link" class="nav-link text-gray-400 hover:text-white hover:bg-gray-700 py-3 px-4 text-sm md:text-base font-medium" data-page="profile">Mi Perfil</a>
+                <a href="#" id="admin-nav-link" class="nav-link text-gray-400 hover:text-white hover:bg-gray-700 py-3 px-4 text-sm md:text-base font-medium" data-page="admin" style="display:none;">Admin</a>
+            </nav>
+
+            <!-- Secciones de la App -->
+            <div id="content-display">
+                <section id="page-prices" class="page-section"></section>
+                <section id="page-fundamentals" class="page-section"></section>
+                <section id="page-correlation" class="page-section"></section>
+                <section id="page-summary" class="page-section"></section>
+                <section id="page-plans" class="page-section"></section>
+                <section id="page-profile" class="page-section"></section>
+                <section id="page-admin" class="page-section"></section>
+                
+                 <section id="actions-section" class="flex justify-center gap-4 pt-4" style="display: none;">
+                    <button id="pdf-btn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-5 rounded-lg flex items-center gap-2 btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M10 15.5v-5a2 2 0 0 1 2-2h2"></path><path d="m14 13.5-2-2-2 2"></path></svg>
+                        Exportar a PDF
+                    </button>
+                </section>
+            </div>
+        </main>
+        
+        <div id="initial-message" class="text-center text-gray-400 mt-12">
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="message-modal" class="modal"><div class="modal-content"><p id="message-text"></p><button id="close-message-modal" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg btn">Cerrar</button></div></div>
+    <div id="info-modal" class="modal"><div class="modal-content text-left"><h3 id="info-modal-title" class="text-xl font-bold mb-4"></h3><p id="info-modal-text" class="text-gray-300"></p><button id="close-info-modal" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg w-full btn">Entendido</button></div></div>
+
+    <script>
+    // --- CONFIGURACIÓN ---
+    const indicatorConfig = {
+        // Valoración
+        PER: { label: 'PERatio', apiField: 'pe', lowerIsBetter: true, green: 15, yellow: 25, explanation: 'Mide el precio de la acción en relación a las ganancias por acción. Un PER bajo (<15) puede indicar que una acción está subvalorada.' },
+        priceToBook: { label: 'Price to Book', apiField: 'pbRatioTTM', lowerIsBetter: true, green: 1.5, yellow: 3, explanation: 'Compara el valor de mercado con el valor contable de la empresa. Un valor bajo (<1.5) puede indicar subvaloración.' },
+        priceToSales: { label: 'Price to Sales', apiField: 'priceToSalesRatioTTM', lowerIsBetter: true, green: 2, yellow: 4, explanation: 'Compara el precio de la acción con sus ingresos. Útil para empresas en crecimiento sin ganancias. Menor a 2 se considera bueno.' },
+        pfc_ratio: { label: 'Price/FCF', apiField: 'priceToFreeCashFlowsRatioTTM', lowerIsBetter: true, green: 15, yellow: 25, explanation: 'Ratio Precio/Flujo de Caja Libre. Mide el precio de la acción en relación a su capacidad de generar efectivo. Menor es mejor, similar al PER.' },
+        evToEbitda: { label: 'EV/EBITDA', apiField: 'enterpriseValueOverEBITDATTM', lowerIsBetter: true, green: 10, yellow: 15, explanation: 'Compara el valor total de la empresa (deuda incluida) con su EBITDA. Un ratio bajo (<10) es generalmente preferido, indicando una posible subvaloración.' },
+        // Rentabilidad
+        grossMargin: { label: 'Margen Bruto (%)', apiField: 'grossProfitMarginTTM', lowerIsBetter: false, green: 0.4, yellow: 0.2, isPercentage: true, explanation: 'Indica el porcentaje de ingresos que queda después de los costos de los bienes vendidos. Más alto (>40%) es mejor.' },
+        operatingMargin: { label: 'Margen Op. (%)', apiField: 'operatingMarginTTM', lowerIsBetter: false, green: 0.15, yellow: 0.05, isPercentage: true, explanation: 'Mide la rentabilidad de las operaciones principales de la empresa. Más alto (>15%) indica eficiencia.' },
+        roe: { label: 'ROE (%)', apiField: 'returnOnEquityTTM', lowerIsBetter: false, green: 0.15, yellow: 0.10, isPercentage: true, explanation: 'Mide el rendimiento generado sobre el capital de los accionistas. Un ROE superior al 15% es deseable.' },
+        roa: { label: 'ROA (%)', apiField: 'returnOnAssetsTTM', lowerIsBetter: false, green: 0.05, yellow: 0.02, isPercentage: true, explanation: 'Mide qué tan eficientemente una empresa utiliza sus activos para generar ganancias. Más del 5% es considerado bueno.' },
+        // Salud Financiera
+        debtToEquity: { label: 'Debt/Equity', apiField: 'debtToEquityTTM', lowerIsBetter: true, green: 0.5, yellow: 1.0, explanation: 'Muestra la proporción de deuda vs. patrimonio. Un ratio bajo (<0.5) indica menor apalancamiento y riesgo.' },
+        debt_to_assets: { label: 'Deuda/Activos (%)', apiField: 'debtToAssetsTTM', lowerIsBetter: true, green: 0.4, yellow: 0.6, isPercentage: true, explanation: 'Mide qué porcentaje de los activos de una empresa se financia con deuda. Un valor bajo (<40%) indica menor riesgo financiero.' },
+        currentRatio: { label: 'Current Ratio', apiField: 'currentRatioTTM', lowerIsBetter: false, green: 2.0, yellow: 1.0, explanation: 'Mide la capacidad de pagar deudas a corto plazo. Un valor superior a 2 es saludable; menor a 1 es riesgoso.' },
+        // Dividendos y Volatilidad
+        dividendYield: { label: 'Rend. Dividendo (%)', apiField: 'dividendYieldTTM', lowerIsBetter: false, green: 0.03, yellow: 0.01, isPercentage: true, explanation: 'Porcentaje de dividendo anual en relación al precio de la acción. Un rendimiento >3% es atractivo para inversores de ingresos.' },
+        payout_ratio: { label: 'Payout Ratio (%)', apiField: 'payoutRatioTTM', lowerIsBetter: true, green: 0.6, yellow: 0.8, isPercentage: true, explanation: 'Porcentaje de las ganancias que se paga como dividendos. Un ratio sostenible está usualmente por debajo del 60-70%.' },
+        beta: { label: 'Beta', apiField: 'beta', lowerIsBetter: true, green: 0.8, yellow: 1.2, explanation: 'Mide la volatilidad de una acción en comparación con el mercado (S&P 500). Beta < 1 es menos volátil; Beta > 1 es más volátil.' },
+        // Otros
+        eps: { label: 'BPA (EPS)', apiField: 'eps', lowerIsBetter: false, green: 5, yellow: 1, explanation: 'Beneficio Por Acción. Es la porción de las ganancias de una empresa asignada a cada acción. Un EPS creciente es una buena señal.' },
+        marketCap: { label: 'Capitalización (USD)', apiField: 'marketCap', lowerIsBetter: false, green: 1e12, yellow: 1e11, isLargeNumber: true, explanation: 'Valor total de mercado de las acciones de una empresa. Ayuda a clasificarla por tamaño (Large-Cap, Mid-Cap, etc.).' },
+    };
+    const RISK_FREE_RATE = 0.02;
+    const ROLE_LIMITS = {
+        basico: 2,
+        plus: 15,
+        premium: 30,
+        administrador: Infinity
+    };
+
+    // --- ESTADO GLOBAL ---
+    let state = {
+        isLoggedIn: false, currentUser: null, users: [], selectedTickers: [], 
+        assetsData: {}, isLoading: false, activePage: 'prices', countdownIntervalId: null
+    };
+    const { jsPDF } = window.jspdf; 
+
+    // --- REFERENCIAS AL DOM ---
+    const dom = {
+        authContainer: document.getElementById('auth-container'), appContainer: document.getElementById('app-container'),
+        signinForm: document.getElementById('signin-form'), signupForm: document.getElementById('signup-form'),
+        signinUsernameInput: document.getElementById('signin-username'), signinPasswordInput: document.getElementById('signin-password'),
+        signinBtn: document.getElementById('signin-btn'), signinError: document.getElementById('signin-error'),
+        signupUsernameInput: document.getElementById('signup-username'), signupPasswordInput: document.getElementById('signup-password'),
+        apiKeyWrapper: document.getElementById('api-key-wrapper'), apiKeyInput: document.getElementById('api-key-input'),
+        signupBtn: document.getElementById('signup-btn'), signupError: document.getElementById('signup-error'),
+        showSignupLink: document.getElementById('show-signup'), showSigninLink: document.getElementById('show-signin'),
+        userInfo: document.getElementById('user-info'), logoutBtn: document.getElementById('logout-btn'),
+        adminNavLink: document.getElementById('admin-nav-link'), profileNavLink: document.getElementById('profile-nav-link'),
+        configSection: document.getElementById('config-section'), searchInput: document.getElementById('ticker-search'),
+        addBtn: document.getElementById('add-ticker-btn'), loader: document.getElementById('loader'),
+        selectedTickersContainer: document.getElementById('selected-tickers'), resultsContainer: document.getElementById('results-container'),
+        contentDisplay: document.getElementById('content-display'), dashboardContent: document.getElementById('dashboard-content'),
+        errorMessage: document.getElementById('error-message'), pdfBtn: document.getElementById('pdf-btn'),
+        actionsSection: document.getElementById('actions-section'), navLinks: document.querySelectorAll('.nav-link'),
+        pages: document.querySelectorAll('.page-section'), messageModal: document.getElementById('message-modal'),
+        messageText: document.getElementById('message-text'), closeMessageModalBtn: document.getElementById('close-message-modal'),
+        infoModal: document.getElementById('info-modal'), infoModalTitle: document.getElementById('info-modal-title'),
+        infoModalText: document.getElementById('info-modal-text'), closeInfoModalBtn: document.getElementById('close-info-modal'),
+    };
+
+    // --- LÓGICA DE MODALES ---
+    const showMessage = (message) => { dom.messageText.textContent = message; dom.messageModal.classList.add('show'); };
+    const hideMessage = () => { dom.messageModal.classList.remove('show'); };
+    const showInfoModal = (key) => {
+        const config = indicatorConfig[key];
+        if (config) {
+            dom.infoModalTitle.textContent = config.label.split('(')[0].trim();
+            dom.infoModalText.textContent = config.explanation;
+            dom.infoModal.classList.add('show');
+        }
+    };
+    const hideInfoModal = () => { dom.infoModal.classList.remove('show'); };
+
+    // --- GESTIÓN DE USUARIOS ---
+    function loadUsers() {
+        const usersJSON = localStorage.getItem('financialAnalyzerUsers');
+        state.users = usersJSON ? JSON.parse(usersJSON) : [];
+    }
+    function saveUsers() {
+        localStorage.setItem('financialAnalyzerUsers', JSON.stringify(state.users));
+    }
+    function handleSignUp() {
+        const username = dom.signupUsernameInput.value.trim();
+        const password = dom.signupPasswordInput.value.trim();
+        let apiKey = '';
+        let role = 'basico';
+        dom.signupError.textContent = '';
+
+        if (state.users.length === 0) {
+            apiKey = dom.apiKeyInput.value.trim();
+            role = 'administrador';
+            if (!username || !password || !apiKey) {
+                dom.signupError.textContent = 'Todos los campos son obligatorios para el administrador.';
+                return;
+            }
+        } else {
+            if (!username || !password) {
+                dom.signupError.textContent = 'Usuario y contraseña son obligatorios.';
+                return;
+            }
+            const admin = state.users.find(u => u.role === 'administrador');
+            if (!admin) {
+                dom.signupError.textContent = 'Error: No se encontró cuenta de administrador para asignar la API Key.';
+                return;
+            }
+            apiKey = admin.apiKey;
+        }
+
+        if (state.users.find(u => u.username === username)) {
+            dom.signupError.textContent = 'El nombre de usuario ya existe.';
+            return;
+        }
+        const newUser = { username, password, role, apiKey, apiCallsMade: 0, lastApiCallDate: new Date().toISOString().split('T')[0] };
+        state.users.push(newUser);
+        saveUsers();
+        loginUser(newUser);
+    }
+    function handleSignIn() {
+        const username = dom.signinUsernameInput.value.trim();
+        const password = dom.signinPasswordInput.value.trim();
+        dom.signinError.textContent = '';
+        const user = state.users.find(u => u.username === username);
+        if (user && user.password === password) {
+            loginUser(user);
+        } else {
+            dom.signinError.textContent = 'Usuario o contraseña incorrectos.';
+        }
+    }
+    function loginUser(user) {
+        state.isLoggedIn = true;
+        state.currentUser = user;
+        dom.authContainer.style.display = 'none';
+        dom.appContainer.style.display = 'block';
+        renderApp();
+    }
+    function handleLogout() {
+        if (state.countdownIntervalId) clearInterval(state.countdownIntervalId);
+        state.isLoggedIn = false; state.currentUser = null; state.selectedTickers = [];
+        state.assetsData = {}; state.activePage = 'prices'; 
+        dom.authContainer.style.display = 'flex'; dom.appContainer.style.display = 'none';
+        dom.signinForm.style.display = 'block'; dom.signupForm.style.display = 'none';
+    }
+    function checkApiLimit() {
+        const user = state.currentUser;
+        if (!user) return false;
+        const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Lisbon' })).toISOString().split('T')[0];
+        if (user.lastApiCallDate !== today) {
+            user.apiCallsMade = 0;
+            user.lastApiCallDate = today;
+        }
+        const limit = ROLE_LIMITS[user.role];
+        if (user.apiCallsMade >= limit) {
+            dom.errorMessage.textContent = `Has alcanzado tu límite de ${limit} consultas diarias.`;
+            return false;
+        }
+        user.apiCallsMade++;
+        const userIndex = state.users.findIndex(u => u.username === user.username);
+        if (userIndex !== -1) {
+            state.users[userIndex] = user;
+            saveUsers();
+        }
+        renderUserHeader();
+        return true;
+    }
+
+    // --- CÁLCULOS FINANCIEROS (sin cambios) ---
+    const calculateMean = (data) => data.reduce((a, b) => a + b, 0) / data.length;
+    const calculateStdDev = (data) => {
+        if (data.length < 2) return 0;
+        const mean = calculateMean(data);
+        const variance = data.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / (data.length -1);
+        return Math.sqrt(variance);
+    };
+    const calculateSharpeRatio = (returns) => {
+        if (returns.length < 2) return 'N/A';
+        const meanReturn = calculateMean(returns);
+        const stdDevReturns = calculateStdDev(returns);
+        if (stdDevReturns === 0) return 'N/A';
+        const annualizedReturn = meanReturn * 252;
+        const annualizedVolatility = stdDevReturns * Math.sqrt(252);
+        const sharpe = (annualizedReturn - RISK_FREE_RATE) / annualizedVolatility;
+        return sharpe;
+    };
+     const calculateCovariance = (returns1, returns2) => {
+         const mean1 = calculateMean(returns1);
+         const mean2 = calculateMean(returns2);
+         let covariance = 0;
+         for (let i = 0; i < returns1.length; i++) {
+             covariance += (returns1[i] - mean1) * (returns2[i] - mean2);
+         }
+         return covariance / (returns1.length - 1);
+    };
+    const calculateCorrelation = (returns1, returns2) => {
+        const cov = calculateCovariance(returns1, returns2);
+        const stdDev1 = calculateStdDev(returns1);
+        const stdDev2 = calculateStdDev(returns2);
+        if (stdDev1 === 0 || stdDev2 === 0) return 0;
+        return cov / (stdDev1 * stdDev2);
+    };
+
+    // --- LÓGICA PRINCIPAL ---
+    async function fetchTickerData(ticker) {
+        dom.errorMessage.textContent = ''; 
+        if (!checkApiLimit()) return null;
+        
+        const apiKey = state.currentUser.apiKey;
+        const toDate = new Date();
+        const fromDate = new Date();
+        fromDate.setFullYear(toDate.getFullYear() - 1);
+        const formatDate = (date) => date.toISOString().split('T')[0];
+
+        const urls = [
+            `https://financialmodelingprep.com/api/v3/profile/${ticker}?apikey=${apiKey}`,
+            `https://financialmodelingprep.com/api/v3/key-metrics-ttm/${ticker}?apikey=${apiKey}`,
+            `https://financialmodelingprep.com/api/v3/quote/${ticker}?apikey=${apiKey}`,
+            `https://financialmodelingprep.com/api/v3/historical-price-full/${ticker}?from=${formatDate(fromDate)}&to=${formatDate(toDate)}&apikey=${apiKey}`
+        ];
+
+        try {
+            const responses = await Promise.all(urls.map(url => fetch(url)));
+            const [profileRes, keyMetricsRes, quoteRes, historicalRes] = await Promise.all(responses.map(res => res.json()));
+
+            if (!responses[0].ok || profileRes.length === 0 || (profileRes[0] && profileRes[0]["Error Message"])) {
+                 throw new Error(`Error para "${ticker}": ${profileRes[0]?.["Error Message"] || 'API Key inválida o no se encontraron datos.'}`);
+            }
+
+            const companyProfile = profileRes[0] || {};
+            const latestKeyMetrics = keyMetricsRes[0] || {};
+            const companyQuote = quoteRes[0] || {};
+            const rawData = { ...companyProfile, ...latestKeyMetrics, ...companyQuote };
+            const processedData = { name: companyProfile.companyName || ticker, data: {}, historicalReturns: [] };
+
+            Object.keys(indicatorConfig).forEach(key => {
+                const config = indicatorConfig[key];
+                let value = rawData[config.apiField];
+                if (value !== undefined && value !== null && value !== 'None' && value !== "") {
+                    let numValue = parseFloat(value);
+                    processedData.data[key] = isNaN(numValue) ? value : numValue;
+                } else {
+                    processedData.data[key] = 'N/A';
+                }
+            });
+
+            processedData.currentPrice = rawData.price;
+            processedData.dayChange = rawData.changesPercentage;
+            
+            if (historicalRes.historical && historicalRes.historical.length > 1) {
+                const history = historicalRes.historical.slice().reverse();
+                const prices = history.map(d => d.close);
+                for (let i = 1; i < prices.length; i++) {
+                    processedData.historicalReturns.push((prices[i] / prices[i - 1]) - 1);
+                }
+                const latestPrice = prices[prices.length - 1];
+                const priceOneYearAgo = prices[0];
+                if(priceOneYearAgo > 0) processedData.yearChange = ((latestPrice / priceOneYearAgo) - 1) * 100;
+                else processedData.yearChange = 'N/A';
+                if (prices.length >= 30) {
+                    const price30daysAgo = prices[prices.length - 30];
+                    processedData.monthChange = price30daysAgo > 0 ? ((latestPrice / price30daysAgo) - 1) * 100 : 'N/A';
+                } else processedData.monthChange = 'N/A';
+                const last30Returns = processedData.historicalReturns.slice(-30);
+                processedData.stdDev = last30Returns.length > 1 ? calculateStdDev(last30Returns) * 100 : 'N/A';
+                processedData.sharpeRatio = calculateSharpeRatio(processedData.historicalReturns);
+            }
+            return processedData;
+        } catch (err) {
+            dom.errorMessage.textContent = err.message;
+            console.error("Error fetching data:", err);
+            return null;
+        }
+    }
+
+    async function handleAddTicker() {
+        const ticker = dom.searchInput.value.trim().toUpperCase(); 
+        if (!ticker) return; 
+        if (state.selectedTickers.length >= 10) {
+            showMessage('Puedes comparar hasta 10 activos a la vez.');
+            return;
+        }
+        if (state.selectedTickers.includes(ticker)) {
+            showMessage('Este activo ya ha sido añadido.');
+            return;
+        }
+        setLoading(true); 
+        const data = await fetchTickerData(ticker); 
+        setLoading(false); 
+        if (data) {
+            state.selectedTickers.push(ticker);
+            state.assetsData[ticker] = data;
+            dom.searchInput.value = ''; 
+            renderApp(); 
+        }
+    }
+    
+    function removeTicker(tickerToRemove) {
+        state.selectedTickers = state.selectedTickers.filter(t => t !== tickerToRemove);
+        delete state.assetsData[tickerToRemove];
+        renderApp(); 
+    }
+
+    // --- LÓGICA DE RENDERIZADO ---
+    function renderApp() {
+        if (!state.isLoggedIn) return;
+        
+        renderUserHeader();
+        renderSelectedTickers(); 
+        
+        const isAdmin = state.currentUser.role === 'administrador';
+        const onAdminPage = state.activePage === 'admin';
+        const onProfilePage = state.activePage === 'profile';
+        const onPlansPage = state.activePage === 'plans';
+        const hasTickers = state.selectedTickers.length > 0;
+        const pagesWithPdfExport = ['prices', 'fundamentals', 'correlation'];
+
+        dom.adminNavLink.style.display = isAdmin ? 'block' : 'none';
+        dom.configSection.style.display = (onAdminPage || onProfilePage || onPlansPage) ? 'none' : 'block';
+        dom.actionsSection.style.display = pagesWithPdfExport.includes(state.activePage) && hasTickers ? 'flex' : 'none';
+        
+        dom.navLinks.forEach(link => link.classList.toggle('active', link.dataset.page === state.activePage));
+        dom.pages.forEach(page => page.classList.toggle('active', page.id === `page-${state.activePage}`));
+
+        dom.resultsContainer.style.display = 'block';
+
+        if (onAdminPage && isAdmin) {
+            renderAdminPanel();
+            dom.contentDisplay.style.display = 'block';
+            dom.dashboardContent.style.display = 'none';
+        } else if (onProfilePage) {
+            renderProfilePanel();
+            dom.contentDisplay.style.display = 'block';
+            dom.dashboardContent.style.display = 'none';
+        } else if (onPlansPage) {
+            renderPlansPage();
+            dom.contentDisplay.style.display = 'block';
+            dom.dashboardContent.style.display = 'none';
+        } else if (hasTickers) {
+            const assetsToRender = state.selectedTickers.map(ticker => ({ ticker, ...state.assetsData[ticker] }));
+            const visibleIndicators = getVisibleIndicators(assetsToRender);
+            renderPriceAnalysis(assetsToRender);
+            renderComparisonTable(assetsToRender, visibleIndicators);
+            renderCorrelationMatrix(assetsToRender);
+            renderAnalysis(assetsToRender);
+            dom.contentDisplay.style.display = 'block';
+            dom.dashboardContent.style.display = 'none';
+        } else {
+            dom.contentDisplay.style.display = 'none';
+            dom.dashboardContent.style.display = 'block';
+        }
+    }
+    
+    function renderUserHeader() {
+        const user = state.currentUser;
+        if (!user) return;
+        const limit = ROLE_LIMITS[user.role];
+        const limitText = limit === Infinity ? 'Ilimitadas' : `${user.apiCallsMade} / ${limit}`;
+        dom.userInfo.innerHTML = `
+            <p class="font-bold text-white">${user.username}</p>
+            <p class="text-gray-400">Rol: <span class="font-semibold text-gray-300 capitalize">${user.role}</span> | Consultas hoy: <span class="font-semibold text-gray-300">${limitText}</span></p>
+        `;
+    }
+
+    function renderSelectedTickers() {
+        dom.selectedTickersContainer.innerHTML = ''; 
+        state.selectedTickers.forEach(ticker => {
+            const tag = document.createElement('div');
+            tag.className = 'tag bg-gray-700 text-white text-sm font-medium px-3 py-1.5 rounded-full flex items-center gap-2';
+            tag.innerHTML = `<span>${ticker}</span><button data-ticker="${ticker}" class="remove-ticker-btn text-gray-400 hover:text-white">&times;</button>`;
+            dom.selectedTickersContainer.appendChild(tag); 
+        });
+        document.querySelectorAll('.remove-ticker-btn').forEach(btn => btn.addEventListener('click', (e) => removeTicker(e.currentTarget.dataset.ticker)));
+    }
+
+    // --- RENDERIZADO DE PANELES ---
+    function renderPriceAnalysis(assetsData) {
+        const container = document.getElementById('page-prices');
+        container.innerHTML = `<div class="card rounded-xl shadow-lg overflow-hidden"><h2 class="text-xl font-bold p-4 md:p-6 text-white">Análisis de Precios y Volatilidad</h2><div class="overflow-x-auto"><table class="min-w-full text-sm text-left text-gray-300"><thead class="text-xs text-gray-400 uppercase bg-gray-900/50"><tr><th class="px-6 py-3">Ticker</th><th class="px-6 py-3">Precio</th><th class="px-6 py-3">Var. Diaria (%)</th><th class="px-6 py-3">Var. Mensual (%)</th><th class="px-6 py-3">Var. Anual (%)</th><th class="px-6 py-3">Volatilidad (30d %)</th><th class="px-6 py-3">Ratio Sharpe</th></tr></thead><tbody id="price-analysis-table-body"></tbody></table></div></div>`;
+        const tableBody = container.querySelector('#price-analysis-table-body');
+        assetsData.forEach(asset => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-700';
+            const { currentPrice, dayChange, monthChange, yearChange, stdDev, sharpeRatio } = asset;
+            const formatCurrency = (v) => typeof v === 'number' ? `$${v.toFixed(2)}` : 'N/A';
+            const formatPercentage = (v, colorize = true) => {
+                if (typeof v !== 'number') return 'N/A';
+                const color = colorize ? (v >= 0 ? 'text-green-400' : 'text-red-400') : '';
+                return `<span class="${color}">${v.toFixed(2)}%</span>`;
+            };
+            const formatNumber = (v) => typeof v === 'number' ? v.toFixed(2) : 'N/A';
+            row.innerHTML = `<td class="px-6 py-4 font-medium text-white">${asset.ticker}</td><td class="px-6 py-4 text-center">${formatCurrency(currentPrice)}</td><td class="px-6 py-4 text-center">${formatPercentage(dayChange)}</td><td class="px-6 py-4 text-center">${formatPercentage(monthChange)}</td><td class="px-6 py-4 text-center">${formatPercentage(yearChange)}</td><td class="px-6 py-4 text-center">${formatPercentage(stdDev, false)}</td><td class="px-6 py-4 text-center">${formatNumber(sharpeRatio)}</td>`;
+            tableBody.appendChild(row);
+        });
+    }
+    
+    function renderCorrelationMatrix(assetsData) {
+        const container = document.getElementById('page-correlation');
+        container.innerHTML = `<div class="card rounded-xl shadow-lg overflow-hidden"><h2 class="text-xl font-bold p-4 md:p-6 text-white">Matriz de Correlación</h2><p class="px-6 pb-4 text-gray-400 text-sm">Mide la relación lineal entre los retornos diarios de dos activos.</p><div class="overflow-x-auto"><table class="min-w-full text-sm text-left text-gray-300"><thead class="text-xs text-gray-400 uppercase bg-gray-900/50"><tr id="correlation-table-head"></tr></thead><tbody id="correlation-table-body"></tbody></table></div></div>`;
+        const tableHead = container.querySelector('#correlation-table-head');
+        const tableBody = container.querySelector('#correlation-table-body');
+        tableHead.innerHTML = '<th></th>';
+        assetsData.forEach(asset => {
+            const th = document.createElement('th');
+            th.className = "px-6 py-3 text-center";
+            th.textContent = asset.ticker;
+            tableHead.appendChild(th);
+        });
+        assetsData.forEach((asset1, i) => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-700';
+            let rowHtml = `<th class="px-6 py-4 font-medium text-white text-center">${asset1.ticker}</th>`;
+            assetsData.forEach((asset2, j) => {
+                let correlation = (i === j) ? 1 : calculateCorrelation(asset1.historicalReturns.slice(-Math.min(asset1.historicalReturns.length, asset2.historicalReturns.length)), asset2.historicalReturns.slice(-Math.min(asset1.historicalReturns.length, asset2.historicalReturns.length)));
+                const { backgroundColor, color } = getCorrelationColor(correlation);
+                rowHtml += `<td class="px-6 py-4 text-center font-semibold rounded" style="background-color: ${backgroundColor}; color: ${color};">${correlation.toFixed(2)}</td>`;
+            });
+            row.innerHTML = rowHtml;
+            tableBody.appendChild(row);
+        });
+    }
+
+    function renderComparisonTable(assetsData, visibleIndicators) {
+        const container = document.getElementById('page-fundamentals');
+        container.innerHTML = `<div class="card rounded-xl shadow-lg overflow-hidden"><h2 class="text-xl font-bold p-4 md:p-6 text-white">Tabla Comparativa de Indicadores</h2><div class="overflow-x-auto"><table class="min-w-full text-sm text-left text-gray-300"><thead class="text-xs text-gray-400 uppercase bg-gray-900/50"><tr id="comparison-table-head"></tr></thead><tbody id="comparison-table-body"></tbody></table></div></div>`;
+        const tableHead = container.querySelector('#comparison-table-head');
+        const tableBody = container.querySelector('#comparison-table-body');
+        tableHead.innerHTML = '<th class="px-6 py-3">Indicador</th>';
+        assetsData.forEach(asset => {
+            const th = document.createElement('th');
+            th.className = 'px-6 py-3 text-center';
+            th.textContent = asset.ticker;
+            tableHead.appendChild(th);
+        });
+        Object.keys(visibleIndicators).forEach(key => {
+            const config = visibleIndicators[key];
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-700';
+            let rowHtml = `<th class="px-6 py-4 font-medium text-white"><div class="flex items-center">${config.label}<button class="info-btn ml-2 text-gray-400" data-key="${key}">&#9432;</button></div></th>`;
+            assetsData.forEach(asset => {
+                const value = asset.data[key];
+                if (typeof value === 'number') {
+                    const colorClass = getTrafficLightColor(key, value);
+                    let displayValue = value.toFixed(2);
+                    if (config.isLargeNumber) displayValue = formatLargeNumber(value);
+                    if (config.isPercentage) displayValue = `${(value * 100).toFixed(2)}%`;
+                    rowHtml += `<td class="px-6 py-4 text-center"><span class="${colorClass}">${displayValue}</span></td>`;
+                } else {
+                    rowHtml += `<td class="px-6 py-4 text-center">${value || 'N/A'}</td>`;
+                }
+            });
+            row.innerHTML = rowHtml; 
+            tableBody.appendChild(row); 
+        });
+        container.querySelectorAll('.info-btn').forEach(btn => btn.addEventListener('click', (e) => showInfoModal(e.currentTarget.dataset.key)));
+    }
+    
+    function renderAnalysis(assetsData) {
+        const container = document.getElementById('page-summary');
+        container.innerHTML = generateAnalysisHTML(assetsData);
+    }
+    
+    function generateAnalysisHTML(assetsData) {
+        if (assetsData.length === 0) return '';
+        
+        const getBestPerformer = (key) => {
+            const config = indicatorConfig[key];
+            const validAssets = assetsData.filter(a => typeof a.data[key] === 'number');
+            if (validAssets.length === 0) return { ticker: 'N/A', data: { [key]: 'N/A' } };
+            return validAssets.reduce((best, current) => {
+                if (config.lowerIsBetter) {
+                    return current.data[key] < best.data[key] ? current : best;
+                } else {
+                    return current.data[key] > best.data[key] ? current : best;
+                }
+            });
+        };
+
+        const createSection = (title, description, key) => {
+            const performer = getBestPerformer(key);
+            let value = performer.data[key];
+            let displayValue = 'N/A';
+            if(typeof value === 'number') {
+                displayValue = indicatorConfig[key].isPercentage ? `${(value*100).toFixed(2)}%` : value.toFixed(2);
+            }
+            return `<div class="card p-6 rounded-lg">
+                <h3 class="font-bold text-lg text-blue-400 mb-2">${title}</h3>
+                <p class="text-sm text-gray-400 mb-4">${description}</p>
+                <p><span class="font-semibold">Mejor desempeño (${indicatorConfig[key].label}):</span> ${performer.ticker} con ${displayValue}</p>
+            </div>`;
+        };
+
+        const valuationSection = createSection('Análisis de Valoración', 'Estos indicadores ayudan a determinar si una acción está sobrevalorada o infravalorada en comparación con sus ganancias, ventas y valor contable. Valores más bajos suelen ser mejores.', 'PER');
+        const profitabilitySection = createSection('Análisis de Rentabilidad', 'Mide la capacidad de la empresa para generar ganancias a partir de sus ingresos, activos y capital. Márgenes y retornos más altos indican mayor eficiencia.', 'roe');
+        const healthSection = createSection('Análisis de Salud Financiera', 'Evalúa la estructura de capital de la empresa y su capacidad para cumplir con sus obligaciones de deuda. Un menor apalancamiento (deuda) generalmente significa menor riesgo.', 'debtToEquity');
+
+        let verdict = '';
+        if (assetsData.length > 1) {
+            const bestValuation = getBestPerformer('PER');
+            const bestProfit = getBestPerformer('roe');
+            const bestHealth = getBestPerformer('debtToEquity');
+            verdict = `<div class="card p-6 rounded-lg mt-8">
+                <h3 class="font-bold text-lg text-green-400 mb-2">Veredicto General</h3>
+                <p class="text-sm">Basado en los datos, <strong class="text-white">${bestValuation.ticker}</strong> parece ser la opción más atractiva desde una perspectiva de <strong class="text-white">valoración</strong>. 
+                En cuanto a <strong class="text-white">rentabilidad</strong>, <strong class="text-white">${bestProfit.ticker}</strong> destaca por su capacidad de generar retornos. 
+                Para inversores que priorizan la <strong class="text-white">seguridad y baja deuda</strong>, <strong class="text-white">${bestHealth.ticker}</strong> presenta la estructura financiera más sólida. 
+                La elección final dependerá de tu perfil de inversor.</p>
+                <p class="mt-4 text-xs text-gray-500">*Este es un análisis automatizado y no constituye una recomendación de inversión.</p>
+            </div>`;
+        }
+
+        return `<h2 class="text-2xl font-bold text-white mb-6">Presentación del Análisis Comparativo</h2><div class="space-y-6">${valuationSection}${profitabilitySection}${healthSection}</div>${verdict}`;
+    }
+
+    function renderAdminPanel() {
+        if (state.currentUser.role !== 'administrador') return;
+        const container = document.getElementById('page-admin');
+        let tableRows = state.users.map(user => `
+            <tr class="border-b border-gray-700">
+                <td class="px-6 py-4 font-medium text-white">${user.username}</td>
+                <td class="px-6 py-4">
+                    <select data-username="${user.username}" class="role-select bg-gray-700 border border-gray-600 text-white rounded-lg p-2">
+                        <option value="basico" ${user.role === 'basico' ? 'selected' : ''}>Básico</option>
+                        <option value="plus" ${user.role === 'plus' ? 'selected' : ''}>Plus</option>
+                        <option value="premium" ${user.role === 'premium' ? 'selected' : ''}>Premium</option>
+                        <option value="administrador" ${user.role === 'administrador' ? 'selected' : ''}>Administrador</option>
+                    </select>
+                </td>
+                <td class="px-6 py-4">${user.apiCallsMade}</td>
+                <td class="px-6 py-4">${user.lastApiCallDate}</td>
+            </tr>
+        `).join('');
+        container.innerHTML = `<div class="card rounded-xl shadow-lg overflow-hidden"><h2 class="text-xl font-bold p-4 md:p-6 text-white">Administración de Usuarios</h2><div class="overflow-x-auto"><table class="min-w-full text-sm text-left text-gray-300"><thead class="text-xs text-gray-400 uppercase bg-gray-900/50"><tr><th class="px-6 py-3">Usuario</th><th class="px-6 py-3">Rol</th><th class="px-6 py-3">Consultas Hoy</th><th class="px-6 py-3">Última Consulta</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
+        container.querySelectorAll('.role-select').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const username = e.target.dataset.username;
+                const newRole = e.target.value;
+                const userIndex = state.users.findIndex(u => u.username === username);
+                if (userIndex !== -1) {
+                    state.users[userIndex].role = newRole;
+                    saveUsers();
+                    showMessage(`Rol de ${username} actualizado a ${newRole}.`);
+                }
+            });
+        });
+    }
+
+    function renderProfilePanel() {
+        const container = document.getElementById('page-profile');
+        container.innerHTML = `
+            <div class="max-w-2xl mx-auto card rounded-xl shadow-lg p-8 text-center">
+                <h2 class="text-2xl font-bold text-white mb-6">Perfil de Usuario</h2>
+                <div class="space-y-4 text-lg">
+                    <p><span class="font-semibold text-gray-400">Usuario:</span> <span class="text-white">${state.currentUser.username}</span></p>
+                    <p><span class="font-semibold text-gray-400">Plan:</span> <span class="text-blue-400 font-bold capitalize">${state.currentUser.role}</span></p>
+                </div>
+                <div class="mt-8">
+                    <h3 class="text-xl font-bold text-white mb-2">Reinicio de Consultas</h3>
+                    <p id="countdown-timer" class="text-3xl font-mono text-green-400"></p>
+                </div>
+            </div>`;
+        
+        if (state.countdownIntervalId) clearInterval(state.countdownIntervalId);
+
+        const countdownElement = document.getElementById('countdown-timer');
+        state.countdownIntervalId = setInterval(() => {
+            const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Lisbon' }));
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+
+            const diff = tomorrow - now;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            countdownElement.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }, 1000);
+    }
+    
+    function renderPlansPage() {
+        const container = document.getElementById('page-plans');
+        const currentUserPlan = state.currentUser.role;
+
+        const plans = [
+            { name: 'Básico', uses: ROLE_LIMITS.basico, features: [`Análisis de ${ROLE_LIMITS.basico} activos por día`, 'Indicadores fundamentales', 'Exportación a PDF'], color: 'gray' },
+            { name: 'Plus', uses: ROLE_LIMITS.plus, features: [`Análisis de ${ROLE_LIMITS.plus} activos por día`, 'Todo lo del plan Básico', 'Soporte prioritario'], color: 'blue' },
+            { name: 'Premium', uses: ROLE_LIMITS.premium, features: [`Análisis de ${ROLE_LIMITS.premium} activos por día`, 'Todo lo del plan Plus'], color: 'indigo' }
+        ];
+
+        let plansHtml = `
+            <div class="card rounded-xl shadow-lg p-4 md:p-6">
+                <h2 class="text-2xl font-bold text-white mb-6 text-center">Nuestros Planes</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        `;
+
+        plans.forEach(plan => {
+            const isCurrentPlan = currentUserPlan === plan.name.toLowerCase();
+            plansHtml += `
+                <div class="card p-6 rounded-lg border-2 ${isCurrentPlan ? `border-blue-500` : `border-gray-700`} flex flex-col">
+                    <h3 class="text-xl font-bold text-center mb-4 ${isCurrentPlan ? `text-blue-400` : `text-white`}">${plan.name}</h3>
+                    <p class="text-4xl font-bold text-center mb-4">${plan.uses}<span class="text-lg font-medium text-gray-400">/día</span></p>
+                    <ul class="space-y-2 text-gray-300 flex-grow">
+                        ${plan.features.map(feature => `
+                            <li class="flex items-center">
+                                <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                ${feature}
+                            </li>
+                        `).join('')}
+                    </ul>
+                    ${isCurrentPlan ? `<div class="w-full mt-6 py-2 rounded-lg font-semibold bg-gray-600 text-center cursor-not-allowed">Plan Actual</div>` : ''}
+                </div>
+            `;
+        });
+
+        plansHtml += `</div></div>`;
+        container.innerHTML = plansHtml;
+    }
+
+    // --- FUNCIONES DE AYUDA ---
+    const getCorrelationColor = (correlation) => {
+        const hue = (correlation + 1) * 60;
+        const textColor = '#1f2937';
+        return { backgroundColor: `hsl(${hue}, 80%, 75%)`, color: textColor };
+    };
+    const getVisibleIndicators = (assetsData) => {
+        if (assetsData.length === 0) return {};
+        const visible = {};
+        Object.keys(indicatorConfig).forEach(key => {
+            if (assetsData.some(a => a.data[key] !== 'N/A' && a.data[key] !== null && a.data[key] !== undefined)) {
+                visible[key] = indicatorConfig[key];
+            }
+        });
+        return visible;
+    };
+    const getTrafficLightColor = (key, value) => {
+        const config = indicatorConfig[key];
+        if (!config || typeof value !== 'number') return 'bg-gray-600';
+        const { green, yellow, lowerIsBetter } = config;
+        if (lowerIsBetter) {
+            if (value <= green) return 'traffic-light-green';
+            if (value <= yellow) return 'traffic-light-yellow';
+            return 'traffic-light-red';
+        } else {
+            if (value >= green) return 'traffic-light-green';
+            if (value >= yellow) return 'traffic-light-yellow';
+            return 'traffic-light-red';
+        }
+    };
+    const formatLargeNumber = (num) => {
+        if (Math.abs(num) >= 1e12) return `${(num / 1e12).toFixed(2)}T`;
+        if (Math.abs(num) >= 1e9) return `${(num / 1e9).toFixed(2)}B`;
+        if (Math.abs(num) >= 1e6) return `${(num / 1e6).toFixed(2)}M`;
+        return num.toLocaleString('es-AR');
+    };
+    const setLoading = (isLoading) => {
+        state.isLoading = isLoading;
+        dom.addBtn.disabled = isLoading; 
+        dom.loader.style.display = isLoading ? 'block' : 'none'; 
+        dom.addBtn.querySelector('span').style.display = isLoading ? 'none' : 'inline'; 
+    };
+
+    // --- EXPORTAR A PDF ---
+    const exportToPdf = async () => {
+        const activePage = document.querySelector('.page-section.active');
+        if (!activePage || !activePage.firstChild) {
+             showMessage("No hay contenido para exportar en esta pestaña.");
+            return;
+        }
+        showMessage('Generando PDF...');
+        const pageContent = activePage.firstChild;
+
+        const spansToModify = activePage.id === 'page-fundamentals' ? pageContent.querySelectorAll('.traffic-light-green, .traffic-light-yellow, .traffic-light-red') : [];
+        spansToModify.forEach(span => {
+            span.dataset.originalClass = span.className;
+            const originalClass = span.className;
+            span.className = ''; 
+            if (originalClass.includes('green')) span.style.color = '#10B981';
+            else if (originalClass.includes('yellow')) span.style.color = '#F59E0B';
+            else if (originalClass.includes('red')) span.style.color = '#EF4444';
+        });
+
+        try {
+            const canvas = await html2canvas(pageContent, { 
+                scale: 2, 
+                useCORS: true, 
+                backgroundColor: '#111827' 
+            });
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] });
+            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+            pdf.save(`analisis-${state.activePage}.pdf`);
+            showMessage('Análisis exportado a PDF correctamente.');
+        } catch (err) {
+            console.error("Error al generar PDF:", err);
+            showMessage("Error al exportar el PDF.");
+        } finally {
+            spansToModify.forEach(span => {
+                span.className = span.dataset.originalClass;
+                span.style.color = '';
+                delete span.dataset.originalClass;
+            });
+        }
+    };
+
+    // --- EVENT LISTENERS ---
+    dom.showSignupLink.addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        dom.signinForm.style.display = 'none'; 
+        dom.signupForm.style.display = 'block';
+        dom.apiKeyWrapper.style.display = (state.users.length === 0) ? 'block' : 'none';
+    });
+    dom.showSigninLink.addEventListener('click', (e) => { e.preventDefault(); dom.signupForm.style.display = 'none'; dom.signinForm.style.display = 'block'; });
+    dom.signupBtn.addEventListener('click', handleSignUp);
+    dom.signinBtn.addEventListener('click', handleSignIn);
+    dom.logoutBtn.addEventListener('click', handleLogout);
+    dom.addBtn.addEventListener('click', handleAddTicker); 
+    dom.searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') dom.addBtn.click(); });
+    dom.pdfBtn.addEventListener('click', exportToPdf); 
+    dom.closeMessageModalBtn.addEventListener('click', hideMessage); 
+    dom.closeInfoModalBtn.addEventListener('click', hideInfoModal);
+    dom.navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            state.activePage = e.target.dataset.page;
+            renderApp();
+        });
+    });
+
+    // --- INICIALIZACIÓN ---
+    window.addEventListener('DOMContentLoaded', () => {
+        loadUsers();
+        dom.authContainer.style.display = 'flex';
+        dom.appContainer.style.display = 'none';
+    });
+    </script>
+</body>
+</html>

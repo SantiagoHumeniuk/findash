@@ -40,12 +40,10 @@ const NotFoundPage = React.lazy(() => import('./features/not-found/pages/not-fou
 const DashboardPage = React.lazy(() => import('./features/dashboard/pages/dashboard-page.tsx'));
 const AssetDetailPage = React.lazy(() => import('./features/asset-detail/pages/asset-detail-page.tsx'));
 const PortfolioPage = React.lazy(() => import('./features/portfolio/pages/portfolio-page.tsx'));
-const DividendsPage = React.lazy(() => import('./features/dividends/pages/dividends-page.tsx'));
+const BondsPage = React.lazy(() => import('./features/bonds/pages/bonds-page.tsx'));
 const NewsPage = React.lazy(() => import('./features/news/pages/news-page.tsx'));
-const EconomicCalendarPage = React.lazy(() => import('./features/economic-calendar/pages/EconomicCalendarPage.tsx'));
 const MarketMoversPage = React.lazy(() => import('./features/market-movers/pages/MarketMoversPage.tsx'));
 const ProfilePage = React.lazy(() => import('./features/profile/pages/profile-page.tsx'));
-const RiskPremiumPage = React.lazy(() => import('./features/risk-premium/pages/risk-premium-page.tsx'));
 const SuggestionsPage = React.lazy(() => import('./features/suggestions/pages/suggestion-page.tsx'));
 const AdminPage = React.lazy(() => import('./features/admin/pages/admin-page.tsx'));
 const RetirementCalculatorPage = React.lazy(() => import('./features/retirement/pages/retirement-calculator-page.tsx'));
@@ -118,21 +116,21 @@ const router = createBrowserRouter([
                         )
                     },
                     {
-                        path: "watchlist",
+                        path: "bonos",
                         element: (
-                            <ErrorBoundary level="feature" featureName="Watchlist">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando watchlist..." />}>
-                                    <WatchlistPage />
+                            <ErrorBoundary level="feature" featureName="Bonds">
+                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando calculador de bonos..." />}>
+                                    <BondsPage />
                                 </Suspense>
                             </ErrorBoundary>
                         )
                     },
                     {
-                        path: "dividends",
+                        path: "watchlist",
                         element: (
-                            <ErrorBoundary level="feature" featureName="Dividends">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando dividendos..." />}>
-                                    <DividendsPage />
+                            <ErrorBoundary level="feature" featureName="Watchlist">
+                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando watchlist..." />}>
+                                    <WatchlistPage />
                                 </Suspense>
                             </ErrorBoundary>
                         )
@@ -148,25 +146,16 @@ const router = createBrowserRouter([
                         )
                     },
                     {
-                        path: "economic-calendar",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="Economic Calendar">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Loading economic calendar..." />}>
-                                    <EconomicCalendarPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
-                    },
-                    {
                         path: "market-movers",
                         element: (
                             <ErrorBoundary level="feature" featureName="Market Movers">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Loading market data..." />}>
+                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando movimientos del mercado..." />}>
                                     <MarketMoversPage />
                                 </Suspense>
                             </ErrorBoundary>
                         )
                     },
+
                     {
                         path: "insights",
                         element: (
@@ -188,7 +177,6 @@ const router = createBrowserRouter([
                         )
                     },
                     { path: "profile", element: <Suspense fallback={<PageSkeleton />}><ProfilePage /></Suspense> },
-                    { path: "risk-premium", element: <Suspense fallback={<PageSkeleton />}><RiskPremiumPage /></Suspense> },
                     { path: "suggestions", element: <Suspense fallback={<PageSkeleton />}><SuggestionsPage /></Suspense> },
                     { path: "retirement-calculator", element: <Suspense fallback={<PageSkeleton />}><RetirementCalculatorPage /></Suspense> },
 

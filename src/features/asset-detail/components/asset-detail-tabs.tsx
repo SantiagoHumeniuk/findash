@@ -10,6 +10,7 @@ import { Card } from '../../../components/ui/card';
 import { HistoricalPerformanceChart } from '../../dashboard/components';
 import { AssetGradesTab } from './ratings/asset-grades-tab';
 import { AssetNewsTab } from './news/asset-news-tab';
+import { AssetFundamentalsTrends } from './fundamentals/asset-fundamentals-trends';
 
 /**
  * Props para el componente AssetDetailTabs.
@@ -31,7 +32,7 @@ interface AssetDetailTabsProps {
 export function AssetDetailTabs({ asset }: AssetDetailTabsProps) {
   return (
     <Tabs defaultValue="profile" className="w-full">
-      <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto">
+      <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto">
         <TabsTrigger value="profile" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
           <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Perfil</span>
@@ -56,6 +57,11 @@ export function AssetDetailTabs({ asset }: AssetDetailTabsProps) {
           <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Calificaciones de analistas</span>
           <span className="sm:hidden">Ratings</span>
+        </TabsTrigger>
+        <TabsTrigger value="evolution" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
+          <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <span className="hidden sm:inline">Evolución</span>
+          <span className="sm:hidden">Evol</span>
         </TabsTrigger>
       </TabsList>
 
@@ -85,6 +91,10 @@ export function AssetDetailTabs({ asset }: AssetDetailTabsProps) {
 
         <TabsContent value="ratings" className="mt-4 sm:mt-6">
           <AssetGradesTab asset={asset} />
+        </TabsContent>
+
+        <TabsContent value="evolution" className="mt-4 sm:mt-6">
+          <AssetFundamentalsTrends asset={asset} />
         </TabsContent>
       </motion.div>
     </Tabs>

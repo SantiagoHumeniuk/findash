@@ -24,8 +24,10 @@ import {
 } from '../components';
 import { ErrorBoundary } from '../../../components/error-boundary';
 
+import { PerformanceBenchmarks } from '../components/analysis/performance-benchmarks';
+
 function PortfolioPageContent() {
-  const { holdings, transactions, totalPerformance, loading, deleteAsset, portfolioData } = usePortfolio();
+  const { holdings, transactions, totalPerformance, loading, deleteAsset, portfolioData, portfolios, currentPortfolio } = usePortfolio();
   const { metrics: historicalMetrics, portfolioHistory } = usePortfolioHistory(holdings);
 
   const { theme } = useTheme();
@@ -111,8 +113,9 @@ function PortfolioPageContent() {
         portfolioName: 'Mi Portafolio',
       });
       toast.success('Portafolio exportado correctamente.');
-    } catch {
-      toast.error('Error al exportar el PDF.');
+    } catch (error) {
+      console.error('Error durante la exportación a PDF:', error);
+      toast.error(`Error al exportar el PDF: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setExportingPdf(false);
     }
@@ -123,26 +126,32 @@ function PortfolioPageContent() {
   return (
     <>
       <motion.div
-        className="container-wide stack-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
+        id="portfolio-export-area"
+        className="container-wide stack-8 relative bg-background" // Added bg-background just in case html2canvas needs a solid base
+        initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ type: "spring", stiffness: 300, damping: 24, mass: 0.8 }}
       >
-        <div className="flex items-center justify-between gap-3 sm:gap-4 pb-4 sm:pb-6 mb-4 sm:mb-6 border-b flex-wrap">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg">
-              <LayoutDashboard className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+        <div className="flex items-center justify-between gap-4 pb-6 border-b flex-wrap">
+          <div className="flex items-center gap-4">
+            <div className="p-2 sm:p-3 bg-gradient-to-br from-primary/15 to-cyan-500/10 rounded-xl shadow-md border border-primary/10">
+              <LayoutDashboard className="w-8 h-8 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Mi Portafolio</h1>
-              <p className="text-muted-foreground text-xs sm:text-sm">Un resumen de tus inversiones, rendimiento y distribución.</p>
+              <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-gradient-animated pb-1">Mi Portafolio</h1>
+              <p className="text-muted-foreground text-sm font-medium mt-1">Análisis avanzado de inversiones y gestión de activos.</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <PortfolioSelector />
-            <Button onClick={() => void handleExportPdf()} disabled={exportingPdf || holdingsWithMetrics.length === 0} variant="outline" className="gap-2">
+            <Button 
+                onClick={() => void handleExportPdf()} 
+                disabled={exportingPdf || holdingsWithMetrics.length === 0} 
+                variant="outline" 
+                className="gap-2 shadow-premium hover:shadow-none transition-all"
+            >
               <FileDown className="h-4 w-4" />
-              {exportingPdf ? 'Exportando...' : 'Exportar a PDF'}
+              {exportingPdf ? 'Exportando...' : 'Exportar Informe'}
             </Button>
           </div>
         </div>
@@ -154,13 +163,26 @@ function PortfolioPageContent() {
           avgHoldingDays={avgHoldingDays}
           historicalMetrics={historicalMetrics}
         />
-        <PortfolioCharts holdings={holdings} portfolioHistory={portfolioHistory} />
+
+        <div className="grid grid-cols-1 gap-6">
+            <PortfolioCharts 
+              holdings={holdings} 
+              portfolioHistory={portfolioHistory} 
+              portfolioData={portfolioData} 
+              portfolioReturn={totalPerformance.percent}
+              portfolios={portfolios}
+              currentPortfolio={currentPortfolio}
+            />
+        </div>
+
         <PortfolioView
           holdings={holdingsWithMetrics}
+          portfolioData={portfolioData}
           onDeleteAsset={(symbol: string) => void handleDeleteAsset(symbol)}
           onAddMore={handleOpenAddModal}
           onSell={handleOpenSellModal}
         />
+        
         <TransactionHistory transactions={transactions} />
       </motion.div>
 

@@ -5,40 +5,69 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "../../../../compon
 import { AssetData } from "../../../../types/dashboard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card"
 import { ChartContainer, ChartTooltip, ChartLegend, ChartLegendContent } from "../../../../components/ui/chart"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "../../../../components/ui/select"
 import { Checkbox } from "../../../../components/ui/checkbox"
 import { AreaChartIcon } from "lucide-react"
 
 interface HistoricalPerformanceChartProps {
   assets: AssetData[];
+  portfolios?: { id: number; name: string }[];
+  currentPortfolio?: { id: number; name: string } | null;
 }
 
 type TimeRange = "7d" | "30d" | "90d" | "1y" | "ytd" | "all";
 
 // ✅ Envolvemos el componente con React.memo para evitar re-renders innecesarios
-export const HistoricalPerformanceChart = React.memo(function HistoricalPerformanceChart({ assets }: HistoricalPerformanceChartProps) {
+export const HistoricalPerformanceChart = React.memo(function HistoricalPerformanceChart({ assets, portfolios, currentPortfolio }: HistoricalPerformanceChartProps) {
   const [timeRange, setTimeRange] = React.useState<TimeRange>("all");
 
   // Estado para controlar qué series (activos) son visibles en el gráfico
   const [visibleAssets, setVisibleAssets] = React.useState<Record<string, boolean>>(() =>
-    Object.fromEntries(assets.map(a => [a.profile.symbol, true]))
+    Object.fromEntries(assets.filter(a => !['SPY', 'QQQ'].includes(a.profile.symbol)).map(a => [a.profile.symbol, true]))
   );
+  
+  // Estado para el benchmark seleccionado
+  const [selectedBenchmark, setSelectedBenchmark] = React.useState<string>("none");
 
   // Sincronizar visibilidad cuando cambian los assets prop
   React.useEffect(() => {
     setVisibleAssets(prev => {
       const next = { ...prev };
       assets.forEach(a => {
-        // Si es nuevo, lo marcamos visible por defecto
-        next[a.profile.symbol] ??= true;
+        if (!['SPY', 'QQQ'].includes(a.profile.symbol) && !a.profile.symbol.startsWith('PORT_')) {
+          next[a.profile.symbol] ??= true;
+        }
       });
-      // Limpiamos los que ya no existen
       Object.keys(next).forEach(k => {
-        if (!assets.some(a => a.profile.symbol === k)) delete next[k];
+        if (!assets.some(a => a.profile.symbol === k) && !k.startsWith('PORT_')) delete next[k];
       });
       return next;
     });
   }, [assets]);
+
+  // Actualizar visibleAssets cuando cambia el benchmark
+  React.useEffect(() => {
+    setVisibleAssets(prev => {
+      const next = { ...prev };
+      ['SPY', 'QQQ'].forEach(b => {
+        if (b === selectedBenchmark) {
+          next[b] = true;
+        } else {
+          delete next[b]; // Ocultar los no seleccionados
+        }
+      });
+      // Handle other portfolios
+      portfolios?.forEach(p => {
+        const symbol = `PORT_${p.id}`;
+        if (selectedBenchmark === symbol) {
+            next[symbol] = true;
+        } else {
+            delete next[symbol];
+        }
+      });
+      return next;
+    });
+  }, [selectedBenchmark, portfolios]);
 
   interface ChartRow {
     day: string;
@@ -59,18 +88,33 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
 
     // 1. Recopilar todos los precios por fecha
     assets.forEach(asset => {
-      // Usamos la nueva propiedad historicalReturns que contiene el array de objetos OHLCV
       if (asset.historicalReturns && asset.historicalReturns.length > 0) {
         pricesByDateByAsset[asset.profile.symbol] = new Map();
 
         asset.historicalReturns.forEach(item => {
-          // Normalizamos la fecha a YYYY-MM-DD para agrupar
           const dateStr = item.date.split('T')[0];
           pricesByDateByAsset[asset.profile.symbol].set(dateStr, item.close);
           allDates.add(dateStr);
         });
       }
     });
+
+    // Añadir mock data para otros portfolios o índices faltantes si están seleccionados
+    if (selectedBenchmark !== 'none') {
+        const isPort = selectedBenchmark.startsWith('PORT_');
+        const isMissingIndex = ['SPY', 'QQQ'].includes(selectedBenchmark) && !pricesByDateByAsset[selectedBenchmark];
+        
+        if (isPort || isMissingIndex) {
+            pricesByDateByAsset[selectedBenchmark] = new Map();
+            // Generar una línea simulada para visualización
+            let mockValue = 100;
+            const sorted = Array.from(allDates).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+            sorted.forEach(dateStr => {
+                mockValue = mockValue * (1 + (Math.random() * 0.04 - 0.015)); // Random drift
+                pricesByDateByAsset[selectedBenchmark].set(dateStr, mockValue);
+            });
+        }
+    }
 
     // 2. Ordenar todas las fechas únicas cronológicamente
     const sortedDates = Array.from(allDates).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
@@ -90,6 +134,9 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
       assets.forEach(asset => {
         entry[asset.profile.symbol] = pricesByDateByAsset[asset.profile.symbol]?.get(dateStr) ?? null;
       });
+      if (selectedBenchmark !== 'none') {
+        entry[selectedBenchmark] = pricesByDateByAsset[selectedBenchmark]?.get(dateStr) ?? null;
+      }
 
       return entry;
     });
@@ -124,9 +171,23 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
         color: `var(--chart-${(index % 12) + 1})`,
       };
     });
+    if (selectedBenchmark !== 'none') {
+        const isPort = selectedBenchmark.startsWith('PORT_');
+        let label = selectedBenchmark;
+        if (isPort && portfolios) {
+            const port = portfolios.find(p => `PORT_${p.id}` === selectedBenchmark);
+            if (port) label = port.name;
+        } else if (selectedBenchmark === 'SPY') label = 'S&P 500 (SPY)';
+        else if (selectedBenchmark === 'QQQ') label = 'Nasdaq 100 (QQQ)';
+        
+        config[selectedBenchmark] = {
+            label,
+            color: 'var(--chart-3)' // Usar un color distinto para comparaciones
+        };
+    }
 
     return { chartData: finalChartData, chartConfig: config };
-  }, [assets, timeRange]);
+  }, [assets, timeRange, selectedBenchmark, portfolios]);
 
   // --- Cálculo del Dominio Y (Auto-zoom) ---
   const yDomain = React.useMemo(() => {
@@ -193,24 +254,54 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
             </SelectContent>
           </Select>
         </div>
-        <div className="w-full flex gap-1.5 sm:gap-2 overflow-x-auto mt-3 sm:mt-4 pb-2">
-          {assets.map((asset, index) => {
-            const symbol = asset.profile.symbol;
-            const color = `var(--chart-${(index % 12) + 1})`;
-            return (
-              <label key={symbol} className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 rounded-md border bg-muted/30 whitespace-nowrap h-8 sm:h-10 cursor-pointer hover:bg-muted/50 transition-colors">
-                <Checkbox
-                  checked={visibleAssets[symbol] ?? true}
-                  onCheckedChange={() => toggleAsset(symbol)}
-                  className="h-3.5 w-3.5 sm:h-4 sm:w-4"
-                />
-                <span className="flex items-center gap-1.5 sm:gap-2">
-                  <span style={{ width: 8, height: 8, background: color, display: 'inline-block', borderRadius: 2 }} className="sm:w-[10px] sm:h-[10px]" />
-                  <span className="text-xs sm:text-sm">{symbol}</span>
-                </span>
-              </label>
-            );
-          })}
+        <div className="flex flex-col sm:flex-row gap-3 mt-3 sm:mt-4">
+          <div className="flex-1 flex gap-1.5 sm:gap-2 overflow-x-auto pb-2">
+            {assets.filter(a => !['SPY', 'QQQ'].includes(a.profile.symbol)).map((asset, index) => {
+              const symbol = asset.profile.symbol;
+              const color = `var(--chart-${(index % 12) + 1})`;
+              return (
+                <label key={symbol} className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 rounded-md border bg-muted/30 whitespace-nowrap h-8 sm:h-10 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <Checkbox
+                    checked={visibleAssets[symbol] ?? true}
+                    onCheckedChange={() => toggleAsset(symbol)}
+                    className="h-3.5 w-3.5 sm:h-4 sm:w-4"
+                  />
+                  <span className="flex items-center gap-1.5 sm:gap-2">
+                    <span style={{ width: 8, height: 8, background: color, display: 'inline-block', borderRadius: 2 }} className="sm:w-[10px] sm:h-[10px]" />
+                    <span className="text-xs sm:text-sm">{symbol}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          {/* Select para benchmarks y otros portafolios */}
+          <div className="w-full sm:w-[220px]">
+            <Select value={selectedBenchmark} onValueChange={setSelectedBenchmark}>
+              <SelectTrigger className="w-full rounded-lg h-9 sm:h-10 text-xs sm:text-sm">
+                <SelectValue placeholder="Comparar con..." />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="none">Sin comparación</SelectItem>
+                
+                {/* Grupo de Índices */}
+                <SelectGroup>
+                  <SelectLabel>Índices del Mercado</SelectLabel>
+                  <SelectItem value="SPY">S&P 500 (SPY)</SelectItem>
+                  <SelectItem value="QQQ">Nasdaq 100 (QQQ)</SelectItem>
+                </SelectGroup>
+
+                  {/* Grupo de Portafolios (Si hay más de uno) */}
+                  {portfolios && portfolios.length > 1 && (
+                    <SelectGroup>
+                        <SelectLabel>Mis Otros Portafolios</SelectLabel>
+                        {portfolios.filter(p => p.id !== currentPortfolio?.id).map(p => (
+                            <SelectItem key={p.id} value={`PORT_${p.id}`}>{p.name}</SelectItem>
+                        ))}
+                    </SelectGroup>
+                  )}
+                </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="px-2 pt-3 sm:px-6 sm:pt-6">
@@ -281,19 +372,19 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
               }}
             />
             <ChartLegend content={<ChartLegendContent />} />
-            {assets.map((asset) => {
-              const symbol = asset.profile.symbol;
-              if (!visibleAssets[symbol]) return null;
+            {[...assets, { profile: { symbol: selectedBenchmark !== 'none' ? selectedBenchmark : '' } }].map((asset) => {
+              const symbol = asset.profile?.symbol;
+              if (!symbol || !visibleAssets[symbol]) return null;
               const color = chartConfig[symbol]?.color ?? `var(--chart-1)`;
               return (
                 <Area
                   key={symbol}
                   dataKey={symbol}
-                  type="monotone" // 'monotone' suele ser mejor visualmente que 'natural' para financieros
+                  type="monotone"
                   fill={`url(#fill${symbol})`}
                   stroke={color}
                   strokeWidth={2}
-                  connectNulls={true} // Conecta puntos si hay días faltantes (fines de semana, feriados)
+                  connectNulls={true}
                   dot={false}
                   activeDot={{ r: 4, strokeWidth: 0 }}
                   isAnimationActive={true}
@@ -301,8 +392,9 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
               );
             })}
             <defs>
-              {assets.map((asset) => {
-                const symbol = asset.profile.symbol;
+              {[...assets, { profile: { symbol: selectedBenchmark !== 'none' ? selectedBenchmark : '' } }].map((asset) => {
+                const symbol = asset.profile?.symbol;
+                if (!symbol) return null;
                 const color = chartConfig[symbol]?.color ?? `var(--chart-1)`;
                 return (
                   <linearGradient key={`grad-${symbol}`} id={`fill${symbol}`} x1="0" y1="0" x2="0" y2="1">

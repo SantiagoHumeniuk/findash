@@ -1,0 +1,1587 @@
+
+
+
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+ <meta http-equiv="Expires" content="0">
+  <meta http-equiv="Last-Modified" content="0">
+  <meta http-equiv="Cache-Control" content="no-cache, mustrevalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+
+<meta charset="UTF-8">
+<meta name="description"
+	content="Lo que se muestra como descripcion de la pagina desde el navegador" />
+<meta name="keywords" content="pruebahtml, viendo" />
+<!-- texto con el que se busca en navgadores: si en google busco pruebahtml lo va a asociar con mi pagina, si son mas de uno van separados por coma -->
+<title>Calculadora Bonos</title>
+<!-- para poner un acento se pone &iacute; (i es la letra que se quiere acentuar)-->
+
+
+<link rel="stylesheet"
+	href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css"
+	integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB"
+	crossorigin="anonymous">
+<script src="static/js/jquery-3.1.1.min.js"></script>
+<script
+	src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
+	integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+	crossorigin="anonymous"></script>
+<script
+	src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"
+	integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T"
+	crossorigin="anonymous"></script>
+	
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="static/js/graficos.js"></script>
+
+<script src="static/js/calcjs.js"></script>
+
+<!-- <script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>  -->
+
+<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap4.min.js"></script>		
+
+
+
+<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.1/css/bootstrap.css">
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css">	
+
+<link href="static/css/estiloFormu.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.2/jquery-confirm.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.2/jquery-confirm.min.js"></script>
+
+</head>
+<body id="body">
+
+	<head>	
+	
+	<script src="static/js/cookie.js"></script>
+	<script src="static/js/headerjs.js"></script>
+
+	
+	<link rel="shortcut icon" href="/images/favicon.png">
+	<link rel="shortcut icon" href="/images/favicon.ico">
+	
+	<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+	<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap4.min.js"></script>
+	
+	<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css">	
+	
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.2/jquery-confirm.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.2/jquery-confirm.min.js"></script>
+	<link rel="stylesheet" href="static/css/estiloHead.css">
+</head>
+
+<body>
+
+<nav id="header" class="navbar navbar-expand-lg navbar-dark bg-dark nvcolr">
+	<a class="navbar-brand" href="/calculadoraDeBonos/"><img src="static/imagenes/KK.png"></a>
+
+	<!-- Cuando se achica la pantalla se muestra lo que esta en navbar-toggler-->
+	<button class="navbar-toggler" type="button" data-toggle="collapse"
+		data-target="#navbarSupportedContent"
+		aria-controls="navbarSupportedContent" aria-expanded="false"
+		aria-label="Toggle navigation">
+		<span class="navbar-toggler-icon"></span>
+	</button>
+
+	<div class="collapse navbar-collapse" id="navbarSupportedContent">
+		<ul class="navbar-nav mr-auto">
+			<li class="nav-item"><a class="nav-link" href="/calculadoraDeBonos/calculadoraBonos" style="font-size: 16px; margin-left: 17px;">BONOS</a></li>
+			
+			<li class="nav-item"><a class="nav-link" href="/calculadoraDeBonos/letras?tip=Letes" style="font-size: 16px; margin-left: 17px;">LETEs</a></li>
+			<li class="nav-item"><a class="nav-link" href="/calculadoraDeBonos/letras?tip=Ledes" style="font-size: 16px; margin-left: 17px;">LEDESs</a></li>
+			<li class="nav-item"><a class="nav-link" href="/calculadoraDeBonos/letras?tip=Lebads" style="font-size: 16px; margin-left: 17px;">LEBADs</a></li>
+			<li class="nav-item"><a class="nav-link" href="/calculadoraDeBonos/letras?tip=Lecers" style="font-size: 16px; margin-left: 17px;">LECERs</a></li>
+			<li class="nav-item"><a class="nav-link" href="/calculadoraDeBonos/letras?tip=Lecaps" style="font-size: 16px; margin-left: 17px;">LECAPs</a></li>
+			<li class="nav-item"><a class="nav-link" href="/calculadoraDeBonos/letras?tip=Lelinks" style="font-size: 16px; margin-left: 17px;">LELINKs</a></li>
+			<li class="nav-item"><a class="nav-link" href="/calculadoraDeBonos/letras?tip=LEPASE" style="font-size: 16px; margin-left: 17px;">LEPASEs</a></li>
+			
+			<li class="nav-item"><a class="nav-link" href="/calculadoraDeBonos/favoritos" style="font-size: 16px; margin-left: 17px;">WATCHLIST</a></li>			
+			<li class="nav-item"><a class="nav-link" href="/calculadoraDeBonos/consulta" style="font-size: 16px; margin-left: 17px;">CONSULTAR</a></li>			
+			<li class="nav-item"><a class="nav-link" href="/calculadoraDeBonos/ayuda" style="font-size: 16px; margin-left: 17px;">AYUDA</a></li>			
+			
+			<!-- ejemplo de menu desactivado  	
+					<li class="nav-item">
+						<a class="nav-link disabled" href="#">Disabled</a>
+					</li>
+				-->
+			<!-- EJEMPLO DE DESPLEGABLE 
+					<li class="nav-item dropdown">
+						<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+						  Dropdown
+						</a>
+						<div class="dropdown-menu" aria-labelledby="navbarDropdown">
+							<a class="dropdown-item" href="#">Action</a>
+							<a class="dropdown-item" href="#">Another action</a>
+							<div class="dropdown-divider"></div>
+							<a class="dropdown-item" href="#">Something else here</a>
+						</div>
+					</li>
+				-->
+
+		</ul>
+		
+		<ul class="nav navbar-right pull-right top-nav"">
+					<!-- <li class="dropdown dropdown-notification"> <a class="dropdown-toggle" href="javascript:;" data-toggle="dropdown" data-hover="dropdown" data-close-others="true" aria-expanded="true"> <i class="fa fa-bell-o"></i> <span class="badge badge-default"> 3 </span> </a>
+						<ul class="dropdown-menu">
+							<li class="external">
+								<h3> <span class="bold">12 pending</span> notifications</h3>
+								<a href="page_user_profile_1.html">view all</a> 
+							</li>
+							<li>
+								<ul class="dropdown-menu-list">
+									<li> <a href="javascript:;"> <span class="time">just now</span> <span class="details"> <span class="label label-sm label-icon label-success"> <i class="fa fa-plus"></i> </span> New user registered. </span> </a> </li>
+									<li> <a href="javascript:;"> <span class="time">3 mins</span> <span class="details"> <span class="label label-sm label-icon label-danger"> <i class="fa fa-bolt"></i> </span> Server #12 overloaded. </span> </a> </li>
+									<li> <a href="javascript:;"> <span class="time">10 mins</span> <span class="details"> <span class="label label-sm label-icon label-warning"> <i class="fa fa-bell-o"></i> </span> Server #2 not responding. </span> </a> </li>
+									<li> <a href="javascript:;"> <span class="time">14 hrs</span> <span class="details"> <span class="label label-sm label-icon label-info"> <i class="fa fa-bullhorn"></i> </span> Application error. </span> </a> </li>
+								</ul>
+							</li>
+						</ul>
+					</li> -->
+								
+					<li class="nav-item dropdown">
+						<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							
+							<div style="text-align: center; padding-bottom: 5px;" >
+								<img class="img-circle"  src="static/imagenes/clien.png" width="35">
+								<p style="color:white; font-size: 11px; margin:0px; margin-top:3px;" id="nombreUsuario"></p>
+							</div>
+							
+						</a>
+						<div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+							<!--  <a class="dropdown-item" href="#">Action</a>
+							<a class="dropdown-item" href="#">Another action</a>-->
+							<a class="dropdown-item" data-toggle="modal" data-target="#modalnotificaciones" href="#modalnotificaciones">Notificaciones</a>
+							<a class="dropdown-item" data-toggle="modal" data-target="#modalFavotitos" href="#modalFavotitos">Administrar Watchlist</a>
+							<div class="dropdown-divider"></div> 
+							<a class="dropdown-item" id="pasarBonosCondiciones" style="display:none;">Pasar Bonos Condiciones</a>	
+							<a class="dropdown-item" id="pasarCierres" style="display:none;">Pasar Cierres</a>							 
+							<a class="dropdown-item" href="/calculadoraDeBonos/login">Cerrar Sesión</a>
+						</div>
+					</li>
+				
+			</ul>
+	
+	</div>
+	
+</nav>
+
+
+
+<div class="modal fade bd-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true" id="modalFavotitos">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+     <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Bonos Favoritos</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body"> 
+       	 
+ 			<div class="btn-group btn-group-toggle" data-toggle="buttons">
+			  <label id="botonTodos"  class="btn btn-primary active">
+			    <input type="radio" name="options" id="option1" autocomplete="off" checked>Todos los bonos
+			  </label>
+			  <label id="botonFav" class="btn btn-primary">
+			    <input type="radio" name="options" id="option2" autocomplete="off">Solo favoritos
+			  </label>			 
+			</div>      	
+        	<table ID="tablaFavoritos" class="table table-striped table-bordered" style="width:100%">
+				<thead>
+					<tr>
+						<th width="4%"><label class='control-label'>Ticker</label></th>															
+						<th width="95%"><label class='control-label'>Descripcion</label></th>						
+						<th width="1%"><label class='control-label'>Favorito</label></th>
+					</tr>
+				</thead>
+				<tbody></tbody>																										
+			</table>
+			
+			  <div class="modal-footer">
+        	
+        	  <button type="button" id="savebtn" class="btn btn-primary">Guardar</button>
+       		 </div>
+			
+      </div>     
+    </div>
+  </div>
+</div>
+
+
+
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"82f1cabe933946299172addb6a72c9f9","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+
+
+
+	<div class="container-fluid fill">
+
+		<div class="container-fluid fill" id="ticker">
+			<div class="row">
+				<div class="col-md-8 order-md-1">
+
+					<div class="row">
+						<div class="col-md-3 order-md-1">
+							<h4>Ticker</h4>							
+							<select id="selecTicker" autocomplete="off" class="custom-select d-block w-10 letras INPUT"></select>
+						</div>
+						<div class="col-md-3 order-md-2">
+							<h4>Buscador de Bono</h4>
+							<input autocomplete="off" id="buscarBono" class="form-control"
+								placeholder="Ingrese palabra clave">
+						</div>
+						<div class="col-md-5 order-md-3">
+							<select autocomplete="off" class="custom-select d-block w-10"
+								id="selecBonoDesc" style="margin-top: 29px;">
+								<option value="" disabled selected>Resultado de Búqueda</option>
+							</select>
+						</div>
+						<div id="compartir_div" class="col-md-1 order-md-5" style="display: none">									
+							<button class="btn btn-primary" id="compartirbtn" STYLE="background: #093f91; margin-top:29px;" type="submit" >Compartir</button>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-12 order-md-1">
+							<h2 id="descBonoH"
+								style="min-width: 500px; padding-top: 40px; margin-bottom: 0px;"></h2>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-md-4 order-md-5" style="">
+					<div class="pull-right">
+						<h4>Liquidación</h4>
+						<div class="card bg-primary text-white pull-right ">
+							<div class="card-header ch" style="background: #093f91;">
+								<div class="row">
+									<div class="col-md-6 order-md-1 mb-1">
+										<label class='control-label letras'>Fecha de Hoy</label>
+									</div>
+									<div class="col-md-6 order-md-2 mb-1">
+										<input autocomplete="off" id="fechaHoyinp" type="date"
+											required="required"
+											class="form-control letras INPUT fechaEstilo"
+											placeholder="Promo code">
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-md-6 order-md-1 mb-1">
+										<label class='control-label letras'>Plazo de
+											Liquidación</label>
+									</div>
+									<div class="col-md-6 order-md-2 mb-1">
+										<select autocomplete="off" id="fechainp"
+											class="custom-select d-block w-10 letras INPUT" id="country"
+											required>
+											<option>T+0</option>
+											<option selected="selected">T+1</option>											
+											<option>MANUAL</option>
+										</select>
+									</div>
+								</div>
+								<div class="row">
+									<div class="col-md-6 order-md-1 mb-1">
+										<label class='control-label letras'>Fecha de
+											Liquidación</label>
+									</div>
+									<div class="col-md-6 order-md-2 mb-1">										
+										<input autocomplete="off" id="fechaLiqinp" type="date" class="custom-select d-block w-10 letras INPUT" required="required" readonly>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<hr>
+		</div>
+
+
+
+		<section id="tabs" class="pt-0" style="background: #EDEDED">
+		<div class="container-fluid fill" id="general">
+
+			<div class="row">
+				<div class="col-xs-12" style="width: 100%;">
+					<nav>
+					<div class="nav nav-tabs nav-fill" id="nav-tab" role="tablist"  ">
+						<a class="nav-item nav-link active" id="nav-DescTec-tab"
+							data-toggle="tab" href="#nav-DescTec" role="tab"
+							aria-controls="nav-DescTec" aria-selected="true" style="color:#343a40;""> Calculadora</a> 
+						<a class="nav-item nav-link" id="nav-sensibilidad-tab"
+							data-toggle="tab" href="#nav-sensibilidad" role="tab"
+							aria-controls="nav-sensibilidad" aria-selected="false" style="color:#343a40;"  >Tablas de Sensibilidad</a>
+						<a class="nav-item nav-link"						
+							id="nav-mercado-tab" data-toggle="tab"
+							href="#nav-mercado" role="tab"
+							aria-controls="nav-mercado" aria-selected="false" style="color:#093f91;" >Comparar Bonos</a>
+						<a class="nav-item nav-link"
+							id="nav-cotizaciones-tab" data-toggle="tab"
+							href="#nav-cotizaciones" role="tab"
+							aria-controls="nav-cotizaciones" aria-selected="false" style="color:#343a40;" >Últimas Cotizaciones</a>
+						
+						<a class="nav-item nav-link"
+							id="nav-condEm-tab" data-toggle="tab"
+							href="#nav-condEm" role="tab"
+							aria-controls="nav-condEm" aria-selected="false" style="color:#343a40;" >Condiciones de Emision</a>
+							
+						<a class="nav-item nav-link"
+							id="nav-avisospag-tab" data-toggle="tab"
+							href="#nav-avisospag" role="tab"
+							aria-controls="nav-avisospag" aria-selected="false" style="color:#343a40;" >Avisos de Pago</a>	
+							
+													
+					</div>
+					</nav>
+					<div class="tab-content py-3 px-3 px-sm-0" id="nav-tabContent">
+						<div class="tab-pane fade show active" id="nav-DescTec"
+							role="tabpanel" aria-labelledby="nav-DescTec-tab">
+							<div class="row">
+								<div class="col-md-5 order-md-1 mb-1" style="padding: 4px;">
+									<div class="card" style="width: 100%; height: 100%;">
+										<div class="card-body">
+											<div>
+												<h4 class="titulo">Descripción Técnica</h4>
+											</div>
+
+											<table class="table table-striped table-bordered descrip"
+												style="margin-bottom: 0px;">
+												<tbody>
+													<tr>
+														<td width="60%"><label class='control-label'>Moneda
+																de emisión</label></td>
+														<td width="40%" style="text-align: center;"><label
+															id="monedaEmLab" class='control-label'></label></td>
+													</tr>
+													<tr>
+														<td><label class='control-label'>Cupón</label></td>
+														<td style="text-align: center;"><label id="cupLab"
+															class='control-label'></label></td>
+													</tr>
+													<tr>
+														<td><label class='control-label'>Tasa mínima</label></td>
+														<td style="text-align: center;"><label id="tasMinLab"
+															class='control-label'></label></td>
+													</tr>
+													<tr>
+														<td><label class='control-label'>Tasa máxima</label></td>
+														<td style="text-align: center;"><label
+															id="tasaMaxLab" class='control-label'></label></td>
+													</tr>
+													<tr>
+														<td><label id="callTitLab" class='control-label'>Call</label>
+														</td>
+														<td style="text-align: center;"><label id="callLab"
+															class='control-label'></label></td>
+													</tr>
+													<tr>
+														<td><label class='control-label'>Monto
+																nominal vigente en moneda de emisión</label></td>
+														<td style="text-align: center;"><label
+															id="monNomVigLab" class='control-label'></label></td>
+													</tr>
+													<tr>
+														<td><label class='control-label'>Fecha de
+																emisión</label></td>
+														<td style="text-align: center;"><label
+															id="fechaEmiLab" class='control-label'></label></td>
+													</tr>
+													<tr>
+														<td><label class='control-label'>Fecha
+																vencimiento</label></td>
+														<td style="text-align: center;"><label
+															id="fechaVencLab" class='control-label'></label></td>
+													</tr>
+													<tr>
+														<td><label class='control-label'>Freq. anual
+																pago renta</label></td>
+														<td style="text-align: center;"><label
+															id="frecAnualLab" class='control-label'></label></td>
+													</tr>
+													<tr>
+														<td><label class='control-label'>Base cálculo
+																intereses</label></td>
+														<td style="text-align: center;"><label
+															id="baseCalcLab" class='control-label'></label></td>
+													</tr>
+													<tr>
+														<td><label class='control-label' id="diasHabPrevTitLab" >Días hábiles
+																previos al cúpon para cálculo de ajuste</label></td>
+														<td style="text-align: center;"><label
+															id="diasHabPrevLab" class='control-label'></label></td>
+													</tr>
+													<tr class="columnaAjustaPor">
+														<td>
+															<div class="row">
+																<div class="col-md-11 order-md-1">
+																	<label class='control-label'>Ajusta Por</label>
+																</div>
+																<div class="col-md-1 order-md-2"></div>
+
+															</div>
+														</td>
+														<td style="text-align: center;"><label
+															id="ajustaPorLab" class='control-label'></label></td>
+
+													</tr>
+													<tr class="columnaAjustaPor">
+														<td>
+															<div class="row">
+																<div class="col-md-3 order-md-1"></div>
+																<div class="col-md-9 order-md-2">
+																	<label class='control-label'>Valor de emisión</label>
+																</div>
+
+															</div>
+														</td>
+														<td style="text-align: center;"><label
+															id="valorEmiLab" class='control-label'></label></td>
+
+													</tr>
+													<tr class="columnaAjustaPor">
+
+														<td>
+															<div class="row">
+																<div class="col-md-3 order-md-1"></div>
+																<div class="col-md-9 order-md-2">
+																	<label class='control-label'>Valor de cálculo</label>
+																</div>
+															</div>
+														</td>
+														<td style="text-align: center;"><label
+															id="valCerCalcLab" class='control-label'></label></td>
+
+
+													</tr>
+
+
+													<tr class="columnaTasaVar">
+														<td WIDTH="71%">
+															<div class="row" style="max-height: 35px">
+																<div class="col-md-5 order-md-1 mb-4">
+																	<label class='control-label'>Tasa Variable</label>
+																</div>
+																<div class="col-md-7 order-md-3"
+																	style="text-align: right">
+																	<select autocomplete="off" class="custom-select INPUT"
+																		id="tasaVarSel"
+																		style="font-size: 12px; height: 28px; max-width: 150px;">
+																		<option>Proy. Mercado</option>
+																		<option>Manual</option>
+																		<option>Prom. Ponderado</option>
+																	</select>
+																</div>
+															</div>
+														</td>
+														<td WIDTH="29%" style="text-align: center;"><label
+															id="tipoCuponLab" class='control-label'></label></td>
+													</tr>
+													<tr class="columnaTasaVar">
+														<td>
+															<div class="row">
+																<div class="col-md-5 order-md-1"></div>
+																<div class="col-md-7 order-md-2">
+																	<label id="tasaVarProxCupLab" class='control-label'></label>
+																</div>
+															</div>
+														</td>
+														<td style="padding-top: 3px; padding-bottom: 2px;">
+															<div class="row">
+																<div class="col-md-1 order-md-1"></div>
+																<div class="col-md-10 order-md-2">
+																	<div class="input-group">
+																		<input autocomplete="off" type="text"
+																			id="badlarProxCupLab"
+																			style="text-align: center; max-width: 80px"
+																			placeholder="Tasa"
+																			class="form-control INPUT numeric " readonly>
+																		<div class="input-group-prepend" style="height: 25px;">
+																			<span class="input-group-text"
+																				style="max-width: 24px; text-align: center; padding-left: 5px;">%</span>
+																		</div>
+																	</div>
+																	<input autocomplete="off" id="badlarProxCup"
+																		type="hidden"> <input autocomplete="off"
+																		id="badlarProxCupPondLab" type="hidden">
+																</div>
+																<div class="col-md-1 order-md-3"></div>
+															</div>
+														</td>
+													</tr>
+													<tr class="columnaTasaVar">
+														<td>
+															<div class="row">
+																<div class="col-md-5 order-md-1"></div>
+																<div class="col-md-7 order-md-2">
+																	<label id="tasaVarRestCupLab" class='control-label'></label>
+																</div>
+
+															</div>
+														</td>
+														<td style="padding-top: 3px; padding-bottom: 2px;">
+															<div class="row">
+																<div class="col-md-1 order-md-1"></div>
+																<div class="col-md-10 order-md-2">
+																	<div class="input-group " style="margin: auto;">
+																		<input autocomplete="off" type="text"
+																			id="badlarRestCupLab"
+																			style="text-align: center; max-width: 80px"
+																			placeholder="Tasa"
+																			class="form-control INPUT numeric " readonly>
+																		<div class="input-group-prepend" style="height: 25px;">
+																			<span class="input-group-text"
+																				style="max-width: 24px; text-align: center; padding-left: 5px;">%</span>
+																		</div>
+																	</div>
+																</div>
+																<div class="col-md-1 order-md-3"></div>
+															</div>
+														</td>
+													</tr>
+													
+													<tr class="columnaTasaVar">
+														<td colspan="2">
+															<div class="d-flex justify-content-around">
+																	<label class='control-label mr-3' id="labelStart"></label>
+																	<label class='control-label ml-3' id="labelEnd"></label>
+															</div>
+														</td>														
+													</tr>
+												</tbody>
+											</table>
+
+											<!-- -->
+											<div id="divProxCupon">
+												<hr class="mb-3">
+
+
+												<table class="table table-striped table-bordered">
+													<tbody>
+														<tr>
+															<td style="padding-bottom: 0; padding-top: 4px;"><label
+																class='control-label'>Último cupón: </label> <label
+																id="ultCupLab" class="label label-default pl-2"></label>
+															</td>
+															<td style="padding-bottom: 0; padding-top: 4px;"><label
+																class='control-label'>Próximo cupón: </label> <label
+																id="proxCupLab" class='control-label pl-2'
+																style="text-align: center;"></label></td>
+														</tr>
+													</tbody>
+												</table>
+
+
+											</div>
+
+										</div>
+									</div>
+								</div>
+								<div class="col-md-7 order-md-2 mb-1" style="padding: 4px;">
+									<div class="card" style="height: 100%; border: none">
+										<div class="card-body"
+											style="padding: 0px; background: #EDEDED">
+											<div class="row">
+												<div class="col-md-4 order-md-1 mb-4"
+													style="padding-right: 4px;">
+													<div class="card" style="height: 100%;">
+														<div class="card-body">
+															<h4 class="titulo">Precio</h4>
+															<div class="card bg-light mb-3">
+																<div class="card-header cho" style="padding: 7px;">
+																	<div class="row">
+																		<div class="col-md-6 order-md-1 mb-1">
+																			<label class='control-label letras'>Precio:</label>
+																		</div>
+
+																		<div class="col-md-6 order-md-2 mb-1"
+																			style="padding-left: 0px;">
+																			<input autocomplete="off" id="PrecioInp" type="text"
+																				class="form-control letras INPUT numeric4"
+																				placeholder="Precio">
+																		</div>
+																	</div>
+																</div>
+																<div class="card-body ch" style="padding: 7px;">
+																	<div class="row" style="padding-top: 10px;">
+																		<div class="col-md-6 order-md-1 mb-1">
+																			<label class='control-label letras'>Tipo
+																				Cambio:</label>
+																		</div>
+																		<div class="col-md-6 order-md-2 mb-1"
+																			style="padding-left: 0px;">
+																			<input autocomplete="off" id="TipoCambioInp"
+																				type="text"
+																				class="form-control letras INPUT numeric4"
+																				placeholder="Tipo de cambio">
+																		</div>
+																	</div>
+
+																	<div class="row" style="padding-top: 10px;">
+																		<div class="col-md-6 order-md-1 mb-1">
+																			<label class='control-label letras'>Tipo
+																				Moneda:</label>
+																		</div>
+																		<div class="col-md-6 order-md-2 mb-1"
+																			style="padding-left: 0px;">
+																			<select autocomplete="off"
+																				class="custom-select d-block w-10 letras INPUT"
+																				id="tipoMonedaSel" required>
+																				<option>Dolares</option>
+																				<option>Pesos</option>
+																				<option>Euros</option>
+																				<!--  <option>Pesos Chilenos</option> -->
+																				<option>Uvas</option>
+																			</select>
+																		</div>
+																	</div>
+
+																	<div class="row"
+																		style="padding-top: 10px; padding-bottom: 7px;"">
+																		<div class="col-md-6 order-md-1 mb-1">
+																			<label class='control-label letras'>Tipo
+																				Precio</label>
+																		</div>
+																		<div class="col-md-6 order-md-2 mb-1"
+																			style="padding-left: 0px;">
+																			<select autocomplete="off"
+																				class="custom-select d-block w-10 letras INPUT"
+																				id="tipoPrecioSel" required>
+																				<option>Clean</option>
+																				<option selected="selected">Dirty</option>
+																			</select>
+																		</div>
+																	</div>
+																</div>
+															</div>
+
+
+															<div class="card bg-light">
+																<div class="card-header cho">
+																	<div class="row">
+																		<div class="col-md-7 order-md-1 mb-1">
+																			<label id="cleanDerLib" class='control-label letras'>Precio
+																				Clean:</label>
+																		</div>
+																		<div class="col-md-5 order-md-2 mb-1"
+																			style="text-align: center">
+																			<label id="PrecioCleanaDirtyInp"
+																				class='control-label'></label>
+																		</div>
+																	</div>
+																	<div class="row"  id="PrecioCleanaDirtyRow" hide>
+																		<div class="col-md-7 order-md-1 mb-1">
+																			<label id="cleanDerLibPor" class='control-label letras'></label>
+																		</div>
+																		<div class="col-md-5 order-md-2 mb-1" style="text-align: center">
+																			<label id="PrecioCleanaDirtyInpPor" class='control-label'></label>
+																		</div>
+																	</div>
+																</div>
+
+															</div>
+															<!-- <div class="card bg-light"
+																style="margin-top: -3px; margin-bottom: 15px;">
+																<div class="card-header cho">
+																	<div class="row">
+																		<div class="col-md-6 order-md-1 mb-1">
+																			<label class='control-label letras'>Precio
+																				C/Cable:</label>
+																		</div>
+																		<div class="col-md-6 order-md-2 mb-1"
+																			style="text-align: center">
+																			<label id="PrecioCableInp" class='control-label'></label>
+																		</div> 
+																	</div>
+																</div>
+															</div>-->
+														</div>
+													</div>
+												</div>
+												<div class="col-md-8 order-md-2 mb-4"
+													style="padding-left: 4px;">
+													<div class="card" style="height: 100%;">
+														<div class="card-body"
+															style="padding-bottom: 0px; max-height: 50px;">
+															<h4 style"margin-top:0px;">Cálculos</h4>
+														</div>
+														<!--  	<div class="card-body d-flex align-items-center" style="padding-top :0px;"> -->
+
+														<div class="card-body" style="padding-top: 0px;">
+
+															<div class="w-100">
+
+																<div id="spreadOTir" style="margin-top: 20px">
+																	<table cellpadding="0px;" class="w-100">
+
+																		<tr>
+																			<td style="max-width: 120px;">
+																				<div class="card bg-light mb-1">
+																					<div class="card-header choBlue" id="tirCard"
+																						style="text-align: center">TIR Requerida</div>
+																					<div class="card-body"
+																						style="padding-left: 7px; padding-right: 7px;">
+																						<div class="input-group mb-2"
+																							style="padding-left: 0px;">
+																							<input autocomplete="off" type="text"
+																								style="text-align: center"
+																								placeholder="TIR Requerida"
+																								class="form-control INPUT numericNeg"
+																								id="tirReqInp">
+																							<div class="input-group-prepend"
+																								style="height: 25px;">
+																								<span class="input-group-text"
+																									style="max-width: 24px; text-align: center; padding-left: 4px;">%</span>
+																							</div>
+																						</div>
+																					</div>
+																				</div>
+																			</td>
+																			<td
+																				style="text-align: center; padding-right: 0px; padding-left: 0 px;"><img
+																				style="margin-top: 40px"
+																				src="static/imagenes/flechaazul.png"></td>
+																			<td>
+																				<div class="card bg-light mb-1"
+																					style="max-width: 314px;">
+																					<div class="card-header choBlue"
+																						style="text-align: center">Precio</div>
+																					<div class="card-body">
+																						<div class="row">
+																							<div class="col-md-7 order-md-1 mb-1"
+																								style="text-align: left">
+																								<label id="monedaPrecioTirLab"
+																									class='control-label'>Precio en U$D:</label>
+																							</div>
+																							<div class="col-md-5 order-md-2 mb-1"
+																								style="text-align: right">
+																								<label id="precioTirLab" class='control-label'
+																									style="min-width: 50px;"></label>
+																							</div>
+																						</div>
+																					</div>
+																				</div>
+																			</td>
+																		</tr>
+
+
+
+																	</table>
+
+																</div>
+
+																<div id="spreadTrim" class="mt-4" style="display: none">
+
+																	<table cellpadding="0px;" class="w-100">
+
+																		<tr>
+																			<td style="max-width: 120px;">
+																				<div class="card bg-light mb-1">
+																					<div class="card-header choBlue" id="tirCard"
+																						style="text-align: center">Spread Trim.
+																						Requerido</div>
+																					<div class="card-body"
+																						style="padding-left: 7px; padding-right: 7px;">
+																						<div class="input-group mb-2"
+																							style="padding-left: 0px;">
+																							<input autocomplete="off" type="text"
+																								style="text-align: center"
+																								placeholder="Spread Trim. Requerido"
+																								class="form-control INPUT numeric "
+																								id="spreadTrimReqInp">
+																							<div class="input-group-prepend"
+																								style="height: 25px;">
+																								<span class="input-group-text"
+																									style="max-width: 24px; text-align: center; padding-left: 4px;">%</span>
+																							</div>
+																						</div>
+																					</div>
+																				</div>
+																			</td>
+																			<td
+																				style="text-align: center; padding-right: 0px; padding-left: 0 px;"><img
+																				style="margin-top: 40px"
+																				src="static/imagenes/flechaazul.png"></td>
+																			<td>
+																				<div class="card bg-light mb-1"
+																					style="max-width: 314px;">
+																					<div class="card-header choBlue"
+																						style="text-align: center">Precio</div>
+																					<div class="card-body">
+																						<div class="row">
+																							<div class="col-md-7 order-md-1 mb-1"
+																								style="text-align: left">
+																								<label id="monedaPrecioSpreadTrimLab"
+																									class='control-label'>Precio en U$D:</label>
+																							</div>
+																							<div class="col-md-5 order-md-2 mb-1"
+																								style="text-align: right">
+																								<label id="precioSpreadTrimLab"
+																									class='control-label' style="min-width: 50px;"></label>
+																							</div>
+																						</div>
+																					</div>
+																				</div>
+																			</td>
+																		</tr>
+
+
+
+																	</table>
+
+																</div>
+																
+																
+																<div id="dolarFutDiv" style="margin-top: 20px; display: none">
+																																		
+																	<div class="card bg-light mb-1" >																		
+																		<div class="card-body">
+																			<div class="row">
+																				<div class="col-md-3 order-md-1 mb-1"
+																					style="text-align: left">
+																					<label id="monedaPrecioSpreadTrimLab"
+																						class='control-label'>Cer proyectado:</label>
+																				</div>
+																				<div class="col-md-4 order-md-2 mb-1"
+																					style="text-align: right">
+																					<input autocomplete="off" id="DolarFutInp"
+																						type="text"
+																						class="form-control letras INPUT numeric4"
+																						placeholder="Cer proyectado">
+																				</div>
+																			</div>
+																		</div>
+																	</div>																	
+																</div>
+																
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+											<div class="row">
+												<div class="col-md-4 order-md-1 mb-1"
+													style="padding-right: 4px;">
+													<div id="cardMedidasRent" class="card"
+														style="width: 100%; height: 100%;">
+														<div class="card-body">
+															<h4>Medidas de Rentabilidad</h4>
+															<table class="table table-striped table-bordered">
+																<tbody>
+																	<tr>
+																		<td WIDTH="70%"><label class='control-label'>Tir
+																				Efectiva</label></td>
+																		<td style="text-align: center;" WIDTH="30%"><label
+																			id="tirEfecLab" class='control-label'></label></td>
+																	</tr>
+
+																	<tr>
+																		<td><label class='control-label'>Tir
+																				Nominal</label></td>
+																		<td style="text-align: center;"><label
+																			id="TirNominlLab" class='control-label'></label></td>
+																	</tr>
+
+																	<tr id="tnatr">
+																		<td><label class='control-label'>Tasa
+																				Nominal</label></td>
+																		<td style="text-align: center;"><label
+																			id="TasaNominlLab" class='control-label'></label></td>
+																	</tr>
+																</tbody>
+															</table>
+															<table id="laTabla"
+																class="table table-striped table-bordered">
+																<tbody>
+																	<tr id="spreadFila" style="background: #f3f3f3;">
+																		<td WIDTH="70%"><label class='control-label'>Spread
+																				de Mercado</label></td WIDTH="30%">
+																		<td style="text-align: center;"><label
+																			id="spreadMercadoLab" class='control-label'></label></td>
+																	</tr>
+																	<tr id="currentFila" style="background: #fff;">
+																		<td WIDTH="70%"><label class='control-label'>Current
+																				Yield</label></td>
+																		<td WIDTH="30%" style="text-align: center;"><label
+																			id="currentYieldLab" class='control-label'></label></td>
+																	</tr>
+																</tbody>
+															</table>
+														</div>
+													</div>
+												</div>
+												<div class="col-md-8 order-md-2 mb-1"
+													style="padding-left: 4px;">
+													<div class="card" style="height: 100%;">
+														<div class="card-body">
+															<div class="row">
+																<div class="col-md-6 order-md-2 mb-1">
+																	<h4>Valuación c/100 vn</h4>
+																	<table class="table table-striped table-bordered">
+																		<tbody>
+																			<tr>
+																				<td WIDTH="65%"><label class='control-label'>Valor
+																						Residual</label></td>
+																				<td WIDTH="35%" style="text-align: right;"><label
+																					id="valorResLab" class='control-label'></label></td>
+																			</tr>
+																			<tr>
+																				<td><label class='control-label'>Valor
+																						Par</label></td>
+																				<td style="text-align: right;"><label
+																					id="valorParLab" class='control-label'></label></td>
+																			</tr>
+																			<tr>
+																				<td><label id="intCorrTituloLab"
+																					class='control-label'>Intereses corridos</label></td>
+																				<td style="text-align: right;"><label
+																					id="interesesCorrLab" class='control-label'></label></td>
+																			</tr>
+																			<tr>
+																				<td><label class='control-label'>Valor
+																						Técnico</label></td>
+																				<td style="text-align: right;"><label
+																					id="valorTecLab" class='control-label'></label></td>
+																			</tr>
+																			<tr>
+																				<td><label class='control-label'>Paridad</label></td>
+																				<td style="text-align: right;"><label
+																					id="paridadaLab" class='control-label'></label></td>
+																			</tr>
+																		</tbody>
+																	</table>
+																</div>
+
+																<div class="col-md-6 order-md-2 mb-1">
+																	<h4>Medidas de Sensibilidad</h4>
+																	<table class="table table-striped table-bordered">
+																		<tbody>
+																			<tr>
+																				<td WIDTH="60%"><label id="monedaEm"
+																					class='control-label'>Modify Duration</label></td>
+																				<td WIDTH="40%" style="text-align: right;"><label
+																					id="modifDur" class='control-label'></label></td>
+																			</tr>
+																			<tr>
+																				<td><label class='control-label'>DV01</label></td>
+																				<td style="text-align: right;"><label id="dv01"
+																					class='control-label'></label></td>
+																			</tr>
+																			<tr>
+																				<td><label class='control-label'>PPV</label></td>
+																				<td style="text-align: right;"><label id="ppvLab"
+																					class='control-label'></label></td>
+																			</tr>
+																			<tr>
+																				<td><label class='control-label'>Term
+																						to Maturity</label></td>
+																				<td style="text-align: right;"><label
+																					id="termToMaturLab" class='control-label'></label></td>
+																			</tr>
+																		</tbody>
+																	</table>
+																</div>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+							<hr>
+							<div class="row">
+								<div class="col-lg-5 order-md-1 mb-1">
+									<div class="card mb-1" style="width: 100%; height: 100%;">
+										<div class="card-body">
+											<h4>Tenencia</h4>
+											<div class="card mb-1">
+
+												<div class="card-header choBlue">
+
+													<div class="d-flex justify-content-start">
+														<div class="pr-3">Tenencia Nominal:</div>
+														<div>
+															<div class="input-group">
+																<input autocomplete="off" type="text" value="100"
+																	placeholder="Tenencia Nominal"
+																	class="form-control INPUT numeric " id="cantidadNomInp"
+																	style="text-align: center">
+															</div>
+														</div>
+													</div>
+												</div>
+
+												<div class="card-body">
+													<div class="row">
+														<div class="col-lg-5 order-md-1 mb-1 pr-0">
+
+															<div class="card bg-light mb-1">
+																<div class="d-flex justify-content-between">
+																	<h5 class="mt-2 ml-2">Prox. Cupón: </h5>
+																	<h5 id="HproxCup" class="mt-2 mr-2"></h5>
+																</div>
+																
+																<hr style="max-width: 210px; margin-left: 10px; margin-top: 0px;">
+																<div class="card-body">
+																	<div class="row">
+																		<div class="col-md-6 order-md-1 mb-3"
+																			style="text-align: left">
+																			<label class='control-label'>Renta:</label>
+																		</div>
+																		<div class="col-md-6 order-md-1 mb-3 pl-0"
+																			style="text-align: right">
+																			<label id="rentaTenenciaLab" class='control-label'></label>
+																		</div>
+																	</div>
+																	<div class="row" id="filaAmort">
+																		<div class="col-md-6 order-md-1 mb-3"
+																			style="text-align: left">
+																			<label class='control-label'>Amortización:</label>
+																		</div>
+																		<div class="col-md-6 order-md-1 mb-3 pl-0"
+																			style="text-align: right">
+																			<label id="amortTenenciaLab" class='control-label'></label>
+																		</div>
+																	</div>
+																	<hr style="margin-top: 0px;">
+																	<div class="row">
+																		<div class="col-md-6 order-md-1 mb-3"
+																			style="text-align: left">
+																			<label id="total1" class='control-label'>Total
+																				en U$D</label>
+																		</div>
+																		<div class="col-md-6 order-md-1 mb-3 pl-0"
+																			style="text-align: right">
+																			<label id="TotalRentTenenciaLab1"
+																				class='control-label'></label>
+																		</div>
+																	</div>
+																	<div class="row" id="rowtotal2">
+																		<div class="col-md-6 order-md-1 mb-3"
+																			style="text-align: left">
+																			<label id="total2" class='control-label'>Total
+																				en AR$</label>
+																		</div>
+																		<div class="col-md-6 order-md-1 mb-3 pl-0"
+																			style="text-align: right">
+																			<label id="TotalRentTenenciaLab2"
+																				class='control-label'></label>
+																		</div>
+																	</div>
+
+																</div>
+															</div>
+														</div>
+														<div class="col-lg-7 order-md-1 mb-1"">
+															<div class="card bg-light">
+																<h5 class="mt-2 ml-2">Valuación Cartera</h5>
+																<hr
+																	style="max-width: 155px; margin-left: 10px; margin-top: 0px;">
+																<div class="card-body">
+
+
+																	<div class="d-flex justify-content-between mb-3">
+																		<label id="capitalMonedaLab" class='control-label'>Valuación Tecnica
+																				U$D</label>
+																		<label id="capitalLab" class='control-label'></label>
+																	</div>
+																	
+																		<div class="d-flex justify-content-between mb-3">
+																			<label id="tenenciaValLab"
+																					class='control-label font-weight-bold'>Tenencia Valorizada (U$D)</label>
+																				<label id="tenValDolLab"
+																					class='control-label font-weight-bold'></label>
+																		</div>
+																		
+																		<div id="tenenciaValRow" class="justify-content-between mb-3 d-none" >
+																			<label id="tenValPesLab" class='control-label'>Tenencia Valorizada (ARS)</label>																		
+																			<label id="tenValPesosLab" class='control-label'></label>
+																		</div>
+																		
+																</div>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+											<hr class="mt-3">
+											<h4 class="mt-3">Liquidez BYMA - MAE en las últimas 252 Ruedas</h4>
+											<div class="card mb-1">
+												<table class="table table-striped table-bordered descrip" style="margin-bottom: 0px;">
+													<tbody>
+														<tr>
+															<td width="70%"><label class='control-label'>Presencia:</label>
+															</td>
+															<td width="30%" style="text-align: center" id="presenciaLab"><label class='control-label'></label>
+															</td>
+														</tr>
+														<tr>
+															<td width="70%"><label class='control-label'>Volumen Promedio Operado (Nominales):</label>
+															</td>
+															<td width="30%" style="text-align: center"><label id="volPromOperadoLab" class='control-label'></label>
+															</td>
+														</tr>
+													</tbody>
+												</table>
+											</div>
+											<hr class="mt-3">
+											<h4 class="mt-3">Lamina Minima y Ley</h4>
+											<div class="card mb-1">
+												<table class="table table-striped table-bordered descrip" style="margin-bottom: 0px;">
+													<tbody>
+														<tr>
+															<td width="70%"><label class='control-label'>Lamina Minima de Negociación en VN:</label>
+															</td>
+															<td width="30%" style="text-align: center" id="laminaLab"><label class='control-label'></label>
+															</td>
+														</tr>
+														<tr>
+															<td width="70%"><label class='control-label'>Ley:</label>
+															</td>
+															<td width="30%" style="text-align: center"><label id="leyLab" class='control-label'></label>
+															</td>
+														</tr>
+														<tr id="pagaEnRow" hide>
+															<td width="70%"><label class='control-label'>Paga en:</label>
+															</td>
+															<td width="30%" style="text-align: center"><label id="pagaEnLab" class='control-label'></label>
+															</td>
+														</tr>
+													</tbody>
+												</table>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="col-lg-7 order-md-1 mb-1"
+									style="padding-left: 4px; width: 100%;">
+									<div class="card">
+
+										<div class="card-body">
+											<h4>CashFlow</h4>
+											<div style="text-align: center">
+												<table ID="tablaFlujos"
+													class="table table-striped table-bordered">
+													<tbody>
+														<tr>
+															<th width="16%"><label id="monedaEm"
+																class='control-label'>Fecha Cupón</label></th>
+															<th width="16%"><label id="modifDur"
+																class='control-label'>VR Cartera</label></th>
+															<th width="16%"><label id="modifDur"
+																class='control-label'>Renta Efect.</label></th>
+															<th width="16%"><label id="monedaEm"
+																class='control-label'>Amortización % c/100 VN</label></th>
+															<th width="20%"><label id="modifDur"
+																class='control-label'>Obs. Prox. Pago</label></th>
+															<th width="16%"><label id="modifDur"
+																class='control-label'>Total</label></th>
+														</tr>
+
+													</tbody>
+												</table>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="tab-pane fade" id="nav-cotizaciones" role="tabpanel"
+							aria-labelledby="nav-cotizaciones-tab">
+							<div class="container-fluid mt-5">
+								<div class="row">
+
+									<div class="col-lg-6">
+										<div class="card" style="width: 100%; height: 100%;">
+											<div class="card-body">
+												<div>
+													<h4 class="titulo">MAE</h4>
+												</div>
+												<table ID="tablaMae"
+													class="table table-striped table-bordered">
+													<tbody>
+														<tr>
+															<th width="20%"><label class='control-label'>Fecha</label>
+															</th>
+															<th width="20%"><label class='control-label'>Moneda</label>
+															</th>
+															<th width="20%"><label class='control-label'>Plazo</label>
+															</th>
+															<th width="20%"><label class='control-label'>Precio</label>
+															</th>
+															<th width="20%"><label class='control-label'>Cantidad</label>
+															</th>
+														</tr>
+													</tbody>
+												</table>
+											</div>
+										</div>
+									</div>
+									<div class="col-lg-6">
+										<div class="card" style="width: 100%; height: 100%;">
+											<div class="card-body">
+												<div>
+													<h4 class="titulo">BYMA</h4>
+												</div>
+												<table ID="tablaByma"
+													class="table table-striped table-bordered">
+													<tbody>
+														<tr>
+															<th width="20%"><label class='control-label'>Fecha</label>
+															</th>
+															<th width="20%"><label class='control-label'>Moneda</label>
+															</th>
+															<th width="20%"><label class='control-label'>Plazo</label>
+															</th>
+															<th width="20%"><label class='control-label'>Precio</label>
+															</th>
+															<th width="20%"><label class='control-label'>Cantidad</label>
+															</th>
+														</tr>
+													</tbody>
+												</table>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="tab-pane fade" id="nav-sensibilidad" role="tabpanel"
+							aria-labelledby="nav-sensibilidad-tab">
+							<div class="container-fluid mt-5">
+
+								<div class="row">
+
+									<div class="col-lg-6">
+										<div class="card" style="width: 100%; height: 100%;">
+											<div class="card-body">
+												<div>
+													<h4>Sensibilidad de Precio</h4>
+												</div>
+												<div class="card mb-1">
+
+													<div class="card-header choBlue">
+
+														<div class="d-flex justify-content-start">
+															<div class="pr-3">Variación Precio:</div>
+															<div>
+																<div class="input-group">
+																	<input autocomplete="off" type="text"
+																		id="variacionPrecioInp" style="text-align: center;"
+																		placeholder="Variación"
+																		class="form-control INPUT numeric ">
+																	<div class="input-group-prepend" style="height: 25px;">
+																		<span class="input-group-text"
+																			style="max-width: 24px; text-align: center; padding-left: 5px;">%</span>
+																	</div>
+																</div>
+															</div>
+														</div>
+													</div>
+
+													<div class="card-body">
+														<div style="text-align: center">
+															<table ID="tablaSensPrecio"
+																class="table table-striped table-bordered">
+																<tbody>
+																	<tr>
+																		<th width="25%"><label class='control-label'>Precio</label>
+																		</th>
+																		<th width="25%"><label class='control-label' id="tirSpreadSensColumna">TIR Efectiva</label></th>
+																		<th width="25%"><label class='control-label'>Modify
+																				Duration</label></th>
+																		<th width="25%"><label class='control-label'>Paridad</label>
+																		</th>
+	
+																	</tr>
+																</tbody>
+															</table>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="col-lg-6">
+										<div class="card" style="width: 100%; height: 100%;">
+											<div class="card-body">
+												<div>
+													<h4 id="sensibilidadTirSpreadH">Sensibilidad de TIR</h4>
+												</div>
+
+												<div class="card mb-1">
+
+													<div class="card-header choBlue">
+
+														<div class="d-flex justify-content-start">
+															<div class="pr-3"><label class='control-label' id="variacionTirSpreadLabel">Variación TIR:</label></div>
+															<div>
+																<div class="input-group">
+																	<input autocomplete="off" type="text"
+																		id="variacionTirInp" style="text-align: center;"
+																		placeholder="Variación"
+																		class="form-control INPUT numeric ">
+																	<div class="input-group-prepend" style="height: 25px;">
+																		<span class="input-group-text"
+																			style="max-width: 24px; text-align: center; padding-left: 5px;">%</span>
+																	</div>
+																</div>
+															</div>
+														</div>
+													</div>
+
+													<div class="card-body">
+														<div style="text-align: center">
+															<table ID="tablaSensTir"
+																class="table table-striped table-bordered">
+																<tbody>
+																	<tr>
+																		<th width="23%"><label ID="columnaSpreadTirMercado" class='control-label'>TIR S/Tasa Ref</label></th>
+																		<th width="18%"><label class='control-label'>Precio</label>
+																		</th>
+																		<th width="25%"><label class='control-label'>Variación
+																				% en Precio</label></th>
+																		<th width="34%"><label class='control-label'>Variación
+																				absoluta en Precio</label></th>
+																	</tr>
+																</tbody>
+															</table>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+
+								</div>
+								<div class="row mt-4">
+									<div class="col-lg-12">
+										<div class="card" style="width: 100%; height: 100%;">
+											<div class="card-body">
+												<div>
+													<h4>Sensibilidad Tipo de Cambio</h4>
+												</div>
+												<div class="card mb-1">
+													<div class="card-header choBlue">
+														<div class="d-flex justify-content-start">
+															<div class="pr-3">Variación Tipo de Cambio:</div>
+															<div>
+																<div class="input-group">
+																	<input autocomplete="off" type="text"
+																		id="variacionCambioInp" style="text-align: center;"
+																		placeholder="Variación "
+																		class="form-control INPUT numeric "
+																		>
+																	<div class="input-group-prepend" style="height: 25px;">
+																		<span class="input-group-text"
+																			style="max-width: 24px; text-align: center; padding-left: 5px;">%</span>
+																	</div>
+																</div>
+															</div>
+														</div>
+
+													</div>
+													<div class="card-body">
+														<div style="text-align: center">
+															<table ID="tablaSensCambio"
+																class="table table-striped table-bordered">
+																<tbody>
+																	<tr>
+																		<th width="33%"><label class='control-label' >Tipo
+																				de Cambio</label></th>
+																		<th width="33%"><label class='control-label' id="precioSensTC1">Precio
+																				en USD</label></th>
+																		<th width="34%"><label class='control-label' id="precioSensTC2">Precio
+																				en Pesos</label></th>
+																	</tr>
+																</tbody>
+															</table>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+
+						</div>
+						<div class="tab-pane fade" id="nav-mercado" role="tabpanel" aria-labelledby="nav-mercado-tab">
+							<div class="container-fluid mt-5">
+								<div class="row">
+									<div class="col-lg-12">
+										<div class="card" style="width: 100%; height: 100%;">
+											<div class="card-body">
+												
+														<div style="text-align: center">
+															
+														<div style="text-align: left" >
+															<h4 class="titulo">Curva de Rendimientos</h4>
+														</div>
+														<div id="container">
+														</div>
+															
+															<hr>
+															
+															<div style="text-align:left" >
+																<h4 id ="tituloMercadoH"></h4>
+															</div>
+															<table ID="tablaAnalisisMerc"
+																class="table table-striped table-bordered">
+																<thead>
+																	<tr>
+																		<th width="11%"><label class='control-label' >Ticker</label></th>
+																		<th width="11%"><label class='control-label' >Precio</label></th>
+																		<th width="11%"><label class='control-label' >Cupón</label></th>
+																		<th width="11%"><label class='control-label' >YTM (anual)</label></th>
+																		<th width="11%"><label class='control-label' >YTM (nominal)</label></th>
+																		<th width="11%"><label class='control-label' >Spread/Mercado</label></th>
+																		<th width="11%"><label class='control-label' >Duration</label></th>
+																		<th width="11%"><label class='control-label' >Vencimiento</label></th>
+																		<th width="12%"><label class='control-label' >Frec.Pago</label></th>																		
+																	</tr>
+																</thead>																
+																<tbody>																	
+																	<tr>
+																		<td><label class='control-label' id="tickerMercadoLab"></label></td>
+																		<td><label class='control-label' id="precioMercadoLab"></label></td>
+																		<td><label class='control-label' id="cuponMercadoLab"></label></td>
+																		<td><label class='control-label' id="YtmaMercadoLab"></label></td>
+																		<td><label class='control-label' id="YtmnMercadoLab"></label></td>
+																		<td><label class='control-label' id="spreadMercLab"></label></td>
+																		<td><label class='control-label' id="durationMercadoLab"></label></td>
+																		<td><label class='control-label' id="vencimientoMercadoLab"></label></td>
+																		<td><label class='control-label' id="frecuenciaMercadoLab"></label></td>																		
+																	</tr>
+																</tbody>
+															</table>
+															<table ID="tablaAnalisisMercBD"
+																class="table table-striped table-bordered" style="display: none">
+																<thead>
+																	<tr>
+																		<th width="17%"><label class='control-label' >Ticker</label></th>
+																		<th width="17%"><label class='control-label' >Vencimiento</label></th>																																			
+																		<th width="17%"><label class='control-label' >Moneda</label></th>
+																		<th width="16%"><label class='control-label' >Precio</label></th>
+																		<th width="16%"><label class='control-label' >Dias Restantes</label></th>
+																		<th width="17%"><label class='control-label' >TNA</label></th>																	
+																	</tr>
+																</thead>																
+																<tbody>																	
+																	<tr>
+																		<td><label class='control-label' id="tickerMercadoBDLab"></label></td>
+																		<td><label class='control-label' id="vencimientoMercadoBDLab"></label></td>																		
+																		<td><label class='control-label' id="monedaMercadoBDLab"></label></td>
+																		<td><label class='control-label' id="precioMercadoBDLab"></label></td>
+																		<td><label class='control-label' id="diasRestantesMercadoBDLab"></label></td>
+																		<td><label class='control-label' id="TnaMercadoBDLab"></label></td>																	
+																	</tr>
+																</tbody>
+															</table>
+														</div>
+														
+														<h4 class="mt-4" >Selección de Bonos para Comparar</h4>
+														<div>
+															<table ID="tablaBonosSimilares" class="table table-striped table-bordered" width="100%" style="text-align: center"></table>														
+														</div>												
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					
+						<div class="tab-pane fade" id="nav-condEm" role="tabpanel" aria-labelledby="nav-condEm-tab">
+							<div class="container-fluid mt-5" align="center">								
+									
+										<div class="card" style="max-width: 450px;">											
+											<div class="card-body" >										
+												<div class="container-fluid" align="left">		
+													<div>
+														<h4>Prospectos</h4>
+													</div>
+																																										
+													<table ID="tablaCondicionesEm"
+														class="table table-striped table-bordered">
+														<tbody>											
+															
+														</tbody>
+													</table>
+												</div>																						
+											</div>
+										</div>							
+							</div>
+						</div>
+						<div class="tab-pane fade" id="nav-avisospag" role="tabpanel" aria-labelledby="nav-avisospag-tab">
+							<div class="container-fluid mt-5" align="center">								
+									
+										<div class="card" style="max-width: 450px;">											
+											<div class="card-body" >										
+												<div class="container-fluid" align="left">		
+													<div>
+														<h4>Avisos de Pago</h4>
+													</div>
+																																										
+													<table ID="tablaAvisosPago"
+														class="table table-striped table-bordered">
+														<tbody>											
+															
+														</tbody>
+													</table>
+												</div>																						
+											</div>
+										</div>							
+							</div>
+						</div>
+					</div>
+
+
+
+				</div>
+			</div>
+		</div>
+		</section>
+
+	</div>
+		<footer id="idFoot">
+	<div class="container-fluid bg-dark py-3">
+		<div class="container">
+			<div class="row py-3">
+				<div class="col-md-9">
+					<p class="text-white"></p>
+				</div>
+				<div class="col-md-3">
+					<div class="d-inline-block">
+						<div class="bg-circle-outline d-inline-block">
+							<a href="https://www.facebook.com/" class="text-white"><i
+								class="fa fa-2x fa-fw fa-facebook"></i> </a>
+						</div>
+
+						<div class="bg-circle-outline d-inline-block">
+							<a href="https://twitter.com/" class="text-white"> <i
+								class="fa fa-2x fa-fw fa-twitter"></i></a>
+						</div>
+
+						<div class="bg-circle-outline d-inline-block">
+							<a href="https://www.linkedin.com/company/" class="text-white">
+								<i class="fa fa-2x fa-fw fa-linkedin"></i>
+							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</footer>
+
+	
+	
+</body>
+</html>

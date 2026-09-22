@@ -33,7 +33,7 @@ interface AuthCardProps {
  */
 export function AuthCard({ title, description, children }: AuthCardProps) {
   return (
-    <Card className="w-full max-w-md mx-auto">
+    <Card className="w-full max-w-md mx-auto backdrop-blur-xl bg-card/90 dark:bg-card/80 border border-border/60 shadow-2xl shadow-primary/5">
       <CardHeader className="space-y-1 px-4 sm:px-6 pt-6 pb-4">
         <CardTitle className="text-xl sm:text-2xl font-semibold text-center">
           {title}

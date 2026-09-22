@@ -11,13 +11,15 @@ import { usePlanFeature } from '../../../hooks/use-plan-feature';
 import { PageHeader } from '../../../components/ui/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 
+import { motion } from 'framer-motion';
+import { TrendingUp, TrendingDown, Filter } from 'lucide-react';
+import type { InsightItem } from '../types/insights.types';
+import { ScreenerTab } from '../components/screener-tab';
+
 const analystSortOptions = [
   { label: 'Más Recomendadas para Compra', value: 'buy' },
   { label: 'Más Recomendadas para Venta', value: 'sell' },
 ];
-import { TrendingUp, TrendingDown, Filter } from 'lucide-react';
-import type { InsightItem } from '../types/insights.types';
-import { ScreenerTab } from '../components/screener-tab';
 
 
 /**
@@ -90,25 +92,33 @@ const InsightsPage: React.FC = () => {
 
   return (
     <div className="container-wide stack-6">
-      <PageHeader
-        icon={<TrendingUp className="h-6 w-6 text-primary" />}
-        title="Insights de Mercado"
-        description="Descubre oportunidades de inversión analizando activos infravalorados, recomendaciones de analistas profesionales y tendencias del mercado. Información actualizada en tiempo real."
-      />
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <PageHeader
+          icon={<TrendingUp className="h-6 w-6 text-primary" />}
+          title="Insights de Mercado"
+          description="Descubre oportunidades de inversión analizando activos infravalorados, recomendaciones de analistas profesionales y tendencias del mercado. Información actualizada en tiempo real."
+        />
+      </motion.div>
 
       <Tabs defaultValue="analysts" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="analysts" className="gap-2">
+        <TabsList className="grid w-full grid-cols-3 bg-card shadow-sm border rounded-xl p-1 h-auto">
+          <TabsTrigger value="analysts" className="gap-2 py-3 rounded-lg data-[state=active]:shadow-premium transition-all">
             <TrendingDown className="h-4 w-4" />
-            Recomendaciones de Analistas
+            <span className="hidden sm:inline">Recomendaciones de Analistas</span>
+            <span className="sm:hidden">Analistas</span>
           </TabsTrigger>
-          <TabsTrigger value="valuation" className="gap-2">
+          <TabsTrigger value="valuation" className="gap-2 py-3 rounded-lg data-[state=active]:shadow-premium transition-all">
             <TrendingUp className="h-4 w-4" />
-            Valoración
+            <span className="hidden sm:inline">Valoración</span>
+            <span className="sm:hidden">Valor</span>
           </TabsTrigger>
-          <TabsTrigger value="screener" className="gap-2">
+          <TabsTrigger value="screener" className="gap-2 py-3 rounded-lg data-[state=active]:shadow-premium transition-all">
             <Filter className="h-4 w-4" />
-            Screening
+            <span>Screening</span>
           </TabsTrigger>
         </TabsList>
 
@@ -119,6 +129,12 @@ const InsightsPage: React.FC = () => {
             <div className="p-6 text-red-600">Error al cargar insights de valoración</div>
           ) : (
             <>
+              <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.5 }}
+            >
               <div className="flex items-center justify-end mb-4 gap-2">
                 <LimitSelect
                   value={valuationLimit}
@@ -133,12 +149,20 @@ const InsightsPage: React.FC = () => {
                 items={undervalued}
                 kind="undervalued"
               />
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
               <InsightsSection
                 title="Activos Sobrevalorados"
                 subtitle="Ordenados por mayor sobreprecio relativo entre su valor intrínseco y precio de mercado"
                 items={overvalued}
                 kind="overvalued"
               />
+            </motion.div>
             </>
           )}
         </TabsContent>
@@ -149,10 +173,16 @@ const InsightsPage: React.FC = () => {
           ) : analystsError ? (
             <div className="p-6 text-red-600">Error al cargar recomendaciones de analistas</div>
           ) : hasStockGrades ? (
-            <div className="space-y-4">
+            <motion.div 
+              className="space-y-4"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.5 }}
+            >
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold">Recomendaciones de Analistas</h3>
+                  <h3 className="text-lg font-semibold heading-premium">Recomendaciones de Analistas</h3>
                   <p className="text-sm text-muted-foreground mt-1">
                     Basado en consenso de analistas profesionales
                   </p>
@@ -177,14 +207,21 @@ const InsightsPage: React.FC = () => {
                 items={analystItems}
                 kind={analystSortBy === 'buy' ? 'analystBuy' : 'analystSell'}
               />
-            </div>
+            </motion.div>
           ) : (
             <FeatureLocked featureName="Stock Grades" description={upgradeMessage} requiredPlan={requiredPlan} />
           )}
         </TabsContent>
 
         <TabsContent value="screener" className="space-y-4 mt-6">
-          <ScreenerTab />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.5 }}
+          >
+            <ScreenerTab />
+          </motion.div>
         </TabsContent>
 
       </Tabs>

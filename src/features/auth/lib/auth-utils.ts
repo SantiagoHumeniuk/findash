@@ -44,6 +44,49 @@ export async function loginUser(
 }
 
 /**
+ * Inicia sesión o registra al usuario utilizando Google OAuth.
+ * Supabase gestiona automáticamente la creación o vinculación del usuario en auth.users.
+ * 
+ * @param redirectTo - URL opcional a la cual redirigir luego de autenticarse
+ * @returns Resultado de la operación con success y error opcional
+ */
+export async function loginWithGoogle(redirectTo?: string): Promise<AuthResult> {
+  try {
+    const targetUrl = redirectTo || `${window.location.origin}/dashboard`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: targetUrl,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
+
+    if (error) throw error;
+
+    await logger.info(
+      'GOOGLE_AUTH_INITIATED',
+      'Google OAuth flow initiated successfully.'
+    );
+
+    return { success: true };
+  } catch (error: unknown) {
+    const errorMessage =
+      typeof error === 'object' && error && 'message' in error
+        ? (error as { message: string }).message
+        : String(error);
+
+    await logger.error('GOOGLE_AUTH_FAILED', 'Failed to initiate Google OAuth.', {
+      errorMessage,
+    });
+
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
  * Registra un nuevo usuario con email y contraseña.
  * 
  * @param email - Email del usuario

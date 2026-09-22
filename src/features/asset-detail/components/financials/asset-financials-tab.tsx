@@ -196,7 +196,7 @@ const DCF_METRICS: MetricConfig[] = [
   // Valoración DCF
   { key: 'enterpriseValue', label: 'Enterprise Value DCF', format: 'compact' },
   { key: 'equityValue', label: 'Equity Value DCF', format: 'compact' },
-  { key: 'equityValuePerShare', label: 'Valor Justo (Por Acción)', format: 'currency' },
+  { key: 'equityValuePerShare', label: 'Valor Teórico DCF (Crudo)', format: 'currency' },
   { key: 'price', label: 'Precio en Modelo', format: 'currency' },
 
   // Parámetros del Modelo

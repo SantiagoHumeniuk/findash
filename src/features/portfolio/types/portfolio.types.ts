@@ -7,6 +7,7 @@ import { HoldingWithMetrics } from '../../../types/portfolio';
  */
 export interface PortfolioViewProps {
   holdings: HoldingWithMetrics[];
+  portfolioData: Record<string, any>;
   onDeleteAsset: (symbol: string) => void;
   onAddMore: (ticker: string, price: number) => void;
   onSell: (holding: HoldingWithMetrics) => void;

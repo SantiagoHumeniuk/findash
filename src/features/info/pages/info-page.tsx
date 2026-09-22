@@ -6,7 +6,6 @@ import { useConfig } from '../../../hooks/use-config';
 import { isInfoPageConfig } from '../lib/type-guards';
 import { HeroSection } from '../components/hero-section';
 import { FeaturesSection } from '../components/features-section';
-import { TestimonialsSection } from '../components/testimonials-section';
 import { FinalCtaSection } from '../components/final-cta-section';
 
 /**
@@ -48,18 +47,11 @@ const InfoPage: React.FC = () => {
         ctaLink={isLoggedIn ? "/dashboard" : "/register"}
       />
 
-      {/* Sección de Características en carrusel */}
+      {/* Sección de Características */}
       <FeaturesSection
         title={infoPage.features.title}
         subtitle={infoPage.features.subtitle}
         features={infoPage.features.items}
-      />
-
-      {/* Sección de Testimonios de usuarios */}
-      <TestimonialsSection
-        title={infoPage.testimonial.title}
-        subtitle={infoPage.testimonial.subtitle}
-        testimonials={infoPage.testimonial.opinions}
       />
 
       {/* CTA Final para conversión */}

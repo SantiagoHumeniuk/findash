@@ -3,6 +3,7 @@ import { Target } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../../components/ui/card";
 import { AssetData } from "../../../../../types/dashboard";
 import { IndicatorConfig } from "../../../../../utils/financial";
+import { motion } from "framer-motion";
 
 interface CategoryLeadersProps {
     categoryWinners: Record<string, { symbol: string; score: number; metrics: string[] }>;
@@ -102,12 +103,24 @@ export default function CategoryLeaders({ categoryWinners, categories, assets, i
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-4 sm:p-6 pt-0">
-                {Object.entries(categoryWinners).map(([catKey, winner]) => {
+                {Object.entries(categoryWinners).map(([catKey, winner], index) => {
                     const category = categories[catKey];
                     const winnerAsset = assets.find(a => a.profile.symbol === winner.symbol);
 
                     return (
-                        <div key={catKey} className="p-3 border rounded-lg hover:bg-muted/30 transition-colors">
+                        <motion.div
+                            key={catKey}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{
+                                delay: index * 0.08,
+                                type: "spring",
+                                stiffness: 350,
+                                damping: 25,
+                            }}
+                            whileHover={{ scale: 1.01 }}
+                            className="p-3 border rounded-lg hover:bg-muted/30 transition-colors"
+                        >
                             <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
                                     <div className="p-1.5 bg-muted rounded-md text-primary">{category.icon}</div>
@@ -141,7 +154,7 @@ export default function CategoryLeaders({ categoryWinners, categories, assets, i
                                     );
                                 })}
                             </div>
-                        </div>
+                        </motion.div>
                     );
                 })}
             </CardContent>

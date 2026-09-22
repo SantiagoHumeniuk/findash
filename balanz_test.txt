@@ -1,0 +1,14 @@
+﻿Step 1: GET login page...
+GET Status: 200
+Cookies after GET: 1
+  cookiesession1 = 678B28DC95CADC8DD53776F8C6AC396C
+
+Step 2: POST login...
+POST Status: 200
+Cookies after POST: 1
+  cookiesession1 = 678B28DC95CADC8DD53776F8C6AC396C
+RESULT: Login FAILED - back on login page
+
+Step 3: Tickers...
+Tickers Status: 200
+Tickers content (first 500): {"sinAutorizacion":"sinAutorizacion"}
