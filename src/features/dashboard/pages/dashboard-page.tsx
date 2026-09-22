@@ -37,7 +37,7 @@ const containerVariants = {
 
 const itemVariants = {
     hidden: { opacity: 0, y: 20, filter: "blur(4px)" },
-    show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { type: "spring", stiffness: 300, damping: 24, mass: 0.8 } }
+    show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { type: "spring" as const, stiffness: 300, damping: 24, mass: 0.8 } }
 };
 
 function DashboardPageContent() {
