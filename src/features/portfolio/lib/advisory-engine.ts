@@ -35,7 +35,7 @@ export function generateAdvisory(
   let score = 50; // Base score (HOLD range)
 
   const latestRatios = Array.isArray(asset?.ratios) ? asset.ratios[0] : null;
-  const pe = latestRatios?.priceEarningsRatio ?? null;
+  const pe = latestRatios?.priceToEarningsRatio ?? null;
   const debtToEquity = latestRatios?.debtToEquityRatio ?? null;
   const roe = asset?.keyMetrics?.returnOnEquityTTM ?? (latestRatios ? (latestRatios as any).returnOnEquity ?? null : null);
   const beta = asset?.profile?.beta ?? null;
@@ -99,7 +99,7 @@ export function generateAdvisory(
   const currentHolding = holdings.find(h => h.symbol === symbol);
   const currentAssetValue = (currentHolding?.quantity ?? 0) * (asset?.quote?.price ?? 0);
   
-  const currentAllocationPercent = totalMarketValue > 0 ? (currentAssetValue / totalMarketValue) * 100 : 0;
+  // currentAllocationPercent is computed via sectorAllocationPercent below
   
   const sectorValue = holdings
     .filter(h => portfolioData[h.symbol]?.profile?.sector === sector)

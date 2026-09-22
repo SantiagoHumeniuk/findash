@@ -24,7 +24,8 @@ import {
 } from '../components';
 import { ErrorBoundary } from '../../../components/error-boundary';
 
-import { PerformanceBenchmarks } from '../components/analysis/performance-benchmarks';
+// PerformanceBenchmarks component available when needed
+// import { PerformanceBenchmarks } from '../components/analysis/performance-benchmarks';
 
 function PortfolioPageContent() {
   const { holdings, transactions, totalPerformance, loading, deleteAsset, portfolioData, portfolios, currentPortfolio } = usePortfolio();
