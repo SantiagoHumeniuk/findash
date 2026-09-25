@@ -859,39 +859,98 @@
      LANDING PAGE - ANIMATED BACKGROUND
      ============================== */
 
-  /* Floating orb animations with different paths */
+  /* Floating orb animations - Recorrido fluido y expansivo por toda la pantalla */
   @keyframes float-orb-1 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    25% { transform: translate(80px, -120px) scale(1.1); }
-    50% { transform: translate(-60px, -200px) scale(0.95); }
-    75% { transform: translate(100px, -80px) scale(1.05); }
+    0%, 100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    25% {
+      transform: translate3d(35vw, 22vh, 0) scale(1.15);
+    }
+    50% {
+      transform: translate3d(55vw, -8vh, 0) scale(0.92);
+    }
+    75% {
+      transform: translate3d(18vw, 38vh, 0) scale(1.08);
+    }
   }
 
   @keyframes float-orb-2 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    25% { transform: translate(-100px, -80px) scale(1.15); }
-    50% { transform: translate(70px, -160px) scale(0.9); }
-    75% { transform: translate(-50px, -120px) scale(1.1); }
+    0%, 100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    25% {
+      transform: translate3d(-38vw, 28vh, 0) scale(1.18);
+    }
+    50% {
+      transform: translate3d(-58vw, -12vh, 0) scale(0.88);
+    }
+    75% {
+      transform: translate3d(-22vw, 42vh, 0) scale(1.12);
+    }
   }
 
   @keyframes float-orb-3 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    33% { transform: translate(120px, -100px) scale(1.08); }
-    66% { transform: translate(-80px, -180px) scale(0.92); }
+    0%, 100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    30% {
+      transform: translate3d(48vw, -26vh, 0) scale(1.14);
+    }
+    60% {
+      transform: translate3d(65vw, 22vh, 0) scale(0.9);
+    }
+    85% {
+      transform: translate3d(25vw, -15vh, 0) scale(1.05);
+    }
   }
 
   @keyframes float-orb-4 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    20% { transform: translate(-60px, -140px) scale(1.12); }
-    40% { transform: translate(90px, -60px) scale(0.88); }
-    60% { transform: translate(-30px, -200px) scale(1.05); }
-    80% { transform: translate(70px, -100px) scale(0.95); }
+    0%, 100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    20% {
+      transform: translate3d(-42vw, -38vh, 0) scale(1.15);
+    }
+    45% {
+      transform: translate3d(18vw, -52vh, 0) scale(0.88);
+    }
+    70% {
+      transform: translate3d(-32vw, -18vh, 0) scale(1.1);
+    }
+    90% {
+      transform: translate3d(15vw, -32vh, 0) scale(0.95);
+    }
   }
 
   @keyframes float-orb-5 {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    30% { transform: translate(50px, -170px) scale(1.1); }
-    60% { transform: translate(-90px, -90px) scale(0.93); }
+    0%, 100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    30% {
+      transform: translate3d(42vw, -38vh, 0) scale(1.16);
+    }
+    65% {
+      transform: translate3d(-18vw, -55vh, 0) scale(0.86);
+    }
+    85% {
+      transform: translate3d(52vw, -18vh, 0) scale(1.06);
+    }
+  }
+
+  @keyframes float-orb-6 {
+    0%, 100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    25% {
+      transform: translate3d(-28vw, 32vh, 0) scale(1.2);
+    }
+    50% {
+      transform: translate3d(32vw, -25vh, 0) scale(0.85);
+    }
+    75% {
+      transform: translate3d(-15vw, -30vh, 0) scale(1.1);
+    }
   }
 
   /* Animated gradient shift for text */

@@ -9,7 +9,7 @@ export interface AnimatedBackgroundProps {
 }
 
 interface OrbConfig {
-  color: string;
+  gradient: string;
   size: string;
   position: string;
   animation: string;
@@ -19,50 +19,64 @@ interface OrbConfig {
 
 const heroOrbs: OrbConfig[] = [
   {
-    color: 'bg-gradient-to-br from-blue-500/25 to-cyan-400/15 dark:from-blue-500/20 dark:to-cyan-400/10',
-    size: 'w-[600px] h-[600px]',
-    position: '-top-[10%] left-[5%]',
+    // Orbe 1: Cian eléctrico y azul neón (recorre ampliamente de arriba a la derecha y centro)
+    gradient: 'radial-gradient(circle at 35% 35%, rgba(6, 182, 212, 0.42) 0%, rgba(59, 130, 246, 0.28) 40%, rgba(99, 102, 241, 0.12) 65%, transparent 80%)',
+    size: 'w-[520px] h-[520px] sm:w-[650px] sm:h-[650px]',
+    position: 'top-[-8%] left-[2%]',
     animation: 'float-orb-1',
-    duration: '18s',
+    duration: '22s',
     delay: '0s',
   },
   {
-    color: 'bg-gradient-to-br from-indigo-500/20 to-purple-500/10 dark:from-indigo-500/15 dark:to-purple-500/5',
-    size: 'w-[500px] h-[500px]',
-    position: 'top-[10%] right-[-5%]',
+    // Orbe 2: Púrpura cósmico, fucsia y violeta (recorre diagonal y parte baja)
+    gradient: 'radial-gradient(circle at 40% 40%, rgba(168, 85, 247, 0.38) 0%, rgba(217, 70, 239, 0.25) 35%, rgba(99, 102, 241, 0.1) 65%, transparent 80%)',
+    size: 'w-[480px] h-[480px] sm:w-[600px] sm:h-[600px]',
+    position: 'top-[5%] right-[-5%]',
     animation: 'float-orb-2',
-    duration: '22s',
-    delay: '-3s',
+    duration: '26s',
+    delay: '-4s',
   },
   {
-    color: 'bg-gradient-to-br from-cyan-400/20 to-blue-600/10 dark:from-cyan-400/15 dark:to-blue-600/5',
-    size: 'w-[450px] h-[450px]',
-    position: 'top-[35%] left-[-5%]',
+    // Orbe 3: Esmeralda luminoso y turquesa (recorre centro y laterales)
+    gradient: 'radial-gradient(circle at 45% 45%, rgba(16, 185, 129, 0.35) 0%, rgba(6, 182, 212, 0.25) 40%, rgba(59, 130, 246, 0.1) 65%, transparent 80%)',
+    size: 'w-[440px] h-[440px] sm:w-[540px] sm:h-[540px]',
+    position: 'top-[35%] left-[-8%]',
     animation: 'float-orb-3',
-    duration: '20s',
+    duration: '24s',
+    delay: '-7s',
+  },
+  {
+    // Orbe 4: Azul zafiro e índigo brillante (recorre cuadrante inferior derecho a superior)
+    gradient: 'radial-gradient(circle at 35% 35%, rgba(59, 130, 246, 0.38) 0%, rgba(99, 102, 241, 0.26) 40%, rgba(147, 51, 234, 0.12) 65%, transparent 80%)',
+    size: 'w-[500px] h-[500px] sm:w-[620px] sm:h-[620px]',
+    position: 'top-[45%] right-[2%]',
+    animation: 'float-orb-4',
+    duration: '28s',
     delay: '-6s',
   },
   {
-    color: 'bg-gradient-to-br from-violet-500/15 to-indigo-400/10 dark:from-violet-500/10 dark:to-indigo-400/5',
-    size: 'w-[550px] h-[550px]',
-    position: 'top-[50%] right-[0%]',
-    animation: 'float-orb-4',
-    duration: '24s',
-    delay: '-5s',
+    // Orbe 5: Cian radiante y cielo brillante (recorre cuadrante inferior izquierdo a superior derecho)
+    gradient: 'radial-gradient(circle at 40% 40%, rgba(14, 165, 233, 0.4) 0%, rgba(6, 182, 212, 0.25) 40%, rgba(99, 102, 241, 0.1) 65%, transparent 80%)',
+    size: 'w-[460px] h-[460px] sm:w-[560px] sm:h-[560px]',
+    position: 'top-[65%] left-[15%]',
+    animation: 'float-orb-5',
+    duration: '20s',
+    delay: '-3s',
   },
   {
-    color: 'bg-gradient-to-br from-blue-400/10 to-sky-500/10 dark:from-blue-400/5 dark:to-sky-500/5',
-    size: 'w-[400px] h-[400px]',
-    position: 'top-[75%] left-[20%]',
-    animation: 'float-orb-5',
-    duration: '16s',
-    delay: '-2s',
+    // Orbe 6: Núcleo de energía solar / rosa violeta dinámico en el centro de la pantalla
+    gradient: 'radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.25) 0%, rgba(236, 72, 153, 0.22) 35%, rgba(99, 102, 241, 0.1) 60%, transparent 80%)',
+    size: 'w-[400px] h-[400px] sm:w-[500px] sm:h-[500px]',
+    position: 'top-[25%] left-[30%]',
+    animation: 'float-orb-6',
+    duration: '19s',
+    delay: '-5s',
   },
 ];
 
 const subtleOrbs: OrbConfig[] = [
   {
-    color: 'bg-gradient-to-br from-blue-500/15 to-cyan-400/10 dark:from-blue-500/10 dark:to-cyan-400/5',
+    gradient: 'radial-gradient(circle at 35% 35%, rgba(6, 182, 212, 0.25) 0%, rgba(59, 130, 246, 0.15) 40%, transparent 75%)',
     size: 'w-[450px] h-[450px]',
     position: '-top-[10%] left-[5%]',
     animation: 'float-orb-1',
@@ -70,16 +84,16 @@ const subtleOrbs: OrbConfig[] = [
     delay: '0s',
   },
   {
-    color: 'bg-gradient-to-br from-indigo-500/15 to-purple-500/10 dark:from-indigo-500/10 dark:to-purple-500/5',
-    size: 'w-[350px] h-[350px]',
+    gradient: 'radial-gradient(circle at 40% 40%, rgba(168, 85, 247, 0.22) 0%, rgba(99, 102, 241, 0.12) 40%, transparent 75%)',
+    size: 'w-[400px] h-[400px]',
     position: 'top-[20%] right-[0%]',
     animation: 'float-orb-2',
     duration: '30s',
     delay: '-5s',
   },
   {
-    color: 'bg-gradient-to-br from-cyan-400/15 to-blue-600/10 dark:from-cyan-400/10 dark:to-blue-600/5',
-    size: 'w-[400px] h-[400px]',
+    gradient: 'radial-gradient(circle at 45% 45%, rgba(14, 165, 233, 0.22) 0%, rgba(6, 182, 212, 0.12) 40%, transparent 75%)',
+    size: 'w-[420px] h-[420px]',
     position: 'top-[60%] left-[10%]',
     animation: 'float-orb-3',
     duration: '28s',
@@ -96,14 +110,19 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({
 
   return (
     <div className={`relative ${className}`}>
-      {/* Capa de orbes animados en viewport fijo para fluidez total de scroll */}
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden transform-gpu will-change-transform" aria-hidden="true">
+      {/* Capa de orbes animados en viewport fijo con aceleración GPU para 120 FPS sin trabas */}
+      <div 
+        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden transform-gpu will-change-transform" 
+        style={{ contain: 'strict' }}
+        aria-hidden="true"
+      >
         {orbs.map((orb, index) => (
           <div
             key={index}
-            className={`absolute rounded-full ${orb.color} ${orb.size} ${orb.position}`}
+            className={`absolute rounded-full ${orb.size} ${orb.position} pointer-events-none`}
             style={{
-              filter: variant === 'hero' ? 'blur(80px)' : 'blur(60px)',
+              backgroundImage: orb.gradient,
+              filter: 'blur(35px)',
               animation: `${orb.animation} ${orb.duration} ease-in-out infinite`,
               animationDelay: orb.delay,
               transform: 'translate3d(0, 0, 0)',
