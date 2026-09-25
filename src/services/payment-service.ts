@@ -17,6 +17,7 @@ export interface SubscriptionRequest {
   admin_notes?: string | null;
   reviewed_by?: string | null;
   reviewed_at?: string | null;
+  user_notified_at?: string | null;
   created_at: string;
   updated_at: string;
   user_first_name?: string | null;
@@ -122,6 +123,86 @@ class PaymentService {
     } catch (err) {
       void logger.error('PAYMENT_USER_REQUESTS_ERR', String(err));
       return [];
+    }
+  }
+
+  /**
+   * Obtiene la solicitud más reciente aprobada o rechazada que aún no ha sido mostrada en el pop-up al usuario
+   */
+  async getUnnotifiedUserRequest(): Promise<SubscriptionRequest | null> {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return null;
+
+      const { data, error } = await supabase
+        .from('subscription_requests')
+        .select('*')
+        .eq('user_id', user.id)
+        .in('status', ['approved', 'rejected'])
+        .order('reviewed_at', { ascending: false, nullsFirst: false })
+        .order('updated_at', { ascending: false });
+
+      if (error || !data || data.length === 0) return null;
+
+      // Obtener lista local de IDs ya notificados
+      let localNotified: string[] = [];
+      try {
+        const stored = localStorage.getItem(`notified_subs_${user.id}`);
+        if (stored) {
+          localNotified = JSON.parse(stored) as string[];
+        }
+      } catch {
+        localNotified = [];
+      }
+
+      // Buscar el primer registro que no tenga user_notified_at y no esté en localNotified
+      const unnotified = (data as SubscriptionRequest[]).find(
+        (req) => !req.user_notified_at && !localNotified.includes(req.id)
+      );
+
+      return unnotified || null;
+    } catch (err) {
+      void logger.error('PAYMENT_GET_UNNOTIFIED_ERR', String(err));
+      return null;
+    }
+  }
+
+  /**
+   * Marca una solicitud como notificada al usuario (en base de datos y localStorage)
+   */
+  async markRequestAsNotified(requestId: string): Promise<void> {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        // Guardar en localStorage para prevenir reapariciones
+        try {
+          const key = `notified_subs_${user.id}`;
+          const stored = localStorage.getItem(key);
+          const list = stored ? (JSON.parse(stored) as string[]) : [];
+          if (!list.includes(requestId)) {
+            list.push(requestId);
+            localStorage.setItem(key, JSON.stringify(list));
+          }
+        } catch {
+          // Ignore local storage error
+        }
+
+        // Actualizar en base de datos
+        await supabase
+          .from('subscription_requests')
+          .update({
+            user_notified_at: new Date().toISOString(),
+          })
+          .eq('id', requestId);
+      }
+    } catch (err) {
+      void logger.error('PAYMENT_MARK_NOTIFIED_ERR', String(err));
     }
   }
 

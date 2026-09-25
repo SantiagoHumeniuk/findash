@@ -18,6 +18,7 @@ import { AnimatedBackground } from "./components/ui/animated-background";
 import { CommandMenu } from "./components/search/command-menu";
 import { ErrorBoundary } from "./components/error-boundary";
 import { SuspenseFallback } from "./components/suspense";
+import { SubscriptionStatusModal } from "./components/shared/subscription-status-modal";
 
 export default function App() {
   const location = useLocation();
@@ -60,6 +61,9 @@ export default function App() {
               <CommandMenu />
               <ModeToggle />
             </div>
+
+            {/* Modal de estado de suscripción y pago */}
+            <SubscriptionStatusModal />
 
             {/* Trigger flotante solo para móvil */}
             <div className="fixed bottom-6 left-6 z-50 md:hidden">

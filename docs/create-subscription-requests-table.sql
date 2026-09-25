@@ -32,11 +32,15 @@ CREATE TABLE IF NOT EXISTS public.subscription_requests (
   admin_notes TEXT,
   reviewed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   reviewed_at TIMESTAMPTZ,
+  user_notified_at TIMESTAMPTZ,
   
   -- Fechas
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Si la tabla ya existe, agregar la columna user_notified_at si no está presente:
+ALTER TABLE public.subscription_requests ADD COLUMN IF NOT EXISTS user_notified_at TIMESTAMPTZ;
 
 -- -----------------------------------------------------------------------------
 -- COMENTARIOS
@@ -52,6 +56,7 @@ COMMENT ON COLUMN public.subscription_requests.receipt_reference IS 'Número de 
 COMMENT ON COLUMN public.subscription_requests.receipt_image IS 'Imagen del comprobante adjunto';
 COMMENT ON COLUMN public.subscription_requests.status IS 'Estado: pending (pendiente), approved (aprobada), rejected (rechazada)';
 COMMENT ON COLUMN public.subscription_requests.admin_notes IS 'Notas internas del administrador';
+COMMENT ON COLUMN public.subscription_requests.user_notified_at IS 'Fecha en que se le mostró el pop-up de confirmación al usuario';
 
 -- -----------------------------------------------------------------------------
 -- ÍNDICES
@@ -96,7 +101,15 @@ FOR SELECT
 TO authenticated
 USING (auth.uid() = user_id);
 
--- POLÍTICA 3: Los administradores pueden ver todas las solicitudes
+-- POLÍTICA 3: Los usuarios pueden actualizar el estado de notificación de sus solicitudes
+CREATE POLICY "Users can mark their own requests as notified"
+ON public.subscription_requests
+FOR UPDATE
+TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+-- POLÍTICA 4: Los administradores pueden ver todas las solicitudes
 CREATE POLICY "Admins can view all subscription requests"
 ON public.subscription_requests
 FOR SELECT
