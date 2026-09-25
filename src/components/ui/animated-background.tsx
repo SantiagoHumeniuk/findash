@@ -54,9 +54,11 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({
         style={{ contain: 'strict' }}
         aria-hidden="true"
       >
-        {/* Gradientes de ambiente muy sutiles y elegantes en los extremos */}
-        <div className="absolute top-0 left-1/4 w-[600px] h-[350px] bg-cyan-500/[0.04] dark:bg-cyan-400/[0.05] rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-[600px] h-[350px] bg-indigo-500/[0.04] dark:bg-indigo-500/[0.05] rounded-full blur-[100px] pointer-events-none" />
+        {/* Gradientes y auras de ambiente difuminadas con brillo elegante */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-15%,rgba(56,189,248,0.22),rgba(99,102,241,0.14),transparent_70%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_0%_40%,rgba(6,182,212,0.18),rgba(59,130,246,0.08),transparent_65%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_100%_60%,rgba(139,92,246,0.18),rgba(99,102,241,0.08),transparent_65%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_40%_at_50%_110%,rgba(59,130,246,0.15),rgba(147,51,234,0.10),transparent_70%)] pointer-events-none" />
 
         {/* Pelotitas luminosas flotantes (suben y bajan con fluidez 120 FPS sin lag) */}
         {backgroundParticles.map((particle, index) => (
