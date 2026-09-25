@@ -2,13 +2,14 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import { Card } from '../../../components/ui/card';
-import { Users, FileText, BarChart2, BookCopy, Info, Lightbulb, Mail } from 'lucide-react';
+import { Users, FileText, BarChart2, BookCopy, Info, Lightbulb, Mail, CreditCard } from 'lucide-react';
 import { AdminUsersTable } from './users/admin-users-table';
 import { AdminLogsTable } from './logs/admin-logs-table';
 import { AdminBlogsSection } from './blogs/admin-blogs-section';
 import { AdminStatsSection } from './stats/admin-stats-section';
 import { AdminSuggestionsSection } from './suggestions/admin-suggestions-section';
 import { AdminContactMessagesSection } from './contact/admin-contact-messages-section';
+import { AdminSubscriptionsSection } from './subscriptions/admin-subscriptions-section';
 
 /**
  * Tarjeta de ayuda contextual para cada pestaña
@@ -31,19 +32,20 @@ function TabHelper({ title, description }: { title: string; description: string 
  * Componente de pestañas (tabs) para las diferentes secciones del panel de admin.
  * Incluye:
  * - Gestión de Usuarios
+ * - Pagos y Suscripciones (Transferencias / Mercado Pago)
  * - Gestión de Blogs
  * - Logs del Sistema
- * - Estadísticas Completas (usuarios, blogs, portfolio, watchlist, sugerencias, logs)
- * 
- * @example
- * ```tsx
- * <AdminTabs />
- * ```
+ * - Estadísticas Completas
  */
 export function AdminTabs() {
   return (
-    <Tabs defaultValue="users" className="w-full">
-      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 h-auto gap-1">
+    <Tabs defaultValue="subscriptions" className="w-full">
+      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 h-auto gap-1">
+        <TabsTrigger value="subscriptions" className="text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
+          <CreditCard className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+          <span className="hidden sm:inline">Pagos</span>
+          <span className="sm:hidden">💳</span>
+        </TabsTrigger>
         <TabsTrigger value="users" className="text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
           <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
           <span className="hidden sm:inline">Usuarios</span>
@@ -75,6 +77,14 @@ export function AdminTabs() {
           <span className="sm:hidden">📊</span>
         </TabsTrigger>
       </TabsList>
+
+      <TabsContent value="subscriptions" className="mt-4 sm:mt-6">
+        <TabHelper 
+          title="Gestión de Pagos y Suscripciones"
+          description="Revisa las transferencias informadas por los usuarios. Al hacer clic en 'Aprobar', el rol del usuario se actualiza automáticamente al plan correspondiente (Plus o Premium) y se le habilitan todas las funcionalidades."
+        />
+        <AdminSubscriptionsSection />
+      </TabsContent>
 
       <TabsContent value="users" className="mt-4 sm:mt-6">
         <TabHelper 

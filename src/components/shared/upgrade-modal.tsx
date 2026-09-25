@@ -44,7 +44,7 @@ export function UpgradeModal({
   const planDetails = {
     plus: {
       name: 'Plus',
-      price: '$9.99/mes',
+      price: '$15.000 / mes',
       features: [
         '+8000 activos en seguimiento',
         '5 portfolios',
@@ -56,7 +56,7 @@ export function UpgradeModal({
     },
     premium: {
       name: 'Premium',
-      price: '$19.99/mes',
+      price: '$25.000 / mes',
       features: [
         '50 activos en seguimiento',
         '10 portfolios',

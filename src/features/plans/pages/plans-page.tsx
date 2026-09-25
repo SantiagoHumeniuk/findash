@@ -1,27 +1,38 @@
 // src/features/plans/pages/plans-page.tsx
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Crown, Zap, Rocket, Shield } from 'lucide-react';
+import { Check, Crown, Zap, Rocket, Shield, Clock, CreditCard } from 'lucide-react';
 import { useConfig } from '../../../hooks/use-config';
 import { useAuth } from '../../../hooks/use-auth';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { cn } from '../../../lib/utils';
+import { PaymentModal } from '../components/payment-modal';
+import { paymentService, type SubscriptionRequest } from '../../../services/payment-service';
 
 /**
- * Página de planes y precios.
- * Muestra una comparación detallada de los diferentes planes disponibles
- * y sus características.
- * 
- * @example
- * ```tsx
- * <Route path="/plans" element={<PlansPage />} />
- * ```
+ * Página de planes y precios con flujo de pago por Mercado Pago / Transferencia.
  */
 export default function PlansPage() {
   const config = useConfig();
   const { user, profile } = useAuth();
+
+  const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<'plus' | 'premium' | null>(null);
+  const [userPendingRequest, setUserPendingRequest] = useState<SubscriptionRequest | null>(null);
+
+  const fetchUserRequests = async () => {
+    if (!user) return;
+    const requests = await paymentService.getUserRequests();
+    const pending = requests.find((r) => r.status === 'pending');
+    setUserPendingRequest(pending ?? null);
+  };
+
+  useEffect(() => {
+    void fetchUserRequests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const plans = [
     {
@@ -52,7 +63,7 @@ export default function PlansPage() {
       role: 'plus',
       icon: Crown,
       description: 'Para inversores serios que necesitan más análisis',
-      price: '$15.000',
+      price: `$${(config.payment?.pricing?.plus ?? 15000).toLocaleString('es-AR')}`,
       priceDetail: 'por mes',
       features: [
         `Acceso a todos los símbolos (+8,000)`,
@@ -68,7 +79,7 @@ export default function PlansPage() {
         'Soporte prioritario',
       ],
       highlighted: true,
-      ctaText: 'Actualizar a Plus',
+      ctaText: 'Suscribirme a Plus',
       color: 'from-purple-500 to-pink-500',
     },
     {
@@ -76,7 +87,7 @@ export default function PlansPage() {
       role: 'premium',
       icon: Rocket,
       description: 'Para profesionales que demandan lo mejor',
-      price: '$25.000',
+      price: `$${(config.payment?.pricing?.premium ?? 25000).toLocaleString('es-AR')}`,
       priceDetail: 'por mes',
       features: [
         `Acceso a todos los símbolos (+8,000)`,
@@ -94,7 +105,7 @@ export default function PlansPage() {
         'Acceso anticipado a nuevas funciones',
       ],
       highlighted: false,
-      ctaText: 'Actualizar a Premium',
+      ctaText: 'Suscribirme a Premium',
       color: 'from-orange-500 to-red-500',
     },
   ];
@@ -109,6 +120,25 @@ export default function PlansPage() {
         transition={{ duration: 0.5 }}
         className="space-y-6 sm:space-y-8"
       >
+        {/* Pending Request Alert */}
+        {userPendingRequest && (
+          <Card className="border-amber-500/30 bg-amber-500/10 p-4">
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <div>
+                <h4 className="font-semibold text-sm text-foreground">
+                  Solicitud en Revisión para el Plan{' '}
+                  <span className="capitalize">{userPendingRequest.plan}</span>
+                </h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Hemos recibido tu comprobante de transferencia por $
+                  {Number(userPendingRequest.amount).toLocaleString('es-AR')} ARS. Tu plan se activará tan pronto como confirmemos la acreditación.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Header */}
         <div className="text-center space-y-2 sm:space-y-4 px-4">
           <Badge variant="outline" className="mb-2 sm:mb-4 text-xs sm:text-sm">
@@ -118,8 +148,7 @@ export default function PlansPage() {
             Elige el plan perfecto para ti
           </h1>
           <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-            Comienza gratis y actualiza cuando necesites más poder de análisis.
-            Todos los planes incluyen acceso a funciones esenciales. Para actualizar tu plan, <a href="/contact" className="text-primary hover:underline font-semibold">contáctanos</a>.
+            Comienza gratis o actualiza tu plan mediante transferencia directa con <strong>Mercado Pago</strong> o cualquier banco.
           </p>
         </div>
 
@@ -184,25 +213,57 @@ export default function PlansPage() {
                   </CardContent>
 
                   <CardFooter>
-                    <Button
-                      className="w-full text-xs sm:text-sm"
-                      size="sm"
-                      variant={plan.highlighted ? 'default' : 'outline'}
-                      disabled={isCurrentPlan}
-                      asChild={!isCurrentPlan}
-                    >
-                      {isCurrentPlan ? (
-                        'Plan Actual'
-                      ) : (
-                        <a href="/contact">Contactar para {plan.name}</a>
-                      )}
-                    </Button>
+                    {plan.role === 'basico' ? (
+                      <Button
+                        className="w-full text-xs sm:text-sm"
+                        size="sm"
+                        variant="outline"
+                        disabled={isCurrentPlan}
+                      >
+                        {isCurrentPlan ? 'Plan Actual' : 'Plan Gratuito'}
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full text-xs sm:text-sm gap-2"
+                        size="sm"
+                        variant={plan.highlighted ? 'default' : 'outline'}
+                        disabled={isCurrentPlan}
+                        onClick={() => {
+                          if (!user) {
+                            window.location.href = '/login';
+                            return;
+                          }
+                          setSelectedPlanForPayment(plan.role as 'plus' | 'premium');
+                        }}
+                      >
+                        {isCurrentPlan ? (
+                          'Plan Actual'
+                        ) : (
+                          <>
+                            <CreditCard className="w-4 h-4" />
+                            {userPendingRequest?.plan === plan.role ? 'Ver Solicitud' : `Pagar ${plan.name} con Transferencia`}
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               </motion.div>
             );
           })}
         </div>
+
+        {/* Payment Modal */}
+        {selectedPlanForPayment && (
+          <PaymentModal
+            isOpen={!!selectedPlanForPayment}
+            onClose={() => setSelectedPlanForPayment(null)}
+            plan={selectedPlanForPayment}
+            onSuccess={() => {
+              void fetchUserRequests();
+            }}
+          />
+        )}
 
         {/* Comparison Table */}
         <div className="mt-12 sm:mt-16">

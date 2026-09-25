@@ -56,6 +56,19 @@ export interface SidebarLink {
   requiresPermission?: keyof Profile;
 }
 
+export interface PaymentConfig {
+  bankName: string;
+  accountHolder: string;
+  alias: string;
+  cvu: string;
+  cuitCuil: string;
+  instructions: string;
+  pricing: {
+    plus: number;
+    premium: number;
+  };
+}
+
 /**
  * Estructura principal del archivo `config.json`, que define el comportamiento de la aplicación.
  */
@@ -76,6 +89,7 @@ export interface Config {
     fmpProxyEndpoints: FmpProxyEndpoints;
   };
   plans: Plans;
+  payment?: PaymentConfig;
   dashboard: {
     maxTickersToCompare: RoleLimits;
   };

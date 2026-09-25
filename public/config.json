@@ -149,6 +149,18 @@
       "SMH"
     ]
   },
+  "payment": {
+    "bankName": "Mercado Pago",
+    "accountHolder": "Santiago Humeniuk",
+    "alias": "santiagohumeniuk",
+    "cvu": "00000031300056422142774",
+    "cuitCuil": "Mercado Pago",
+    "instructions": "Realiza la transferencia desde Mercado Pago o cualquier banco/billetera. Luego ingresa tu nombre y número de comprobante para validar tu activación.",
+    "pricing": {
+      "plus": 15000,
+      "premium": 25000
+    }
+  },
   "notifications": [
     {
       "id": "portfolio_launch_01",
