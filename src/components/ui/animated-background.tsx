@@ -8,132 +8,77 @@ export interface AnimatedBackgroundProps {
   className?: string;
 }
 
-interface OrbConfig {
-  gradient: string;
-  size: string;
-  position: string;
+interface ParticleConfig {
+  size: number;
+  top: number;
+  left: number;
+  colorClass: string;
+  glowClass: string;
   animation: string;
   duration: string;
   delay: string;
 }
 
-const heroOrbs: OrbConfig[] = [
-  {
-    // Orbe 1: Cian eléctrico y azul neón (recorre ampliamente de arriba a la derecha y centro)
-    gradient: 'radial-gradient(circle at 35% 35%, rgba(6, 182, 212, 0.42) 0%, rgba(59, 130, 246, 0.28) 40%, rgba(99, 102, 241, 0.12) 65%, transparent 80%)',
-    size: 'w-[520px] h-[520px] sm:w-[650px] sm:h-[650px]',
-    position: 'top-[-8%] left-[2%]',
-    animation: 'float-orb-1',
-    duration: '22s',
-    delay: '0s',
-  },
-  {
-    // Orbe 2: Púrpura cósmico, fucsia y violeta (recorre diagonal y parte baja)
-    gradient: 'radial-gradient(circle at 40% 40%, rgba(168, 85, 247, 0.38) 0%, rgba(217, 70, 239, 0.25) 35%, rgba(99, 102, 241, 0.1) 65%, transparent 80%)',
-    size: 'w-[480px] h-[480px] sm:w-[600px] sm:h-[600px]',
-    position: 'top-[5%] right-[-5%]',
-    animation: 'float-orb-2',
-    duration: '26s',
-    delay: '-4s',
-  },
-  {
-    // Orbe 3: Esmeralda luminoso y turquesa (recorre centro y laterales)
-    gradient: 'radial-gradient(circle at 45% 45%, rgba(16, 185, 129, 0.35) 0%, rgba(6, 182, 212, 0.25) 40%, rgba(59, 130, 246, 0.1) 65%, transparent 80%)',
-    size: 'w-[440px] h-[440px] sm:w-[540px] sm:h-[540px]',
-    position: 'top-[35%] left-[-8%]',
-    animation: 'float-orb-3',
-    duration: '24s',
-    delay: '-7s',
-  },
-  {
-    // Orbe 4: Azul zafiro e índigo brillante (recorre cuadrante inferior derecho a superior)
-    gradient: 'radial-gradient(circle at 35% 35%, rgba(59, 130, 246, 0.38) 0%, rgba(99, 102, 241, 0.26) 40%, rgba(147, 51, 234, 0.12) 65%, transparent 80%)',
-    size: 'w-[500px] h-[500px] sm:w-[620px] sm:h-[620px]',
-    position: 'top-[45%] right-[2%]',
-    animation: 'float-orb-4',
-    duration: '28s',
-    delay: '-6s',
-  },
-  {
-    // Orbe 5: Cian radiante y cielo brillante (recorre cuadrante inferior izquierdo a superior derecho)
-    gradient: 'radial-gradient(circle at 40% 40%, rgba(14, 165, 233, 0.4) 0%, rgba(6, 182, 212, 0.25) 40%, rgba(99, 102, 241, 0.1) 65%, transparent 80%)',
-    size: 'w-[460px] h-[460px] sm:w-[560px] sm:h-[560px]',
-    position: 'top-[65%] left-[15%]',
-    animation: 'float-orb-5',
-    duration: '20s',
-    delay: '-3s',
-  },
-  {
-    // Orbe 6: Núcleo de energía solar / rosa violeta dinámico en el centro de la pantalla
-    gradient: 'radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.25) 0%, rgba(236, 72, 153, 0.22) 35%, rgba(99, 102, 241, 0.1) 60%, transparent 80%)',
-    size: 'w-[400px] h-[400px] sm:w-[500px] sm:h-[500px]',
-    position: 'top-[25%] left-[30%]',
-    animation: 'float-orb-6',
-    duration: '19s',
-    delay: '-5s',
-  },
-];
+const backgroundParticles: ParticleConfig[] = [
+  { size: 8, top: 8, left: 7, colorClass: 'bg-cyan-400', glowClass: 'shadow-[0_0_12px_rgba(34,211,238,0.75)]', animation: 'particle-rise-fall-1', duration: '9s', delay: '0s' },
+  { size: 10, top: 18, left: 22, colorClass: 'bg-blue-400', glowClass: 'shadow-[0_0_14px_rgba(96,165,250,0.7)]', animation: 'particle-rise-fall-2', duration: '12s', delay: '-2s' },
+  { size: 6, top: 28, left: 38, colorClass: 'bg-indigo-400', glowClass: 'shadow-[0_0_10px_rgba(129,140,248,0.7)]', animation: 'particle-rise-fall-3', duration: '8s', delay: '-4s' },
+  { size: 11, top: 12, left: 55, colorClass: 'bg-cyan-300', glowClass: 'shadow-[0_0_15px_rgba(103,232,249,0.8)]', animation: 'particle-rise-fall-4', duration: '11s', delay: '-1s' },
+  { size: 7, top: 22, left: 72, colorClass: 'bg-emerald-400', glowClass: 'shadow-[0_0_12px_rgba(52,211,153,0.7)]', animation: 'particle-rise-fall-1', duration: '10s', delay: '-5s' },
+  { size: 9, top: 15, left: 88, colorClass: 'bg-indigo-400', glowClass: 'shadow-[0_0_12px_rgba(129,140,248,0.75)]', animation: 'particle-rise-fall-2', duration: '13s', delay: '-3s' },
+  
+  { size: 8, top: 42, left: 12, colorClass: 'bg-blue-400', glowClass: 'shadow-[0_0_12px_rgba(96,165,250,0.75)]', animation: 'particle-rise-fall-3', duration: '11s', delay: '-6s' },
+  { size: 6, top: 52, left: 28, colorClass: 'bg-cyan-400', glowClass: 'shadow-[0_0_10px_rgba(34,211,238,0.7)]', animation: 'particle-rise-fall-4', duration: '9s', delay: '-2.5s' },
+  { size: 12, top: 45, left: 48, colorClass: 'bg-indigo-400', glowClass: 'shadow-[0_0_16px_rgba(129,140,248,0.8)]', animation: 'particle-rise-fall-1', duration: '14s', delay: '-7s' },
+  { size: 7, top: 58, left: 65, colorClass: 'bg-cyan-300', glowClass: 'shadow-[0_0_12px_rgba(103,232,249,0.7)]', animation: 'particle-rise-fall-2', duration: '10s', delay: '-4.5s' },
+  { size: 9, top: 48, left: 82, colorClass: 'bg-emerald-400', glowClass: 'shadow-[0_0_14px_rgba(52,211,153,0.75)]', animation: 'particle-rise-fall-3', duration: '12s', delay: '-1.5s' },
+  { size: 6, top: 38, left: 94, colorClass: 'bg-blue-400', glowClass: 'shadow-[0_0_10px_rgba(96,165,250,0.7)]', animation: 'particle-rise-fall-4', duration: '8.5s', delay: '-5.5s' },
 
-const subtleOrbs: OrbConfig[] = [
-  {
-    gradient: 'radial-gradient(circle at 35% 35%, rgba(6, 182, 212, 0.25) 0%, rgba(59, 130, 246, 0.15) 40%, transparent 75%)',
-    size: 'w-[450px] h-[450px]',
-    position: '-top-[10%] left-[5%]',
-    animation: 'float-orb-1',
-    duration: '25s',
-    delay: '0s',
-  },
-  {
-    gradient: 'radial-gradient(circle at 40% 40%, rgba(168, 85, 247, 0.22) 0%, rgba(99, 102, 241, 0.12) 40%, transparent 75%)',
-    size: 'w-[400px] h-[400px]',
-    position: 'top-[20%] right-[0%]',
-    animation: 'float-orb-2',
-    duration: '30s',
-    delay: '-5s',
-  },
-  {
-    gradient: 'radial-gradient(circle at 45% 45%, rgba(14, 165, 233, 0.22) 0%, rgba(6, 182, 212, 0.12) 40%, transparent 75%)',
-    size: 'w-[420px] h-[420px]',
-    position: 'top-[60%] left-[10%]',
-    animation: 'float-orb-3',
-    duration: '28s',
-    delay: '-10s',
-  },
+  { size: 10, top: 72, left: 8, colorClass: 'bg-cyan-400', glowClass: 'shadow-[0_0_14px_rgba(34,211,238,0.75)]', animation: 'particle-rise-fall-1', duration: '12s', delay: '-3.5s' },
+  { size: 7, top: 82, left: 24, colorClass: 'bg-indigo-400', glowClass: 'shadow-[0_0_12px_rgba(129,140,248,0.7)]', animation: 'particle-rise-fall-2', duration: '9.5s', delay: '-6.5s' },
+  { size: 8, top: 68, left: 42, colorClass: 'bg-emerald-400', glowClass: 'shadow-[0_0_12px_rgba(52,211,153,0.7)]', animation: 'particle-rise-fall-3', duration: '11s', delay: '-2s' },
+  { size: 11, top: 85, left: 58, colorClass: 'bg-blue-400', glowClass: 'shadow-[0_0_15px_rgba(96,165,250,0.8)]', animation: 'particle-rise-fall-4', duration: '13s', delay: '-4s' },
+  { size: 6, top: 75, left: 75, colorClass: 'bg-cyan-300', glowClass: 'shadow-[0_0_10px_rgba(103,232,249,0.7)]', animation: 'particle-rise-fall-1', duration: '8s', delay: '-1s' },
+  { size: 9, top: 88, left: 90, colorClass: 'bg-indigo-400', glowClass: 'shadow-[0_0_14px_rgba(129,140,248,0.75)]', animation: 'particle-rise-fall-2', duration: '10.5s', delay: '-5s' },
 ];
 
 export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ 
   children, 
-  variant = 'hero',
   className = ''
 }) => {
-  const orbs = variant === 'hero' ? heroOrbs : subtleOrbs;
-
   return (
     <div className={`relative ${className}`}>
-      {/* Capa de orbes animados en viewport fijo con aceleración GPU para 120 FPS sin trabas */}
+      {/* Fondo sutil y minimalista con pelotitas luminosas que suben y bajan suavemente */}
       <div 
         className="pointer-events-none fixed inset-0 -z-10 overflow-hidden transform-gpu will-change-transform" 
         style={{ contain: 'strict' }}
         aria-hidden="true"
       >
-        {orbs.map((orb, index) => (
+        {/* Gradientes de ambiente muy sutiles y elegantes en los extremos */}
+        <div className="absolute top-0 left-1/4 w-[600px] h-[350px] bg-cyan-500/[0.04] dark:bg-cyan-400/[0.05] rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[350px] bg-indigo-500/[0.04] dark:bg-indigo-500/[0.05] rounded-full blur-[100px] pointer-events-none" />
+
+        {/* Pelotitas luminosas flotantes (suben y bajan con fluidez 120 FPS sin lag) */}
+        {backgroundParticles.map((particle, index) => (
           <div
             key={index}
-            className={`absolute rounded-full ${orb.size} ${orb.position} pointer-events-none`}
+            className={`absolute rounded-full ${particle.colorClass} ${particle.glowClass} pointer-events-none`}
             style={{
-              backgroundImage: orb.gradient,
-              filter: 'blur(35px)',
-              animation: `${orb.animation} ${orb.duration} ease-in-out infinite`,
-              animationDelay: orb.delay,
+              width: `${particle.size}px`,
+              height: `${particle.size}px`,
+              top: `${particle.top}%`,
+              left: `${particle.left}%`,
+              animation: `${particle.animation} ${particle.duration} ease-in-out infinite`,
+              animationDelay: particle.delay,
               transform: 'translate3d(0, 0, 0)',
-              willChange: 'transform',
+              willChange: 'transform, opacity',
             }}
           />
         ))}
 
-        {/* Capa de ruido/textura sutil para profundidad */}
+        {/* Capa de textura microscópica sutil */}
         <div
-          className="absolute inset-0 opacity-[0.015] dark:opacity-[0.025]"
+          className="absolute inset-0 opacity-[0.012] dark:opacity-[0.02]"
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
           }}
@@ -148,48 +93,19 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({
 
 export const AnimatedAuthBackground: React.FC = () => (
   <div className="pointer-events-none absolute inset-0 overflow-hidden -z-0" aria-hidden="true">
-    {/* Orbe 1: Cian / Azul brillante arriba a la izquierda */}
+    {/* Orbe sutil 1: Cian / Azul arriba a la izquierda */}
     <div
-      className="absolute -top-[12%] -left-[6%] w-[550px] h-[550px] rounded-full bg-gradient-to-br from-cyan-400/25 via-blue-500/20 to-indigo-600/15 dark:from-cyan-400/20 dark:via-blue-500/15 dark:to-indigo-600/10 blur-[120px]"
-      style={{
-        animation: 'float-orb-1 22s ease-in-out infinite',
-        willChange: 'transform',
-      }}
+      className="absolute -top-[10%] -left-[5%] w-[450px] h-[450px] rounded-full bg-cyan-500/[0.08] dark:bg-cyan-400/[0.08] blur-[90px]"
     />
 
-    {/* Orbe 2: Índigo / Violeta arriba a la derecha */}
+    {/* Orbe sutil 2: Índigo / Violeta arriba a la derecha */}
     <div
-      className="absolute top-[8%] -right-[12%] w-[520px] h-[520px] rounded-full bg-gradient-to-br from-indigo-500/25 via-purple-500/20 to-blue-600/15 dark:from-indigo-500/20 dark:via-purple-500/15 dark:to-blue-600/10 blur-[130px]"
-      style={{
-        animation: 'float-orb-2 26s ease-in-out infinite',
-        animationDelay: '-4s',
-        willChange: 'transform',
-      }}
-    />
-
-    {/* Orbe 3: Azul eléctrico / Turquesa abajo al centro */}
-    <div
-      className="absolute -bottom-[15%] left-[20%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-blue-500/20 via-cyan-400/15 to-emerald-400/10 dark:from-blue-500/15 dark:via-cyan-400/10 dark:to-emerald-400/5 blur-[140px]"
-      style={{
-        animation: 'float-orb-3 24s ease-in-out infinite',
-        animationDelay: '-8s',
-        willChange: 'transform',
-      }}
-    />
-
-    {/* Orbe 4: Violeta suave / Púrpura medio lateral izquierdo */}
-    <div
-      className="absolute top-[45%] -left-[10%] w-[450px] h-[450px] rounded-full bg-gradient-to-br from-violet-600/20 via-indigo-500/15 to-blue-500/10 dark:from-violet-600/15 dark:via-indigo-500/10 dark:to-blue-500/5 blur-[120px]"
-      style={{
-        animation: 'float-orb-4 28s ease-in-out infinite',
-        animationDelay: '-6s',
-        willChange: 'transform',
-      }}
+      className="absolute top-[10%] -right-[8%] w-[450px] h-[450px] rounded-full bg-indigo-500/[0.08] dark:bg-indigo-500/[0.08] blur-[90px]"
     />
 
     {/* Patrón de cuadrícula tecnológica punteada de fondo */}
     <div
-      className="absolute inset-0 opacity-[0.03] dark:opacity-[0.07]"
+      className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
       style={{
         backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)',
         backgroundSize: '32px 32px',

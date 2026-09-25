@@ -32,47 +32,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 }) => {
   return (
     <section className="relative text-center py-16 px-4 sm:py-20 md:py-28 lg:py-36 overflow-visible z-10">
-      {/* Fondo decorativo con múltiples gradientes radiales superpuestos */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_30%,rgba(120,119,198,0.18),transparent)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_70%_60%,rgba(56,189,248,0.1),transparent)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_50%_at_30%_50%,rgba(139,92,246,0.08),transparent)]" />
-      </div>
-
-      {/* Partículas decorativas flotantes sutiles y ligeras */}
-      <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden" aria-hidden="true">
-        {[...Array(6)].map((_, i) => {
-          const size = 5 + (i % 4);
-          const left = 12 + i * 15;
-          const delay = i * 0.6;
-          const duration = 7 + (i % 3);
-          const travel = 40 + i * 10;
-          
-          return (
-            <motion.div
-              key={i}
-              className={`absolute rounded-full ${i % 2 === 0 ? 'bg-primary/40' : 'bg-cyan-400/40'}`}
-              style={{
-                width: `${size}px`,
-                height: `${size}px`,
-                left: `${left}%`,
-                top: `${25 + (i % 3) * 15}%`,
-                willChange: 'transform, opacity',
-              }}
-              animate={{
-                y: [0, travel, 0],
-                x: [0, (i % 2 === 0 ? 15 : -15), 0],
-                opacity: [0.2, 0.7, 0.2],
-              }}
-              transition={{
-                duration: duration,
-                repeat: Infinity,
-                delay: delay,
-                ease: 'easeInOut',
-              }}
-            />
-          );
-        })}
+      {/* Fondo decorativo sutil */}
+      <div className="absolute inset-0 -z-10 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_30%,rgba(120,119,198,0.12),transparent)]" />
       </div>
 
       {/* Título principal con gradiente animado */}
