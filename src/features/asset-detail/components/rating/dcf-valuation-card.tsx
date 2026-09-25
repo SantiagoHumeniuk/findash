@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../../../../components/ui/card';
-import { Scale, TrendingUp, TrendingDown, HelpCircle, AlertTriangle, Calculator, ShieldCheck, ShieldAlert, Shield } from 'lucide-react';
+import { Scale, TrendingUp, TrendingDown, HelpCircle, AlertTriangle, Calculator, ShieldCheck, ShieldAlert, Shield, Globe, Layers } from 'lucide-react';
 import { formatPrice } from '../../lib/asset-formatters';
 import type { AssetData } from '../../../../types/dashboard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../components/ui/tooltip';
@@ -20,8 +20,8 @@ interface DCFValuationCardProps {
 export function DCFValuationCard({ asset }: DCFValuationCardProps) {
   const currentPrice = asset.quote?.price ?? 0;
 
-  // Usa el algoritmo robusto multi-modelo de promedios ponderados
-  const { fairValue, modelsUsed, isAnomaly, spread, confidence } = calculateBlendedFairValue(asset);
+  // Usa el algoritmo robusto multi-modelo calibrado por sector y geografía
+  const { fairValue, modelsUsed, isAnomaly, spread, confidence, context } = calculateBlendedFairValue(asset);
   
   const isUndervalued = spread !== null && spread >= 0;
 
@@ -41,6 +41,8 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
     'asset-based': 'Activos',
     'analyst': 'Analistas',
   };
+
+  const hasCountryRisk = context.countryRiskPremiumPct > 0 || context.valuationDiscountPct > 0;
 
   return (
     <Card className="border-l-4 border-l-primary/50 h-full overflow-hidden flex flex-col justify-between">
@@ -62,12 +64,19 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
-                    <p className="text-sm font-semibold mb-1">Confianza: {confidenceLabel}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {confidence === 'alta' && `Basado en ${modelsUsed.length} modelos de ${new Set(modelsUsed.map(m => m.category)).size} categorías diferentes. Alta diversificación y convergencia.`}
-                      {confidence === 'media' && `Basado en ${modelsUsed.length} modelos. Precisión moderada con buena cobertura de datos.`}
-                      {confidence === 'baja' && `Pocos modelos disponibles (${modelsUsed.length}). Los datos financieros son limitados para este activo.`}
+                    <p className="text-sm font-semibold mb-1">Nivel de Confianza: {confidenceLabel}</p>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      {confidence === 'alta' && `Basado en ${modelsUsed.length} modelos con alta convergencia en múltiplos de ${context.sector}.`}
+                      {confidence === 'media' && `Basado en ${modelsUsed.length} modelos calibrados con buena cobertura.`}
+                      {confidence === 'baja' && `Pocos modelos disponibles (${modelsUsed.length}) para este activo.`}
                     </p>
+                    <div className="pt-1 text-[11px] text-muted-foreground/80 border-t border-white/10 space-y-0.5">
+                      <div><span className="text-foreground">Sector:</span> {context.sector}</div>
+                      <div><span className="text-foreground">Geografía:</span> {context.country}</div>
+                      {hasCountryRisk && (
+                        <div><span className="text-foreground">Ajuste Riesgo País:</span> +{context.countryRiskPremiumPct.toFixed(1)}% Ke (-{context.valuationDiscountPct.toFixed(0)}% múltiplos)</div>
+                      )}
+                    </div>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -77,9 +86,11 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
                 <TooltipTrigger asChild>
                   <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
                 </TooltipTrigger>
-                <TooltipContent className="max-w-sm">
-                  <p className="font-semibold mb-1">Modelo Multi-Factor de Valoración</p>
-                  <p className="text-sm mb-2">Promedio ponderado con filtro IQR de outliers usando los siguientes modelos financieros:</p>
+                <TooltipContent className="max-w-md">
+                  <p className="font-semibold mb-1">Modelo de Valoración Multi-Factor</p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Calibrado para el sector <strong className="text-foreground">{context.sector}</strong> e industria <strong className="text-foreground">{context.industry}</strong> en <strong className="text-foreground">{context.country}</strong>.
+                  </p>
                   <ul className="text-xs space-y-1.5 list-none pl-0 text-muted-foreground max-h-56 overflow-y-auto">
                     {modelsUsed.map((m, i) => (
                       <li key={i} className="flex flex-col gap-0.5 pb-1 border-b border-white/[0.05] last:border-0">
@@ -87,10 +98,8 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
                           <span className="font-medium text-foreground">{m.name}</span>
                           <span className="text-[10px] uppercase font-medium px-1.5 py-0.5 rounded bg-muted">{categoryLabels[m.category] ?? m.category}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-[10px] leading-snug opacity-70">{m.description}</span>
-                        </div>
-                        <span className="font-medium text-foreground text-[11px]">{formatPrice(m.value)} <span className="opacity-50">(×{m.weight})</span></span>
+                        <span className="text-[10px] leading-snug opacity-70">{m.description}</span>
+                        <span className="font-medium text-foreground text-[11px]">{formatPrice(m.value)} <span className="opacity-50">(Peso: {m.weight}x)</span></span>
                       </li>
                     ))}
                   </ul>
@@ -129,13 +138,23 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
           </div>
         </div>
 
-        {/* Info adicional de modelos */}
-        {!isAnomaly && modelsUsed.length > 0 && (
-          <div className="flex items-center gap-1.5 justify-center py-1 bg-muted/30 rounded-md border border-white/[0.02]">
-            <Calculator className="w-3 h-3 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-wide">
-              Promedio ponderado de {modelsUsed.length} modelo{modelsUsed.length > 1 ? 's' : ''} financiero{modelsUsed.length > 1 ? 's' : ''}
-            </span>
+        {/* Info de calibración por sector y país */}
+        {!isAnomaly && (
+          <div className="flex flex-wrap items-center gap-2 justify-center py-1.5 px-2 bg-muted/30 rounded-md border border-white/[0.02] text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Layers className="w-3 h-3 text-primary/70" />
+              <span>{context.sector}</span>
+            </div>
+            <span>•</span>
+            <div className="flex items-center gap-1">
+              <Globe className="w-3 h-3 text-primary/70" />
+              <span>{context.country}</span>
+            </div>
+            <span>•</span>
+            <div className="flex items-center gap-1">
+              <Calculator className="w-3 h-3 text-primary/70" />
+              <span>{modelsUsed.length} modelos</span>
+            </div>
           </div>
         )}
 
