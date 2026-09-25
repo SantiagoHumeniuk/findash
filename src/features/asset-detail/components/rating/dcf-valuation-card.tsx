@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../../../../components/ui/card';
-import { Scale, TrendingUp, TrendingDown, HelpCircle, AlertTriangle, Calculator } from 'lucide-react';
+import { Scale, TrendingUp, TrendingDown, HelpCircle, AlertTriangle, Calculator, ShieldCheck, ShieldAlert, Shield } from 'lucide-react';
 import { formatPrice } from '../../lib/asset-formatters';
 import type { AssetData } from '../../../../types/dashboard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../components/ui/tooltip';
@@ -20,8 +20,8 @@ interface DCFValuationCardProps {
 export function DCFValuationCard({ asset }: DCFValuationCardProps) {
   const currentPrice = asset.quote?.price ?? 0;
 
-  // Usa el nuevo algoritmo robusto de promedios ponderados
-  const { fairValue, modelsUsed, isAnomaly, spread } = calculateBlendedFairValue(asset);
+  // Usa el algoritmo robusto multi-modelo de promedios ponderados
+  const { fairValue, modelsUsed, isAnomaly, spread, confidence } = calculateBlendedFairValue(asset);
   
   const isUndervalued = spread !== null && spread >= 0;
 
@@ -30,30 +30,74 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
     return null;
   }
 
+  const ConfidenceIcon = confidence === 'alta' ? ShieldCheck : confidence === 'media' ? Shield : ShieldAlert;
+  const confidenceColor = confidence === 'alta' ? 'text-green-500' : confidence === 'media' ? 'text-yellow-500' : 'text-red-400';
+  const confidenceLabel = confidence === 'alta' ? 'Alta' : confidence === 'media' ? 'Media' : 'Baja';
+
+  // Group models by category for display
+  const categoryLabels: Record<string, string> = {
+    'intrinsic': 'Intrínseco',
+    'relative': 'Relativo',
+    'asset-based': 'Activos',
+    'analyst': 'Analistas',
+  };
+
   return (
     <Card className="border-l-4 border-l-primary/50 h-full overflow-hidden flex flex-col justify-between">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Scale className="w-5 h-5 text-primary" />
-            Valor Justo (InvestingPro Style)
+            Valor Justo
           </CardTitle>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-sm">
-                <p className="font-semibold mb-1">Modelo Blended Valuation</p>
-                <p className="text-sm mb-2">Calcula un precio objetivo filtrando errores de moneda y promediando los siguientes modelos financieros confiables:</p>
-                <ul className="text-xs space-y-1 list-disc pl-4 text-muted-foreground">
-                  {modelsUsed.map((m, i) => (
-                    <li key={i}>{m.name}: <span className="font-medium text-foreground">{formatPrice(m.value)}</span> (Peso: {m.weight}x)</li>
-                  ))}
-                </ul>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="flex items-center gap-2">
+            {/* Confidence badge */}
+            {confidence && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className={`text-[10px] gap-1 px-2 py-0.5 ${confidenceColor} border-current/30`}>
+                      <ConfidenceIcon className="w-3 h-3" />
+                      {confidenceLabel}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-sm font-semibold mb-1">Confianza: {confidenceLabel}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {confidence === 'alta' && `Basado en ${modelsUsed.length} modelos de ${new Set(modelsUsed.map(m => m.category)).size} categorías diferentes. Alta diversificación y convergencia.`}
+                      {confidence === 'media' && `Basado en ${modelsUsed.length} modelos. Precisión moderada con buena cobertura de datos.`}
+                      {confidence === 'baja' && `Pocos modelos disponibles (${modelsUsed.length}). Los datos financieros son limitados para este activo.`}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-sm">
+                  <p className="font-semibold mb-1">Modelo Multi-Factor de Valoración</p>
+                  <p className="text-sm mb-2">Promedio ponderado con filtro IQR de outliers usando los siguientes modelos financieros:</p>
+                  <ul className="text-xs space-y-1.5 list-none pl-0 text-muted-foreground max-h-56 overflow-y-auto">
+                    {modelsUsed.map((m, i) => (
+                      <li key={i} className="flex flex-col gap-0.5 pb-1 border-b border-white/[0.05] last:border-0">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-foreground">{m.name}</span>
+                          <span className="text-[10px] uppercase font-medium px-1.5 py-0.5 rounded bg-muted">{categoryLabels[m.category] ?? m.category}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[10px] leading-snug opacity-70">{m.description}</span>
+                        </div>
+                        <span className="font-medium text-foreground text-[11px]">{formatPrice(m.value)} <span className="opacity-50">(×{m.weight})</span></span>
+                      </li>
+                    ))}
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       </CardHeader>
 
@@ -90,7 +134,7 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
           <div className="flex items-center gap-1.5 justify-center py-1 bg-muted/30 rounded-md border border-white/[0.02]">
             <Calculator className="w-3 h-3 text-muted-foreground" />
             <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-wide">
-              Promedio de {modelsUsed.length} modelo{modelsUsed.length > 1 ? 's' : ''} financiero{modelsUsed.length > 1 ? 's' : ''}
+              Promedio ponderado de {modelsUsed.length} modelo{modelsUsed.length > 1 ? 's' : ''} financiero{modelsUsed.length > 1 ? 's' : ''}
             </span>
           </div>
         )}
