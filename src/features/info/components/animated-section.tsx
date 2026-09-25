@@ -28,11 +28,10 @@ interface AnimatedSectionProps {
 export const AnimatedSection: React.FC<AnimatedSectionProps> = ({ children, className }) => (
   <motion.section
     className={className}
-    initial={{ opacity: 0, y: 30 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5, ease: "easeOut" }}
-    viewport={{ once: true, margin: "-50px" }}
-    style={{ willChange: "opacity, transform" }}
+    initial={{ opacity: 0 }}
+    whileInView={{ opacity: 1 }}
+    transition={{ duration: 0.4, ease: "easeOut" }}
+    viewport={{ once: true, amount: 0.05 }}
   >
     {children}
   </motion.section>

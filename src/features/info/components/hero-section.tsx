@@ -39,31 +39,30 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_50%_at_30%_50%,rgba(139,92,246,0.08),transparent)]" />
       </div>
 
-      {/* Partículas decorativas flotantes con mayor impacto y desplazamiento */}
-      <div className="absolute inset-0 -z-10 pointer-events-none" aria-hidden="true">
-        {[...Array(15)].map((_, i) => {
-          // Generación determinista pseudo-aleatoria basada en el índice para evitar saltos
-          const size = 6 + (i % 8);
-          const left = 5 + (i * 6);
-          const delay = i * 0.4;
-          const duration = 6 + (i % 4);
-          const travel = 150 + (i * 15);
+      {/* Partículas decorativas flotantes sutiles y ligeras */}
+      <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden" aria-hidden="true">
+        {[...Array(6)].map((_, i) => {
+          const size = 5 + (i % 4);
+          const left = 12 + i * 15;
+          const delay = i * 0.6;
+          const duration = 7 + (i % 3);
+          const travel = 40 + i * 10;
           
           return (
             <motion.div
               key={i}
-              className={`absolute rounded-full ${i % 2 === 0 ? 'bg-primary/60 shadow-[0_0_15px_rgba(99,102,241,0.6)]' : 'bg-cyan-400/50 shadow-[0_0_15px_rgba(34,211,238,0.5)]'}`}
+              className={`absolute rounded-full ${i % 2 === 0 ? 'bg-primary/40' : 'bg-cyan-400/40'}`}
               style={{
                 width: `${size}px`,
                 height: `${size}px`,
                 left: `${left}%`,
-                top: `${20 + (i % 5) * 10}%`,
+                top: `${25 + (i % 3) * 15}%`,
+                willChange: 'transform, opacity',
               }}
               animate={{
-                y: [0, travel, 0], // Viajan mucho más hacia abajo (hacia la otra sección)
-                x: [0, (i % 2 === 0 ? 30 : -30), 0], // Ligero balanceo horizontal
-                opacity: [0.1, 0.9, 0.1],
-                scale: [1, 1.8, 1],
+                y: [0, travel, 0],
+                x: [0, (i % 2 === 0 ? 15 : -15), 0],
+                opacity: [0.2, 0.7, 0.2],
               }}
               transition={{
                 duration: duration,
