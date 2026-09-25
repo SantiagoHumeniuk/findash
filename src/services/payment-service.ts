@@ -134,13 +134,7 @@ class PaymentService {
     try {
       let query = supabase
         .from('subscription_requests')
-        .select(`
-          *,
-          profiles:user_id (
-            first_name,
-            last_name
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (filters?.status && filters.status !== 'all') {
@@ -150,19 +144,14 @@ class PaymentService {
       const { data, error } = await query;
 
       if (error) {
+        console.error('Error fetching subscription requests:', error);
         void logger.error('PAYMENT_GET_ALL_REQUESTS_FAILED', error.message);
         return [];
       }
 
-      return ((data as Array<Record<string, unknown>>) || []).map((item) => {
-        const profile = item.profiles as { first_name?: string; last_name?: string } | null;
-        return {
-          ...item,
-          user_first_name: profile?.first_name ?? null,
-          user_last_name: profile?.last_name ?? null,
-        } as unknown as SubscriptionRequest;
-      });
+      return (data as SubscriptionRequest[]) ?? [];
     } catch (err) {
+      console.error('Exception fetching subscription requests:', err);
       void logger.error('PAYMENT_GET_ALL_EXCEPTION', String(err));
       return [];
     }

@@ -105,7 +105,7 @@ USING (
   EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = auth.uid()
-      AND profiles.role = 'administrador'
+      AND (profiles.role = 'administrador' OR profiles.role = 'admin')
   )
 );
 
@@ -118,14 +118,14 @@ USING (
   EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = auth.uid()
-      AND profiles.role = 'administrador'
+      AND (profiles.role = 'administrador' OR profiles.role = 'admin')
   )
 )
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = auth.uid()
-      AND profiles.role = 'administrador'
+      AND (profiles.role = 'administrador' OR profiles.role = 'admin')
   )
 );
 
@@ -138,7 +138,7 @@ USING (
   EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = auth.uid()
-      AND profiles.role = 'administrador'
+      AND (profiles.role = 'administrador' OR profiles.role = 'admin')
   )
 );
 
@@ -159,7 +159,7 @@ BEGIN
   -- Verificar si el usuario actual es administrador
   IF NOT EXISTS (
     SELECT 1 FROM public.profiles
-    WHERE id = v_admin_id AND role = 'administrador'
+    WHERE id = v_admin_id AND (role = 'administrador' OR role = 'admin')
   ) THEN
     RAISE EXCEPTION 'No tienes permisos de administrador para realizar esta acción';
   END IF;
@@ -218,7 +218,7 @@ BEGIN
   -- Verificar si el usuario actual es administrador
   IF NOT EXISTS (
     SELECT 1 FROM public.profiles
-    WHERE id = v_admin_id AND role = 'administrador'
+    WHERE id = v_admin_id AND (role = 'administrador' OR role = 'admin')
   ) THEN
     RAISE EXCEPTION 'No tienes permisos de administrador para realizar esta acción';
   END IF;
