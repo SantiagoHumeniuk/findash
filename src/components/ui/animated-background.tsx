@@ -20,26 +20,26 @@ interface ParticleConfig {
 }
 
 const backgroundParticles: ParticleConfig[] = [
-  { size: 8, top: 8, left: 7, colorClass: 'bg-cyan-400', glowClass: 'shadow-[0_0_12px_rgba(34,211,238,0.75)]', animation: 'particle-rise-fall-1', duration: '9s', delay: '0s' },
-  { size: 10, top: 18, left: 22, colorClass: 'bg-blue-400', glowClass: 'shadow-[0_0_14px_rgba(96,165,250,0.7)]', animation: 'particle-rise-fall-2', duration: '12s', delay: '-2s' },
-  { size: 6, top: 28, left: 38, colorClass: 'bg-indigo-400', glowClass: 'shadow-[0_0_10px_rgba(129,140,248,0.7)]', animation: 'particle-rise-fall-3', duration: '8s', delay: '-4s' },
-  { size: 11, top: 12, left: 55, colorClass: 'bg-cyan-300', glowClass: 'shadow-[0_0_15px_rgba(103,232,249,0.8)]', animation: 'particle-rise-fall-4', duration: '11s', delay: '-1s' },
-  { size: 7, top: 22, left: 72, colorClass: 'bg-emerald-400', glowClass: 'shadow-[0_0_12px_rgba(52,211,153,0.7)]', animation: 'particle-rise-fall-1', duration: '10s', delay: '-5s' },
-  { size: 9, top: 15, left: 88, colorClass: 'bg-indigo-400', glowClass: 'shadow-[0_0_12px_rgba(129,140,248,0.75)]', animation: 'particle-rise-fall-2', duration: '13s', delay: '-3s' },
+  { size: 3.5, top: 8, left: 7, colorClass: 'bg-cyan-400/60 dark:bg-cyan-400/50', glowClass: 'shadow-[0_0_6px_rgba(34,211,238,0.4)]', animation: 'particle-rise-fall-1', duration: '11s', delay: '0s' },
+  { size: 4.5, top: 18, left: 22, colorClass: 'bg-blue-400/55 dark:bg-blue-400/45', glowClass: 'shadow-[0_0_6px_rgba(96,165,250,0.35)]', animation: 'particle-rise-fall-2', duration: '14s', delay: '-2s' },
+  { size: 3, top: 28, left: 38, colorClass: 'bg-indigo-400/50 dark:bg-indigo-400/40', glowClass: 'shadow-[0_0_5px_rgba(129,140,248,0.35)]', animation: 'particle-rise-fall-3', duration: '10s', delay: '-4s' },
+  { size: 5, top: 12, left: 55, colorClass: 'bg-cyan-300/60 dark:bg-cyan-300/45', glowClass: 'shadow-[0_0_7px_rgba(103,232,249,0.4)]', animation: 'particle-rise-fall-4', duration: '13s', delay: '-1s' },
+  { size: 3.5, top: 22, left: 72, colorClass: 'bg-emerald-400/55 dark:bg-emerald-400/40', glowClass: 'shadow-[0_0_5px_rgba(52,211,153,0.35)]', animation: 'particle-rise-fall-1', duration: '12s', delay: '-5s' },
+  { size: 4, top: 15, left: 88, colorClass: 'bg-indigo-400/55 dark:bg-indigo-400/45', glowClass: 'shadow-[0_0_6px_rgba(129,140,248,0.4)]', animation: 'particle-rise-fall-2', duration: '15s', delay: '-3s' },
   
-  { size: 8, top: 42, left: 12, colorClass: 'bg-blue-400', glowClass: 'shadow-[0_0_12px_rgba(96,165,250,0.75)]', animation: 'particle-rise-fall-3', duration: '11s', delay: '-6s' },
-  { size: 6, top: 52, left: 28, colorClass: 'bg-cyan-400', glowClass: 'shadow-[0_0_10px_rgba(34,211,238,0.7)]', animation: 'particle-rise-fall-4', duration: '9s', delay: '-2.5s' },
-  { size: 12, top: 45, left: 48, colorClass: 'bg-indigo-400', glowClass: 'shadow-[0_0_16px_rgba(129,140,248,0.8)]', animation: 'particle-rise-fall-1', duration: '14s', delay: '-7s' },
-  { size: 7, top: 58, left: 65, colorClass: 'bg-cyan-300', glowClass: 'shadow-[0_0_12px_rgba(103,232,249,0.7)]', animation: 'particle-rise-fall-2', duration: '10s', delay: '-4.5s' },
-  { size: 9, top: 48, left: 82, colorClass: 'bg-emerald-400', glowClass: 'shadow-[0_0_14px_rgba(52,211,153,0.75)]', animation: 'particle-rise-fall-3', duration: '12s', delay: '-1.5s' },
-  { size: 6, top: 38, left: 94, colorClass: 'bg-blue-400', glowClass: 'shadow-[0_0_10px_rgba(96,165,250,0.7)]', animation: 'particle-rise-fall-4', duration: '8.5s', delay: '-5.5s' },
+  { size: 4, top: 42, left: 12, colorClass: 'bg-blue-400/55 dark:bg-blue-400/45', glowClass: 'shadow-[0_0_6px_rgba(96,165,250,0.4)]', animation: 'particle-rise-fall-3', duration: '13s', delay: '-6s' },
+  { size: 3, top: 52, left: 28, colorClass: 'bg-cyan-400/50 dark:bg-cyan-400/40', glowClass: 'shadow-[0_0_5px_rgba(34,211,238,0.35)]', animation: 'particle-rise-fall-4', duration: '11s', delay: '-2.5s' },
+  { size: 5, top: 45, left: 48, colorClass: 'bg-indigo-400/60 dark:bg-indigo-400/45', glowClass: 'shadow-[0_0_7px_rgba(129,140,248,0.4)]', animation: 'particle-rise-fall-1', duration: '16s', delay: '-7s' },
+  { size: 3.5, top: 58, left: 65, colorClass: 'bg-cyan-300/55 dark:bg-cyan-300/40', glowClass: 'shadow-[0_0_5px_rgba(103,232,249,0.35)]', animation: 'particle-rise-fall-2', duration: '12s', delay: '-4.5s' },
+  { size: 4.5, top: 48, left: 82, colorClass: 'bg-emerald-400/55 dark:bg-emerald-400/40', glowClass: 'shadow-[0_0_6px_rgba(52,211,153,0.4)]', animation: 'particle-rise-fall-3', duration: '14s', delay: '-1.5s' },
+  { size: 3, top: 38, left: 94, colorClass: 'bg-blue-400/50 dark:bg-blue-400/40', glowClass: 'shadow-[0_0_5px_rgba(96,165,250,0.35)]', animation: 'particle-rise-fall-4', duration: '10s', delay: '-5.5s' },
 
-  { size: 10, top: 72, left: 8, colorClass: 'bg-cyan-400', glowClass: 'shadow-[0_0_14px_rgba(34,211,238,0.75)]', animation: 'particle-rise-fall-1', duration: '12s', delay: '-3.5s' },
-  { size: 7, top: 82, left: 24, colorClass: 'bg-indigo-400', glowClass: 'shadow-[0_0_12px_rgba(129,140,248,0.7)]', animation: 'particle-rise-fall-2', duration: '9.5s', delay: '-6.5s' },
-  { size: 8, top: 68, left: 42, colorClass: 'bg-emerald-400', glowClass: 'shadow-[0_0_12px_rgba(52,211,153,0.7)]', animation: 'particle-rise-fall-3', duration: '11s', delay: '-2s' },
-  { size: 11, top: 85, left: 58, colorClass: 'bg-blue-400', glowClass: 'shadow-[0_0_15px_rgba(96,165,250,0.8)]', animation: 'particle-rise-fall-4', duration: '13s', delay: '-4s' },
-  { size: 6, top: 75, left: 75, colorClass: 'bg-cyan-300', glowClass: 'shadow-[0_0_10px_rgba(103,232,249,0.7)]', animation: 'particle-rise-fall-1', duration: '8s', delay: '-1s' },
-  { size: 9, top: 88, left: 90, colorClass: 'bg-indigo-400', glowClass: 'shadow-[0_0_14px_rgba(129,140,248,0.75)]', animation: 'particle-rise-fall-2', duration: '10.5s', delay: '-5s' },
+  { size: 4.5, top: 72, left: 8, colorClass: 'bg-cyan-400/60 dark:bg-cyan-400/45', glowClass: 'shadow-[0_0_6px_rgba(34,211,238,0.4)]', animation: 'particle-rise-fall-1', duration: '14s', delay: '-3.5s' },
+  { size: 3.5, top: 82, left: 24, colorClass: 'bg-indigo-400/50 dark:bg-indigo-400/40', glowClass: 'shadow-[0_0_5px_rgba(129,140,248,0.35)]', animation: 'particle-rise-fall-2', duration: '11s', delay: '-6.5s' },
+  { size: 4, top: 68, left: 42, colorClass: 'bg-emerald-400/55 dark:bg-emerald-400/40', glowClass: 'shadow-[0_0_6px_rgba(52,211,153,0.35)]', animation: 'particle-rise-fall-3', duration: '13s', delay: '-2s' },
+  { size: 5, top: 85, left: 58, colorClass: 'bg-blue-400/60 dark:bg-blue-400/45', glowClass: 'shadow-[0_0_7px_rgba(96,165,250,0.4)]', animation: 'particle-rise-fall-4', duration: '15s', delay: '-4s' },
+  { size: 3, top: 75, left: 75, colorClass: 'bg-cyan-300/50 dark:bg-cyan-300/40', glowClass: 'shadow-[0_0_5px_rgba(103,232,249,0.35)]', animation: 'particle-rise-fall-1', duration: '9.5s', delay: '-1s' },
+  { size: 4, top: 88, left: 90, colorClass: 'bg-indigo-400/55 dark:bg-indigo-400/45', glowClass: 'shadow-[0_0_6px_rgba(129,140,248,0.4)]', animation: 'particle-rise-fall-2', duration: '12.5s', delay: '-5s' },
 ];
 
 export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({ 

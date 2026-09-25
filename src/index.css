@@ -859,76 +859,76 @@
      LANDING PAGE - ANIMATED BACKGROUND
      ============================== */
 
-  /* Floating Pelotitas Animations - Movimiento suave vertical de subida y bajada */
+  /* Floating Pelotitas Animations - Movimiento suave vertical minimalista */
   @keyframes particle-rise-fall-1 {
     0%, 100% {
       transform: translate3d(0, 0, 0) scale(1);
-      opacity: 0.25;
+      opacity: 0.15;
     }
     30% {
-      transform: translate3d(18px, -90px, 0) scale(1.35);
-      opacity: 0.85;
+      transform: translate3d(12px, -60px, 0) scale(1.15);
+      opacity: 0.45;
     }
     65% {
-      transform: translate3d(-12px, -180px, 0) scale(0.9);
-      opacity: 0.4;
+      transform: translate3d(-8px, -120px, 0) scale(0.9);
+      opacity: 0.25;
     }
     85% {
-      transform: translate3d(8px, -70px, 0) scale(1.15);
-      opacity: 0.7;
+      transform: translate3d(6px, -45px, 0) scale(1.05);
+      opacity: 0.38;
     }
   }
 
   @keyframes particle-rise-fall-2 {
     0%, 100% {
       transform: translate3d(0, 0, 0) scale(1);
-      opacity: 0.3;
+      opacity: 0.2;
     }
     35% {
-      transform: translate3d(-22px, 110px, 0) scale(1.4);
-      opacity: 0.9;
+      transform: translate3d(-14px, 70px, 0) scale(1.2);
+      opacity: 0.5;
     }
     70% {
-      transform: translate3d(15px, 220px, 0) scale(0.85);
-      opacity: 0.35;
+      transform: translate3d(10px, 140px, 0) scale(0.85);
+      opacity: 0.22;
     }
     90% {
-      transform: translate3d(-10px, 80px, 0) scale(1.1);
-      opacity: 0.65;
+      transform: translate3d(-6px, 50px, 0) scale(1.05);
+      opacity: 0.35;
     }
   }
 
   @keyframes particle-rise-fall-3 {
     0%, 100% {
       transform: translate3d(0, 0, 0) scale(0.95);
-      opacity: 0.2;
+      opacity: 0.12;
     }
     40% {
-      transform: translate3d(25px, -130px, 0) scale(1.45);
-      opacity: 0.8;
+      transform: translate3d(16px, -80px, 0) scale(1.2);
+      opacity: 0.42;
     }
     75% {
-      transform: translate3d(-18px, 90px, 0) scale(0.9);
-      opacity: 0.5;
+      transform: translate3d(-12px, 60px, 0) scale(0.9);
+      opacity: 0.25;
     }
   }
 
   @keyframes particle-rise-fall-4 {
     0%, 100% {
-      transform: translate3d(0, 0, 0) scale(1.1);
-      opacity: 0.35;
+      transform: translate3d(0, 0, 0) scale(1.05);
+      opacity: 0.2;
     }
     30% {
-      transform: translate3d(-15px, 140px, 0) scale(0.85);
-      opacity: 0.6;
+      transform: translate3d(-10px, 85px, 0) scale(0.9);
+      opacity: 0.32;
     }
     60% {
-      transform: translate3d(20px, -120px, 0) scale(1.35);
-      opacity: 0.85;
+      transform: translate3d(14px, -75px, 0) scale(1.15);
+      opacity: 0.45;
     }
     85% {
-      transform: translate3d(-8px, -40px, 0) scale(1);
-      opacity: 0.4;
+      transform: translate3d(-5px, -25px, 0) scale(1);
+      opacity: 0.22;
     }
   }
 
