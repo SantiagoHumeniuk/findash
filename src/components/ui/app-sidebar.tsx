@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarRail,
+  useSidebar,
 } from "./sidebar";
 import {
   LogIn, UserPlus, Home, ChartCandlestick, LayoutDashboard,
