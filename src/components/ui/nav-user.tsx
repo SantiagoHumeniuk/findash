@@ -22,6 +22,7 @@ import { CreditCard, EllipsisVertical, LogOut, UserCircle } from "lucide-react"
 import { useConfig } from "../../hooks/use-config";
 import { User } from "@supabase/supabase-js";
 import { Profile } from "../../types/auth";
+import { getProfileAvatarIndex, getProfileAvatarUrl } from "../../lib/profile-avatar";
 
 export function NavUser({
   user, signOut, profile
@@ -35,6 +36,12 @@ export function NavUser({
   const userRole = profile.role
   const apiLimit = config.plans.roleLimits[userRole as keyof typeof config.plans.roleLimits]
   const callsMade = profile.api_calls_made
+  const avatarUrl = getProfileAvatarUrl(
+    getProfileAvatarIndex(profile.id, profile.onboarding_profile?.avatarIndex),
+    profile.onboarding_profile?.avatarImage,
+  )
+  const profileInitials = `${profile.first_name?.[0] ?? ''}${profile.last_name?.[0] ?? ''}`.toUpperCase()
+  const initials = profileInitials.length > 0 ? profileInitials : 'FD'
 
   return (
     <SidebarMenu>
@@ -46,8 +53,8 @@ export function NavUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarImage src={avatarUrl} alt="Tu avatar de perfil" />
+                <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left body-sm leading-tight">
                 <span className="truncate font-medium">
@@ -71,8 +78,8 @@ export function NavUser({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left body-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  <AvatarImage src={avatarUrl} alt="Tu avatar de perfil" />
+                  <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left body-sm leading-tight">
                   <span className="truncate font-medium">

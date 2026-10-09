@@ -4,7 +4,8 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { BlogCard } from '../components/blog-card';
-import { Search, Filter, Plus, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FeaturedBlogCard } from '../components/featured-blog-card';
+import { Search, Filter, Plus, ChevronLeft, ChevronRight, Newspaper, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/use-auth';
@@ -20,8 +21,12 @@ interface Blog {
   tags: string[];
   status: 'draft' | 'pending_review' | 'approved' | 'rejected';
   author: {
+    id: string;
     first_name: string;
     last_name: string;
+    avatar_index?: number | string | null;
+    avatar_image?: string | null;
+    can_upload_blog?: boolean | null;
   };
   stats: {
     likes: number;
@@ -56,7 +61,7 @@ function BlogListPage() {
         .from('blogs')
         .select(`
           *,
-          author:profiles!fk_author(first_name, last_name)
+          author:profiles!fk_author(id, first_name, last_name, avatar_index:onboarding_profile->avatarIndex, avatar_image:onboarding_profile->avatarImage, can_upload_blog)
         `)
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
@@ -143,6 +148,8 @@ function BlogListPage() {
   const startIndex = (currentPage - 1) * blogsPerPage;
   const endIndex = startIndex + blogsPerPage;
   const currentBlogs = filteredBlogs.slice(startIndex, endIndex);
+  const featuredBlog = currentPage === 1 ? currentBlogs[0] : undefined;
+  const remainingBlogs = featuredBlog ? currentBlogs.slice(1) : currentBlogs;
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
@@ -150,100 +157,112 @@ function BlogListPage() {
   };
 
   return (
-    <div className="container-wide space-y-6 sm:space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 pb-4 sm:pb-6 border-b">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg flex-shrink-0">
-            <BookOpen className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1">Blog Financiero</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Artículos, análisis y noticias del mundo financiero
+    <div className="container-wide space-y-8 pb-12 sm:space-y-10">
+      <header className="border-y border-foreground/15 py-8 sm:py-11">
+        <div className="flex flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-3xl">
+            <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+              <Newspaper className="size-4" aria-hidden="true" />
+              Findash / Cuaderno de mercados
+            </p>
+            <h1 className="text-3xl font-bold leading-[1.08] sm:text-5xl">
+              El mercado, <span className="text-primary">explicado con criterio.</span>
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+              Análisis, ideas y perspectivas para entender qué mueve tus inversiones.
             </p>
           </div>
+          <div className="flex items-center justify-between gap-5 border-l-2 border-primary pl-4 sm:min-w-40">
+            <div>
+              <p className="text-2xl font-semibold tabular-nums">{blogs.length.toString().padStart(2, '0')}</p>
+              <p className="text-xs text-muted-foreground">artículos publicados</p>
+            </div>
+            {user && profile?.can_upload_blog && (
+              <Link to="/blog/crear">
+                <Button size="sm" className="btn-press whitespace-nowrap">
+                  <Plus className="mr-2 size-4" />
+                  Escribir
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
-        
-        {/* Botón crear blog (solo si tiene permisos) */}
-        {user && profile?.can_upload_blog && (
-          <Link to="/blog/crear" className="w-full sm:w-auto">
-            <Button size="sm" className="w-full sm:w-auto btn-press text-xs sm:text-sm">
-              <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
-              Crear Artículo
-            </Button>
-          </Link>
-        )}
-      </div>
+      </header>
 
-      {/* Filtros y búsqueda */}
-      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-6 sm:mb-8">
-        {/* Búsqueda */}
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+      <section aria-label="Buscar y filtrar artículos" className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_190px_190px]">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input
-            placeholder="Buscar artículos..."
+            placeholder="Buscar análisis, temas o etiquetas"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 sm:pl-10 text-sm"
+            className="h-11 pl-10"
+            aria-label="Buscar artículos"
           />
         </div>
-
-        {/* Categoría */}
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-full sm:w-[160px] md:w-[180px] text-sm">
-            <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
+          <SelectTrigger className="h-11">
+            <Filter className="mr-2 size-4 text-muted-foreground" aria-hidden="true" />
             <SelectValue placeholder="Categoría" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="text-sm">Todas</SelectItem>
-            {categories.map(cat => (
-              <SelectItem key={cat} value={cat} className="text-sm">{cat}</SelectItem>
-            ))}
+            <SelectItem value="all">Todas las categorías</SelectItem>
+            {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
           </SelectContent>
         </Select>
-
-        {/* Ordenar */}
         <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-          <SelectTrigger className="w-full sm:w-[160px] md:w-[180px] text-sm">
-            <SelectValue placeholder="Ordenar por" />
-          </SelectTrigger>
+          <SelectTrigger className="h-11"><SelectValue placeholder="Ordenar por" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="newest" className="text-sm">Más Recientes</SelectItem>
-            <SelectItem value="popular" className="text-sm">Más Populares</SelectItem>
-            <SelectItem value="trending" className="text-sm">Tendencia</SelectItem>
+            <SelectItem value="newest">Más recientes</SelectItem>
+            <SelectItem value="popular">Más populares</SelectItem>
+            <SelectItem value="trending">En tendencia</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </section>
 
-      {/* Lista de blogs */}
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-80 sm:h-96 bg-muted animate-pulse rounded-lg" />
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-80 animate-pulse rounded-sm border bg-muted" />
           ))}
         </div>
       ) : filteredBlogs.length === 0 ? (
-        <div className="text-center py-12 sm:py-16">
-          <Search className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-muted-foreground" />
-          <h3 className="text-lg sm:text-xl font-semibold mb-2">No se encontraron artículos</h3>
-          <p className="text-sm sm:text-base text-muted-foreground">
+        <section className="border-y border-foreground/15 py-14 text-center sm:py-20">
+          <Sparkles className="mx-auto mb-4 size-8 text-primary" aria-hidden="true" />
+          <h2 className="text-xl font-semibold">No encontramos artículos</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
             {searchQuery || categoryFilter !== 'all'
-              ? 'Intenta ajustar tus filtros de búsqueda'
-              : 'Aún no hay artículos publicados'}
+              ? 'Prueba con otros términos o cambia los filtros.'
+              : 'Estamos preparando nuevas ideas y análisis para esta sección.'}
           </p>
-        </div>
+        </section>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {currentBlogs.map(blog => (
-              <BlogCard key={blog.id} {...blog} />
-            ))}
-          </div>
+          {featuredBlog && (
+            <section aria-labelledby="featured-heading" className="space-y-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <span className="size-2 rounded-full bg-primary" />
+                <h2 id="featured-heading">En portada</h2>
+              </div>
+              <FeaturedBlogCard blog={featuredBlog} />
+            </section>
+          )}
+
+          {remainingBlogs.length > 0 && (
+            <section aria-labelledby="latest-heading" className="space-y-4">
+              <div className="flex items-end justify-between border-b border-border pb-3">
+                <h2 id="latest-heading" className="text-xl font-semibold sm:text-2xl">Últimas publicaciones</h2>
+                <span className="text-xs text-muted-foreground">{filteredBlogs.length} artículos</span>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-5">
+                {remainingBlogs.map(blog => <BlogCard key={blog.id} {...blog} />)}
+              </div>
+            </section>
+          )}
 
           {/* Paginación */}
           {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 mt-6 sm:mt-8">
+            <div className="mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
               <Button
                 variant="outline"
                 size="sm"
@@ -295,7 +314,7 @@ function BlogListPage() {
           )}
 
           {/* Contador de resultados */}
-          <div className="mt-3 sm:mt-4 text-center text-xs sm:text-sm text-muted-foreground">
+          <div className="text-center text-xs text-muted-foreground">
             Mostrando {startIndex + 1}-{Math.min(endIndex, filteredBlogs.length)} de {filteredBlogs.length} artículos
             {filteredBlogs.length !== blogs.length && ` (${blogs.length} total)`}
           </div>

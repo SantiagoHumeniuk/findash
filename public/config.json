@@ -41,6 +41,8 @@
       "gradesConsensus": "stable/grades-consensus",
       "analystEstimates": "stable/analyst-estimates",
       "ratios": "stable/ratios",
+      "ratiosTtm": "stable/ratios-ttm",
+      "stockPeers": "stable/stock-peers",
       "keyMetricsYear": "stable/key-metrics",
       "leveredDiscountedCashFlow": "stable/levered-discounted-cash-flow",
       "stockPriceChange": "stable/stock-price-change"
@@ -156,6 +158,10 @@
     "cvu": "00000031300056422142774",
     "cuitCuil": "Mercado Pago",
     "instructions": "Realiza la transferencia desde Mercado Pago o cualquier banco/billetera. Luego ingresa tu nombre y número de comprobante para validar tu activación.",
+    "links": {
+      "plus": "https://mpago.la/2wrJ9MD",
+      "premium": "https://mpago.la/2U7wTKi"
+    },
     "pricing": {
       "plus": 15000,
       "premium": 25000
@@ -351,7 +357,7 @@
           {
             "to": "/market-movers",
             "label": "Movimientos del Mercado",
-            "icon": "TrendingUp",
+            "icon": "Activity",
             "requiresAuth": true
           },
           {
@@ -364,6 +370,12 @@
             "to": "/insights",
             "label": "Insights",
             "icon": "TrendingUp",
+            "requiresAuth": true
+          },
+          {
+            "to": "/blog",
+            "label": "Blog Financiero",
+            "icon": "Newspaper",
             "requiresAuth": true
           },
           {

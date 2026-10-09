@@ -42,6 +42,8 @@ export interface FmpProxyEndpoints {
   gradesConsensus: string;
   analystEstimates: string;
   ratios: string;
+  ratiosTtm?: string;
+  stockPeers?: string;
   keyMetricsYear: string;
   leveredDiscountedCashFlow: string;
   stockPriceChange: string;
@@ -63,6 +65,10 @@ export interface PaymentConfig {
   cvu: string;
   cuitCuil: string;
   instructions: string;
+  links?: {
+    plus: string;
+    premium: string;
+  };
   pricing: {
     plus: number;
     premium: number;

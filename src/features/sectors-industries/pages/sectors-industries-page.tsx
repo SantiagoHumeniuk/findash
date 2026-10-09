@@ -9,7 +9,8 @@ import {
   Selector,
   StatsCard,
   PerformanceChart,
-  PerformanceTable
+  PerformanceTable,
+  YahooFinanceTest
 } from '../components';
 import {
   useIndustries,
@@ -18,7 +19,6 @@ import {
   useSectorPerformance
 } from '../hooks';
 import { calculateStats } from '../lib/format-utils';
-import { SectorsIndustriesSkeleton } from '../components/skeleton';
 import { toast } from 'sonner';
 
 /**
@@ -99,7 +99,7 @@ const PerformanceLoadingSkeleton: React.FC = () => (
  * - Table view of recent performance data
  */
 export default function SectorsIndustriesPage() {
-  const [activeTab, setActiveTab] = React.useState<'industries' | 'sectors'>('industries');
+  const [activeTab, setActiveTab] = React.useState<'industries' | 'sectors' | 'yahoo'>('yahoo');
   const [selectedIndustry, setSelectedIndustry] = React.useState<string | null>(null);
   const [selectedSector, setSelectedSector] = React.useState<string | null>(null);
 
@@ -157,11 +157,6 @@ export default function SectorsIndustriesPage() {
     return calculateStats(sectorPerformance);
   }, [sectorPerformance]);
 
-  // Show loading skeleton
-  if (industriesLoading || sectorsLoading) {
-    return <SectorsIndustriesSkeleton />;
-  }
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="container-wide stack-8">
@@ -180,13 +175,16 @@ export default function SectorsIndustriesPage() {
           </div>
         </div>
         {/* Tabs with improved styling */}
-        <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as 'industries' | 'sectors')} className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2 h-12 p-1 bg-muted/50">
+        <Tabs value={activeTab} onValueChange={(v: string) => setActiveTab(v as 'industries' | 'sectors' | 'yahoo')} className="space-y-6">
+          <TabsList className="grid w-full max-w-xl grid-cols-3 h-12 p-1 bg-muted/50">
             <TabsTrigger value="industries" className="text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Industrias
             </TabsTrigger>
             <TabsTrigger value="sectors" className="text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Sectores
+            </TabsTrigger>
+            <TabsTrigger value="yahoo" className="text-sm sm:text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Yahoo Finance
             </TabsTrigger>
           </TabsList>
 
@@ -346,6 +344,10 @@ export default function SectorsIndustriesPage() {
                 </p>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="yahoo" className="space-y-6">
+            <YahooFinanceTest />
           </TabsContent>
         </Tabs>
       </div>

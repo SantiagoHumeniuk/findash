@@ -23,12 +23,13 @@ import {
   PortfolioSelector,
 } from '../components';
 import { ErrorBoundary } from '../../../components/error-boundary';
+import { ErrorScreen } from '../../../components/ui/error-screen';
 
 // PerformanceBenchmarks component available when needed
 // import { PerformanceBenchmarks } from '../components/analysis/performance-benchmarks';
 
 function PortfolioPageContent() {
-  const { holdings, transactions, totalPerformance, loading, deleteAsset, portfolioData } = usePortfolio();
+  const { holdings, transactions, totalPerformance, loading, error, refreshPortfolio, deleteAsset, portfolioData } = usePortfolio();
   const { metrics: historicalMetrics, portfolioHistory } = usePortfolioHistory(holdings);
 
   const { theme } = useTheme();
@@ -122,6 +123,15 @@ function PortfolioPageContent() {
     }
   };
 
+  if (error) {
+    return (
+      <ErrorScreen
+        title="Error al cargar el portafolio"
+        message={error}
+        onRetry={() => void refreshPortfolio()}
+      />
+    );
+  }
   if (loading) return <PortfolioSkeleton />;
 
   return (

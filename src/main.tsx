@@ -2,7 +2,7 @@
 
 import React, { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/react-query';
 
@@ -180,66 +180,71 @@ const router = createBrowserRouter([
                     { path: "suggestions", element: <Suspense fallback={<PageSkeleton />}><SuggestionsPage /></Suspense> },
                     { path: "retirement-calculator", element: <Suspense fallback={<PageSkeleton />}><RetirementCalculatorPage /></Suspense> },
 
-                    // --- Rutas del Blog ---
                     {
-                        path: "blog",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="Blog">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando blog..." />}>
-                                    <BlogListPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
-                    },
-                    {
-                        path: "blog/:slug",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="Blog Post">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando artículo..." />}>
-                                    <BlogPostPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
-                    },
-                    {
-                        path: "blog/crear",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="Create Blog">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando editor..." />}>
-                                    <CreateBlogPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
-                    },
-                    {
-                        path: "blog/editar/:slug",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="Edit Blog">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando editor..." />}>
-                                    <EditBlogPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
-                    },
-                    {
-                        path: "mis-blogs",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="My Blogs">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando tus artículos..." />}>
-                                    <MyBlogsPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
-                    },
-                    {
-                        path: "guardados",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="Bookmarked Blogs">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando artículos guardados..." />}>
-                                    <BookmarkedBlogsPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
+                        element: <Outlet />,
+                        children: [
+                            // --- Rutas del Blog ---
+                            {
+                                path: "blog",
+                                element: (
+                                    <ErrorBoundary level="feature" featureName="Blog">
+                                        <Suspense fallback={<SuspenseFallback type="page" message="Cargando blog..." />}>
+                                            <BlogListPage />
+                                        </Suspense>
+                                    </ErrorBoundary>
+                                )
+                            },
+                            {
+                                path: "blog/:slug",
+                                element: (
+                                    <ErrorBoundary level="feature" featureName="Blog Post">
+                                        <Suspense fallback={<SuspenseFallback type="page" message="Cargando artículo..." />}>
+                                            <BlogPostPage />
+                                        </Suspense>
+                                    </ErrorBoundary>
+                                )
+                            },
+                            {
+                                path: "blog/crear",
+                                element: (
+                                    <ErrorBoundary level="feature" featureName="Create Blog">
+                                        <Suspense fallback={<SuspenseFallback type="page" message="Cargando editor..." />}>
+                                            <CreateBlogPage />
+                                        </Suspense>
+                                    </ErrorBoundary>
+                                )
+                            },
+                            {
+                                path: "blog/editar/:slug",
+                                element: (
+                                    <ErrorBoundary level="feature" featureName="Edit Blog">
+                                        <Suspense fallback={<SuspenseFallback type="page" message="Cargando editor..." />}>
+                                            <EditBlogPage />
+                                        </Suspense>
+                                    </ErrorBoundary>
+                                )
+                            },
+                            {
+                                path: "mis-blogs",
+                                element: (
+                                    <ErrorBoundary level="feature" featureName="My Blogs">
+                                        <Suspense fallback={<SuspenseFallback type="page" message="Cargando tus artículos..." />}>
+                                            <MyBlogsPage />
+                                        </Suspense>
+                                    </ErrorBoundary>
+                                )
+                            },
+                            {
+                                path: "guardados",
+                                element: (
+                                    <ErrorBoundary level="feature" featureName="Bookmarked Blogs">
+                                        <Suspense fallback={<SuspenseFallback type="page" message="Cargando artículos guardados..." />}>
+                                            <BookmarkedBlogsPage />
+                                        </Suspense>
+                                    </ErrorBoundary>
+                                )
+                            },
+                        ]
                     },
 
                     // --- Rutas Protegidas solo para Administradores (anidadas) ---

@@ -18,6 +18,8 @@ import { AssetFundamentalsTrends } from './fundamentals/asset-fundamentals-trend
  */
 interface AssetDetailTabsProps {
   asset: AssetData;
+  onRefreshAssetData: () => Promise<AssetData>;
+  isRefreshing: boolean;
 }
 
 /**
@@ -29,7 +31,7 @@ interface AssetDetailTabsProps {
  * <AssetDetailTabs asset={assetData} />
  * ```
  */
-export function AssetDetailTabs({ asset }: AssetDetailTabsProps) {
+export function AssetDetailTabs({ asset, onRefreshAssetData, isRefreshing }: AssetDetailTabsProps) {
   return (
     <Tabs defaultValue="profile" className="w-full">
       <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto">
@@ -90,7 +92,7 @@ export function AssetDetailTabs({ asset }: AssetDetailTabsProps) {
         </TabsContent>
 
         <TabsContent value="ratings" className="mt-4 sm:mt-6">
-          <AssetGradesTab asset={asset} />
+          <AssetGradesTab asset={asset} onRefreshAssetData={onRefreshAssetData} isRefreshing={isRefreshing} />
         </TabsContent>
 
         <TabsContent value="evolution" className="mt-4 sm:mt-6">

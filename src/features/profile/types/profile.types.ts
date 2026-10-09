@@ -7,6 +7,8 @@ export interface OnboardingProfile {
   investorProfile?: string;
   experience?: string;
   interests?: Record<string, boolean>;
+  avatarIndex?: number;
+  avatarImage?: string | null;
 }
 
 /**

@@ -34,6 +34,24 @@ export interface CreateSubscriptionRequestPayload {
 }
 
 class PaymentService {
+  /** Downgrades the authenticated user's paid plan when its 30-day period has ended. */
+  async expireCurrentUserPlanIfDue(): Promise<boolean> {
+    try {
+      const { data, error } = await supabase.rpc('expire_subscription_if_due');
+      if (error) {
+        void logger.error('SUBSCRIPTION_EXPIRY_CHECK_FAILED', error.message);
+        return false;
+      }
+      return data === true;
+    } catch (err) {
+      void logger.error(
+        'SUBSCRIPTION_EXPIRY_CHECK_EXCEPTION',
+        err instanceof Error ? err.message : String(err),
+      );
+      return false;
+    }
+  }
+
   /**
    * Envía una nueva solicitud de suscripción por transferencia
    */

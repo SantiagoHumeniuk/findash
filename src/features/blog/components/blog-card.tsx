@@ -1,7 +1,8 @@
 // src/features/blog/components/blog-card.tsx
 import { Card, CardContent, CardFooter, CardHeader } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
-import { Avatar, AvatarFallback } from '../../../components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
+import { getProfileAvatarIndex, getProfileAvatarUrl } from '../../../lib/profile-avatar';
 import { Calendar, Heart, MessageCircle, Bookmark, Eye, BookOpen, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -15,8 +16,12 @@ interface BlogCardProps {
   featured_image_url?: string;
   created_at: string;
   author: {
+    id: string;
     first_name: string;
     last_name: string;
+    avatar_index?: number | string | null;
+    avatar_image?: string | null;
+    can_upload_blog?: boolean | null;
   };
   category?: string;
   tags?: string[];
@@ -72,7 +77,7 @@ export function BlogCard({
 
   return (
     <Card 
-      className="overflow-hidden h-full flex flex-col cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] hover:border-primary/50 active:scale-[0.98] group"
+      className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-sm border-border shadow-none transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md active:translate-y-0"
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       tabIndex={0}
@@ -80,7 +85,7 @@ export function BlogCard({
     >
       {/* Imagen destacada */}
       <div className="relative block">
-        <div className="relative w-full h-40 sm:h-48 bg-muted overflow-hidden">
+        <div className="relative h-44 w-full overflow-hidden bg-muted sm:h-48">
           {featured_image_url ? (
             <img
               src={featured_image_url}
@@ -89,7 +94,7 @@ export function BlogCard({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-muted/50">
-              <BookOpen className="w-10 h-10 sm:w-12 sm:h-12" />
+              <BookOpen className="size-10 text-primary/70 sm:size-12" />
             </div>
           )}
         </div>
@@ -110,17 +115,17 @@ export function BlogCard({
       </div>
 
       {/* Contenido */}
-      <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
+      <CardHeader className="p-4 pb-2 sm:p-5 sm:pb-2">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-base sm:text-lg font-semibold line-clamp-2 group-hover:text-primary transition-colors flex-1">
+          <h3 className="line-clamp-2 flex-1 text-base font-semibold leading-snug transition-colors group-hover:text-primary sm:text-lg">
             {title}
           </h3>
           <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5 sm:mt-1" />
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 p-4 sm:p-6 pt-2 pb-3">
-        <p className="text-sm text-muted-foreground line-clamp-3 mb-3 sm:mb-4 leading-relaxed">
+      <CardContent className="flex-1 p-4 pt-2 pb-4 sm:p-5 sm:pt-2">
+        <p className="mb-4 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
           {excerpt}
         </p>
         
@@ -142,10 +147,13 @@ export function BlogCard({
       </CardContent>
 
       {/* Footer */}
-      <CardFooter className="border-t p-4 sm:p-6 pt-3 sm:pt-4 flex flex-col gap-2 sm:gap-3">
+      <CardFooter className="flex flex-col gap-3 border-t p-4 pt-3 sm:p-5 sm:pt-4">
         {/* Autor y fecha */}
         <div className="flex items-center gap-2 sm:gap-3 w-full">
           <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
+            {author.can_upload_blog && (
+              <AvatarImage src={getProfileAvatarUrl(getProfileAvatarIndex(author.id, author.avatar_index), author.avatar_image)} alt="" />
+            )}
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">

@@ -49,7 +49,7 @@ import {
 import { Data912FixedIncome } from '../components/data912-fixed-income';
 
 export default function BondsPage() {
-  const [activeTab, setActiveTab] = useState<'macro' | 'live' | 'lecaps'>('live');
+  const [activeTab, setActiveTab] = useState<'macro' | 'live' | 'lecaps'>('macro');
 
   // Estados de Dólares y Macro
   const [provider, setProvider] = useState<'argentinadatos' | 'dolarazo'>('argentinadatos');
@@ -59,6 +59,7 @@ export default function BondsPage() {
   const [plazosFijos, setPlazosFijos] = useState<PlazoFijoDato[]>([]);
   const [uvaList, setUvaList] = useState<UvaDato[]>([]);
   const [loadingMacro, setLoadingMacro] = useState<boolean>(true);
+  const [macroErrors, setMacroErrors] = useState<string[]>([]);
 
   // Estados del Conversor de Moneda
   const [conversorMonto, setConversorMonto] = useState<number>(100000);
@@ -81,49 +82,57 @@ export default function BondsPage() {
   // Carga inicial de datos
   const loadMacroData = async (preferredProvider: 'argentinadatos' | 'dolarazo') => {
     setLoadingMacro(true);
-    setErrorMacro(null);
-    try {
-      const [dolaresRes, inflacionRes, pfRes, uvaRes] = await Promise.allSettled([
-        fetchUnifiedDolares(preferredProvider),
-        fetchInflacion(),
-        fetchPlazosFijos(),
-        fetchUva(),
-      ]);
-
-      if (dolaresRes.status === 'fulfilled') {
-        setDolares(dolaresRes.value.dolares);
-        setActiveSourceUsed(dolaresRes.value.sourceUsed);
-      } else {
-        console.error('Error cargando dólares:', dolaresRes.reason);
-      }
-
-      if (inflacionRes.status === 'fulfilled') {
-        setInflacion(inflacionRes.value);
-      }
-
-      if (pfRes.status === 'fulfilled') {
-        setPlazosFijos(pfRes.value);
-      }
-
-      if (uvaRes.status === 'fulfilled') {
-        setUvaList(uvaRes.value);
-      }
-    } catch (err: any) {
-      setErrorMacro('No se pudieron obtener algunas variables macroeconómicas.');
-    } finally {
-      setLoadingMacro(false);
+    const [dolaresRes, inflacionRes, pfRes, uvaRes] = await Promise.allSettled([
+      fetchUnifiedDolares(preferredProvider),
+      fetchInflacion(),
+      fetchPlazosFijos(),
+      fetchUva(),
+    ]);
+    const failures: string[] = [];
+    if (dolaresRes.status === 'rejected') {
+      failures.push(`dólares: ${dolaresRes.reason instanceof Error ? dolaresRes.reason.message : 'error desconocido'}`);
     }
+    if (inflacionRes.status === 'rejected') {
+      failures.push(`inflación: ${inflacionRes.reason instanceof Error ? inflacionRes.reason.message : 'error desconocido'}`);
+    }
+    if (pfRes.status === 'rejected') {
+      failures.push(`plazos fijos: ${pfRes.reason instanceof Error ? pfRes.reason.message : 'error desconocido'}`);
+    }
+    if (uvaRes.status === 'rejected') {
+      failures.push(`UVA: ${uvaRes.reason instanceof Error ? uvaRes.reason.message : 'error desconocido'}`);
+    }
+    setMacroErrors(failures);
+
+    if (dolaresRes.status === 'fulfilled') {
+      setDolares(dolaresRes.value.dolares);
+      setActiveSourceUsed(dolaresRes.value.sourceUsed);
+    } else {
+      console.error('Error cargando dólares:', dolaresRes.reason);
+    }
+
+    if (inflacionRes.status === 'fulfilled') {
+      setInflacion(inflacionRes.value);
+    }
+
+    if (pfRes.status === 'fulfilled') {
+      setPlazosFijos(pfRes.value);
+    }
+
+    if (uvaRes.status === 'fulfilled') {
+      setUvaList(uvaRes.value);
+    }
+    setLoadingMacro(false);
   };
 
   useEffect(() => {
-    loadMacroData(provider);
+    void loadMacroData('argentinadatos');
     const instList = getCurvaLecapYTasaFija();
     setInstrumentos(instList);
   }, []);
 
   const handleProviderChange = (newProvider: 'argentinadatos' | 'dolarazo') => {
     setProvider(newProvider);
-    loadMacroData(newProvider);
+    void loadMacroData(newProvider);
   };
 
   // Filtrado de Plazos Fijos
@@ -182,7 +191,7 @@ export default function BondsPage() {
 
   // Datos del instrumento seleccionado para el simulador
   const selectedInstrumento = useMemo(() => {
-    return instrumentos.find((i) => i.ticker === selectedTickerSim) || instrumentos[0];
+    return instrumentos.find((i) => i.ticker === selectedTickerSim) ?? instrumentos[0];
   }, [instrumentos, selectedTickerSim]);
 
   // Cálculos del simulador
@@ -284,7 +293,7 @@ export default function BondsPage() {
             size="sm"
             variant="outline"
             className="h-9 px-3 gap-1.5 border-white/15 hover:bg-white/10"
-            onClick={() => loadMacroData(provider)}
+            onClick={() => { void loadMacroData(provider); }}
             disabled={loadingMacro}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loadingMacro ? 'animate-spin' : ''}`} />
@@ -325,6 +334,11 @@ export default function BondsPage() {
         {/* PESTAÑA 1: DÓLARES & VARIABLES MACRO (ArgentinaDatos y Dolarazo) */}
         {/* ========================================================================= */}
         <TabsContent value="macro" className="space-y-6 mt-6">
+          {macroErrors.length > 0 && (
+            <div role="alert" className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+              No se pudieron cargar algunas variables: {macroErrors.join(' · ')}
+            </div>
+          )}
           {/* Barra de control de fuente de datos */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-card/60 backdrop-blur-md border border-white/10">
             <div className="flex items-center gap-2 text-xs">
@@ -572,7 +586,7 @@ export default function BondsPage() {
                         <YAxis stroke="#888888" fontSize={11} tickLine={false} unit="%" />
                         <Tooltip
                           content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
+                            if (active && payload?.length) {
                               const data = payload[0].payload;
                               return (
                                 <div className="p-2 bg-popover/95 border border-border rounded-lg shadow-xl text-xs space-y-1">
@@ -899,7 +913,7 @@ export default function BondsPage() {
                     />
                     <Tooltip
                       content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
+                        if (active && payload?.length) {
                           const data = payload[0].payload;
                           return (
                             <div className="p-3 bg-popover/95 border border-border rounded-lg shadow-xl text-xs space-y-1.5 backdrop-blur-md">

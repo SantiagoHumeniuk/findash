@@ -1,6 +1,7 @@
 // src/features/asset-detail/components/fundamentals/asset-fundamentals-trends.tsx
 
 import React, { useMemo, useState } from 'react';
+import { subMonths } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { AssetData } from '../../../../types/dashboard';
 import { 
@@ -21,9 +22,23 @@ interface AssetFundamentalsTrendsProps {
   asset: AssetData;
 }
 
-type MetricType = 'revenuePerShare' | 'netIncomePerShare' | 'freeCashFlowPerShare';
+type MetricType = 'pricePerformance' | 'revenuePerShare' | 'netIncomePerShare' | 'freeCashFlowPerShare';
+
+const RETURN_PERIODS = [
+  { months: 1, label: '1 mes' },
+  { months: 3, label: '3 meses' },
+  { months: 6, label: '6 meses' },
+  { months: 12, label: '1 año' },
+  { months: 36, label: '3 años' },
+  { months: 60, label: '5 años' },
+];
 
 const METRIC_CONFIG = {
+  pricePerformance: {
+    label: 'Rendimiento del precio',
+    color: 'hsl(var(--primary))',
+    gradient: ['#0f766e', '#14b8a6']
+  },
   revenuePerShare: {
     label: 'Ingresos por Acción (Revenue p/s)',
     color: 'hsl(var(--primary))',
@@ -42,22 +57,41 @@ const METRIC_CONFIG = {
 };
 
 export function AssetFundamentalsTrends({ asset }: AssetFundamentalsTrendsProps) {
-  const [selectedMetric, setSelectedMetric] = useState<MetricType>('revenuePerShare');
+  const [selectedMetric, setSelectedMetric] = useState<MetricType>('pricePerformance');
 
   const chartData = useMemo(() => {
+    if (selectedMetric === 'pricePerformance') {
+      const history = [...(asset.historicalReturns ?? [])]
+        .filter((item) => Number.isFinite(item.close) && item.close > 0 && Number.isFinite(new Date(item.date).getTime()))
+        .sort((left, right) => new Date(left.date).getTime() - new Date(right.date).getTime());
+      const latest = history.at(-1);
+      if (!latest) return [];
+
+      const latestDate = new Date(latest.date);
+      return RETURN_PERIODS.flatMap((period) => {
+        const cutoff = subMonths(latestDate, period.months).getTime();
+        const baseline = history.filter((item) => new Date(item.date).getTime() <= cutoff).at(-1);
+        if (!baseline) return [];
+
+        return [{
+          label: period.label,
+          value: ((latest.close - baseline.close) / baseline.close) * 100,
+        }];
+      });
+    }
+
     // Usamos ratios que contiene datos históricos REALES por acción
     if (!asset.ratios || asset.ratios.length === 0) return [];
     
     // Tomamos los datos y los ordenamos cronológicamente (de más antiguo a más reciente)
     return [...asset.ratios]
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .map(item => ({
-        year: new Date(item.date).getFullYear().toString(),
-        revenuePerShare: item.revenuePerShare,
-        netIncomePerShare: item.netIncomePerShare,
-        freeCashFlowPerShare: item.freeCashFlowPerShare
+      .filter((item) => Number.isFinite(item[selectedMetric]))
+      .map((item) => ({
+        label: new Date(item.date).getFullYear().toString(),
+        value: item[selectedMetric],
       }));
-  }, [asset]);
+  }, [asset.historicalReturns, asset.ratios, selectedMetric]);
 
   if (chartData.length === 0) {
     return (
@@ -69,17 +103,19 @@ export function AssetFundamentalsTrends({ asset }: AssetFundamentalsTrendsProps)
     );
   }
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const value = payload[0].value;
+  const isPricePerformance = selectedMetric === 'pricePerformance';
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value?: number }[]; label?: string }) => {
+    if (active && payload?.length) {
+      const value = payload[0]?.value;
+      if (typeof value !== 'number') return null;
       const isNegative = value < 0;
       return (
         <div className="bg-popover/95 backdrop-blur-md border border-border p-3 rounded-xl shadow-xl text-popover-foreground">
           <p className="font-semibold mb-1">{label}</p>
           <p className="text-sm">
-            <span className="text-muted-foreground mr-2">{METRIC_CONFIG[selectedMetric].label}:</span>
+            <span className="text-muted-foreground mr-2">{isPricePerformance ? 'Retorno total' : METRIC_CONFIG[selectedMetric].label}:</span>
             <span className={`font-bold ${isNegative ? 'text-red-500' : 'text-emerald-500'}`}>
-              {formatCurrency(value)}
+              {isPricePerformance ? `${value > 0 ? '+' : ''}${value.toFixed(2)}%` : formatCurrency(value)}
             </span>
           </p>
         </div>
@@ -102,6 +138,7 @@ export function AssetFundamentalsTrends({ asset }: AssetFundamentalsTrendsProps)
             <SelectValue placeholder="Seleccionar Métrica" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="pricePerformance">Rendimiento del precio por período</SelectItem>
             <SelectItem value="revenuePerShare">Ingresos por Acción</SelectItem>
             <SelectItem value="netIncomePerShare">Beneficio por Acción (EPS)</SelectItem>
             <SelectItem value="freeCashFlowPerShare">Flujo de Caja Libre por Acción</SelectItem>
@@ -109,7 +146,7 @@ export function AssetFundamentalsTrends({ asset }: AssetFundamentalsTrendsProps)
         </Select>
       </div>
 
-      <Card className="bg-card/40 backdrop-blur-sm border-white/5 overflow-hidden shadow-sm">
+      <Card className="bg-card/40 backdrop-blur-sm border-border overflow-hidden shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
             <div 
@@ -118,7 +155,11 @@ export function AssetFundamentalsTrends({ asset }: AssetFundamentalsTrendsProps)
             />
             {METRIC_CONFIG[selectedMetric].label}
           </CardTitle>
-          <CardDescription>Evolución histórica real en {asset.profile.currency || 'USD'}</CardDescription>
+          <CardDescription>
+            {isPricePerformance
+              ? 'Retorno total calculado desde cierres históricos ajustados.'
+              : `Evolución histórica real por acción en ${asset.profile.currency || 'USD'}`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[400px] w-full mt-4">
@@ -139,7 +180,7 @@ export function AssetFundamentalsTrends({ asset }: AssetFundamentalsTrendsProps)
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.3} />
                 <XAxis 
-                  dataKey="year" 
+                  dataKey="label"
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: 'hsl(var(--foreground))', fontSize: 13, fontWeight: 500 }}
@@ -150,6 +191,7 @@ export function AssetFundamentalsTrends({ asset }: AssetFundamentalsTrendsProps)
                   tickLine={false}
                   tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                   tickFormatter={(val) => {
+                    if (isPricePerformance) return `${val.toFixed(0)}%`;
                     if (Math.abs(val) >= 1000) return `${(val / 1000).toFixed(1)}k`;
                     return val.toFixed(1);
                   }}
@@ -160,21 +202,21 @@ export function AssetFundamentalsTrends({ asset }: AssetFundamentalsTrendsProps)
                   cursor={{ fill: 'hsl(var(--muted))', opacity: 0.15 }}
                 />
                 <Bar 
-                  dataKey={selectedMetric} 
+                  dataKey="value"
                   radius={[6, 6, 6, 6]}
                   animationDuration={1500}
                   maxBarSize={60}
                 >
                   <LabelList 
-                    dataKey={selectedMetric} 
+                    dataKey="value"
                     position="top" 
-                    formatter={(val: number) => val.toFixed(2)}
-                    style={{ fill: 'hsl(var(--foreground))', fontSize: 12, fontWeight: 600, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+                    formatter={(val: number) => isPricePerformance ? `${val > 0 ? '+' : ''}${val.toFixed(1)}%` : val.toFixed(2)}
+                    style={{ fill: 'hsl(var(--foreground))', fontSize: 12, fontWeight: 600 }}
                   />
                   {chartData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
-                      fill={entry[selectedMetric] < 0 ? 'url(#colorMetricNegative)' : 'url(#colorMetric)'} 
+                      fill={entry.value < 0 ? 'url(#colorMetricNegative)' : 'url(#colorMetric)'}
                     />
                   ))}
                 </Bar>
