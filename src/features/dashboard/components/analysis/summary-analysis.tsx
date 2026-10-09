@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import { AssetData } from "../../../../types/dashboard";
-import { IndicatorConfig, indicatorConfig as globalIndicatorConfig } from "../../../../utils/financial";
+import { IndicatorConfig } from "../../../../utils/financial";
+import { scoreAssetSummary } from "../../lib/summary-scoring";
 import {
     BrainCircuit, DollarSign, Shield, TrendingUp, Zap,
     ThumbsUp, ThumbsDown, AlertTriangle, CheckCircle, Info,
@@ -10,7 +11,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
 import { Badge } from "../../../../components/ui/badge";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import WinnerCard from "./summary/winner-card";
 import CategoryLeaders from "./summary/category-leaders";
 import RankingList from "./summary/ranking-list";
@@ -28,57 +29,22 @@ interface AssetProfile {
     recommendation: string;
     strengths: string[];
     weaknesses: string[];
+    reasons: string[];
     sector: string;
     price: number;
+    currency: string;
     changePercent: number;
     marketCap: number;
+    coverage: number;
+    trailingPE: number | null;
+    forwardPE: number | null;
+    forwardEPS: number | null;
+    targetUpsidePct: number | null;
     verdict: 'positive' | 'neutral' | 'negative';
     verdictText: string;
 }
 
-// Función Helper para resolver valores
-const resolveValue = (asset: AssetData, key: string): number | null => {
-    if (key === 'upsidePotential') {
-        const p = asset.quote?.price;
-        const t = asset.priceTargetConsensus?.targetConsensus;
-        return (p && t && p > 0) ? (t - p) / p : null;
-    }
-
-    const config = globalIndicatorConfig[key];
-    if (!config) return null;
-
-    let value: number | null = null;
-    const sources = [asset.keyMetrics, asset.profile, asset.quote];
-
-    for (const field of config.apiFields) {
-        for (const source of sources) {
-            if (source && typeof source === 'object' && field in source) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const val = (source as any)[field];
-                if (typeof val === 'number' && Number.isFinite(val)) {
-                    value = val;
-                    break;
-                }
-            }
-        }
-        if (value !== null) break;
-    }
-
-    if (value === null && config.compute) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const rawContext: any = {
-            ...(asset.profile as any), // eslint-disable-line @typescript-eslint/no-explicit-any
-            ...(asset.quote as any), // eslint-disable-line @typescript-eslint/no-explicit-any
-            ...(asset.keyMetrics as any), // eslint-disable-line @typescript-eslint/no-explicit-any
-        };
-        const computed = config.compute(rawContext);
-        if (computed !== null && Number.isFinite(computed)) value = computed;
-    }
-
-    return value;
-};
-
-const containerVariants = {
+const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
         opacity: 1,
@@ -86,7 +52,7 @@ const containerVariants = {
     },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20, filter: "blur(4px)" },
     visible: {
         opacity: 1,
@@ -268,6 +234,13 @@ function PanoramicOverview({ profiles, totalAssets }: { profiles: AssetProfile[]
                                             </div>
                                         </div>
 
+                                        <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-muted/30 p-2 text-xs sm:grid-cols-4">
+                                            <div><span className="text-muted-foreground">PER / forward</span><div className="font-semibold tabular-nums">{profile.trailingPE?.toFixed(2) ?? 'N/D'} / {profile.forwardPE?.toFixed(2) ?? 'N/D'}</div></div>
+                                            <div><span className="text-muted-foreground">EPS forward</span><div className="font-semibold tabular-nums">{profile.forwardEPS !== null ? `${profile.forwardEPS.toFixed(2)} ${profile.currency}` : 'N/D'}</div></div>
+                                            <div><span className="text-muted-foreground">Potencial objetivo</span><div className="font-semibold tabular-nums">{profile.targetUpsidePct !== null ? `${profile.targetUpsidePct > 0 ? '+' : ''}${profile.targetUpsidePct.toFixed(1)}%` : 'N/D'}</div></div>
+                                            <div><span className="text-muted-foreground">Cobertura</span><div className="font-semibold tabular-nums">{profile.coverage}% de señales disponibles</div></div>
+                                        </div>
+
                                         {/* Verdict explanation */}
                                         <div className="mt-3 pt-3 border-t border-dashed">
                                             <p className="text-xs text-foreground/70 leading-relaxed italic">
@@ -287,6 +260,14 @@ function PanoramicOverview({ profiles, totalAssets }: { profiles: AssetProfile[]
                                                     </Badge>
                                                 ))}
                                             </div>
+                                            <details className="mt-3 text-xs">
+                                                <summary className="cursor-pointer font-medium text-primary">Ver señales consideradas ({profile.reasons.length})</summary>
+                                                <ul className="mt-2 space-y-1.5 pl-4 text-muted-foreground">
+                                                    {profile.reasons.map((reason, reasonIndex) => (
+                                                        <li key={`${profile.symbol}-reason-${reasonIndex}`} className="list-disc">{reason}</li>
+                                                    ))}
+                                                </ul>
+                                            </details>
                                         </div>
                                     </motion.div>
                                 );
@@ -300,14 +281,22 @@ function PanoramicOverview({ profiles, totalAssets }: { profiles: AssetProfile[]
 }
 
 export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnalysisProps) {
+    const fallbackAssets = useMemo(
+        () => assets.filter(asset => asset.dataSource === 'Yahoo Finance'),
+        [assets],
+    );
+    const analysisAssets = useMemo(
+        () => assets.filter(asset => asset.dataSource !== 'Yahoo Finance'),
+        [assets],
+    );
 
     const analysis = useMemo(() => {
-        if (assets.length < 1) return null;
+        if (analysisAssets.length < 1) return null;
 
         const categories = {
             valuation: {
                 label: "Valoración",
-                metrics: ['PER', 'evToEbitda', 'priceToBook', 'pfc_ratio'],
+                metrics: ['PER', 'forwardPER', 'evToEbitda', 'priceToBook', 'pfc_ratio'],
                 weight: 0.3,
                 icon: <DollarSign className="w-5 h-5" />
             },
@@ -331,64 +320,24 @@ export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnal
             }
         };
 
-        const scores: Record<string, Record<string, number>> = {};
-
-        assets.forEach(a => {
-            scores[a.profile.symbol] = {};
-        });
-
-        // Calcular puntajes por categoría
-        Object.entries(categories).forEach(([catKey, category]) => {
-            category.metrics.forEach(metric => {
-                const validAssets = assets.map(a => ({
-                    symbol: a.profile.symbol,
-                    value: resolveValue(a, metric)
-                })).filter(item => item.value !== null) as { symbol: string, value: number }[];
-
-                if (validAssets.length < 1) return;
-
-                let lowerIsBetter = false;
-                if (metric === 'upsidePotential') lowerIsBetter = false;
-                else lowerIsBetter = indicatorConfig[metric]?.lowerIsBetter ?? false;
-
-                validAssets.sort((a, b) => lowerIsBetter ? a.value - b.value : b.value - a.value);
-
-                validAssets.forEach((item, index) => {
-                    const points = validAssets.length === 1
-                        ? 5 // Single asset gets a neutral score
-                        : ((validAssets.length - 1 - index) / Math.max(1, validAssets.length - 1)) * 10;
-                    if (!scores[item.symbol][catKey]) scores[item.symbol][catKey] = 0;
-                    scores[item.symbol][catKey] += points;
-                });
-            });
-
-            // Normalizar a escala 0-100 por categoría
-            assets.forEach(a => {
-                const rawScore = scores[a.profile.symbol][catKey] || 0;
-                scores[a.profile.symbol][catKey] = (rawScore / Math.max(1, category.metrics.length)) * 10;
-            });
-        });
-
-        const rankedAssets = assets.map(asset => {
-            const s = scores[asset.profile.symbol];
-
-            let totalWeighted =
-                (s.valuation || 0) * categories.valuation.weight +
-                (s.profitability || 0) * categories.profitability.weight +
-                (s.financial_health || 0) * categories.financial_health.weight +
-                (s.momentum || 0) * categories.momentum.weight;
-
-            totalWeighted = Math.round(totalWeighted);
-
-            return { asset, score: totalWeighted, details: s };
-        }).sort((a, b) => b.score - a.score);
+        const scored = analysisAssets.map((asset) => ({
+            asset,
+            summary: scoreAssetSummary(asset),
+        }));
+        const rankedAssets = scored
+            .map(({ asset, summary }) => ({
+                asset,
+                score: summary.score,
+                details: summary.categoryScores,
+            }))
+            .sort((left, right) => right.score - left.score);
 
         const categoryWinners: Record<string, { symbol: string; score: number; metrics: string[] }> = {};
         Object.keys(categories).forEach(catKey => {
             let winner = rankedAssets[0];
             let maxVal = -1;
             rankedAssets.forEach(item => {
-                const catScore = item.details[catKey] || 0;
+                const catScore = item.details[catKey as keyof typeof item.details] || 0;
                 if (catScore > maxVal) {
                     maxVal = catScore;
                     winner = item;
@@ -401,69 +350,46 @@ export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnal
             };
         });
 
-        const assetProfiles: AssetProfile[] = rankedAssets.map(item => {
-            const { asset, score, details } = item;
-
-            const debt = resolveValue(asset, 'debtToEquity') ?? 999;
-            const beta = resolveValue(asset, 'beta') ?? 1;
-
-            let riskLevel: 'low' | 'medium' | 'high' = 'medium';
-            if (debt < 0.8 && beta < 1.1) riskLevel = 'low';
-            else if (debt > 2.0 || beta > 1.5) riskLevel = 'high';
-
-            const strengths: string[] = [];
-            const weaknesses: string[] = [];
-
-            if ((details.valuation || 0) > 60) strengths.push("Valoración Atractiva");
-            if ((details.profitability || 0) > 60) strengths.push("Alta Calidad");
-            if ((details.financial_health || 0) > 60) strengths.push("Balance Sólido");
-            if ((details.momentum || 0) > 60) strengths.push("Alto Potencial");
-
-            if ((details.valuation || 0) < 30) weaknesses.push("Valoración Exigente");
-            if ((details.financial_health || 0) < 30) weaknesses.push("Riesgo Financiero");
-            if ((details.profitability || 0) < 30) weaknesses.push("Rentabilidad Baja");
-            if ((details.momentum || 0) < 30) weaknesses.push("Poco Potencial");
-
-            let verdict: 'positive' | 'neutral' | 'negative' = 'neutral';
-            let verdictText = "";
-
-            if (score >= 60) {
-                verdict = 'positive';
-                verdictText = `${asset.profile.companyName} muestra fundamentos sólidos. Destaca en ${strengths.slice(0, 2).join(' y ').toLowerCase() || 'métricas generales'}. Es una opción interesante para considerar.`;
-            } else if (score >= 35) {
-                verdict = 'neutral';
-                verdictText = `${asset.profile.companyName} tiene un desempeño mixto. ${strengths.length > 0 ? `Punto fuerte: ${strengths[0].toLowerCase()}.` : ''} ${weaknesses.length > 0 ? `Punto débil: ${weaknesses[0].toLowerCase()}.` : ''} Conviene investigar más antes de decidir.`;
-            } else {
-                verdict = 'negative';
-                verdictText = `${asset.profile.companyName} presenta señales de alerta. ${weaknesses.length > 0 ? `Principalmente ${weaknesses.join(' y ').toLowerCase()}.` : 'Sus métricas están por debajo del promedio.'} Se recomienda precaución.`;
-            }
-
-            let recommendation = "";
-            if (score >= 80) recommendation = "Excelente opción integral. Destaca por su equilibrio.";
-            else if (score >= 60) recommendation = "Opción sólida. Buen desempeño general.";
-            else if (score >= 40) recommendation = "Desempeño medio. Evaluar estrategia.";
-            else recommendation = "Puntaje bajo comparativo. Revisar fundamentales.";
+        const assetProfiles: AssetProfile[] = scored.map(({ asset, summary }) => {
+            const latestRatio = [...asset.ratios].sort((left, right) => Date.parse(right.date) - Date.parse(left.date))[0];
+            const debt = latestRatio?.debtToEquityRatio;
+            const beta = asset.profile.beta;
+            const riskLevel: AssetProfile['riskLevel'] =
+                (typeof debt === 'number' && debt > 2.5) || beta > 1.8
+                    ? 'high'
+                    : typeof debt === 'number' && debt < 0.8 && beta < 1.1
+                        ? 'low'
+                        : 'medium';
+            const price = asset.quote?.price ?? 0;
+            const target = asset.priceTargetConsensus?.targetConsensus ?? 0;
 
             return {
                 symbol: asset.profile.symbol,
                 companyName: asset.profile.companyName,
-                score,
+                score: summary.score,
                 riskLevel,
-                recommendation,
-                strengths,
-                weaknesses,
+                recommendation: summary.verdictText,
+                strengths: summary.strengths,
+                weaknesses: summary.weaknesses,
+                reasons: summary.reasons,
                 sector: asset.profile.sector || 'N/A',
-                price: asset.quote?.price || asset.profile.price || 0,
-                changePercent: asset.quote?.changePercentage || asset.profile.changePercentage || 0,
-                marketCap: asset.quote?.marketCap || asset.profile.marketCap || 0,
-                verdict,
-                verdictText,
+                price,
+                currency: asset.profile.currency || 'USD',
+                changePercent: asset.quote?.changePercentage ?? asset.profile.changePercentage ?? 0,
+                marketCap: asset.quote?.marketCap ?? asset.profile.marketCap ?? 0,
+                coverage: summary.coverage,
+                trailingPE: asset.quote?.pe && asset.quote.pe > 0 ? asset.quote.pe : null,
+                forwardPE: asset.quote?.forwardPE && asset.quote.forwardPE > 0 ? asset.quote.forwardPE : null,
+                forwardEPS: asset.quote?.forwardEPS && asset.quote.forwardEPS > 0 ? asset.quote.forwardEPS : null,
+                targetUpsidePct: price > 0 && target > 0 ? ((target / price) - 1) * 100 : null,
+                verdict: summary.verdict,
+                verdictText: summary.verdictText,
             };
         });
 
         return { rankedAssets, categoryWinners, categories, assetProfiles };
 
-    }, [assets, indicatorConfig]);
+    }, [analysisAssets]);
 
     // Empty / single state — still show the panoramic view for a single asset
     if (!analysis) {
@@ -477,7 +403,31 @@ export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnal
                     </div>
                 </CardHeader>
                 <CardContent className="text-center text-muted-foreground py-8 sm:py-10 px-4 text-sm sm:text-base">
-                    <p>Selecciona al menos un activo para generar el análisis inteligente.</p>
+                    {fallbackAssets.length > 0 ? (
+                        <div className="space-y-2">
+                            <p>
+                                FMP no respondió para {fallbackAssets.map(asset => asset.profile.symbol).join(', ')}.
+                                Se muestran cotizaciones y métricas forward de Yahoo Finance, pero no se los incluye
+                                en el ranking fundamental porque Yahoo no entregó el resto de las métricas necesarias.
+                            </p>
+                            {fallbackAssets.map(asset => (
+                                <p key={asset.profile.symbol} className="font-medium">
+                                    {asset.profile.symbol}: {asset.profile.companyName} · {asset.profile.currency}{' '}
+                                    {asset.quote.price.toFixed(2)} · PER {asset.quote.pe && asset.quote.pe > 0
+                                        ? asset.quote.pe.toFixed(2)
+                                        : 'No disponible'} · PER forward {asset.quote.forwardPE && asset.quote.forwardPE > 0
+                                        ? asset.quote.forwardPE.toFixed(2)
+                                        : 'No disponible'} · EPS forward {asset.quote.forwardEPS && asset.quote.forwardEPS > 0
+                                        ? asset.quote.forwardEPS.toFixed(2)
+                                        : 'No disponible'} · Objetivo {asset.priceTargetConsensus.targetConsensus > 0
+                                        ? `${asset.profile.currency} ${asset.priceTargetConsensus.targetConsensus.toFixed(2)}`
+                                        : 'No disponible'}
+                                </p>
+                            ))}
+                        </div>
+                    ) : (
+                        <p>Selecciona al menos un activo para generar el análisis inteligente.</p>
+                    )}
                 </CardContent>
             </Card>
         );
@@ -495,14 +445,23 @@ export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnal
             initial="hidden"
             animate="visible"
         >
+            {fallbackAssets.length > 0 && (
+                <Card className="border-amber-500/30">
+                    <CardContent className="p-4 text-sm text-muted-foreground">
+                        FMP no respondió para {fallbackAssets.map(asset => asset.profile.symbol).join(', ')}.
+                        Se muestran sus cotizaciones de Yahoo Finance, pero se excluyen del ranking
+                        fundamental para no presentar métricas faltantes como calificaciones.
+                    </CardContent>
+                </Card>
+            )}
             {/* 1. Panoramic Overview — THE main beginner-friendly section */}
             <PanoramicOverview
                 profiles={analysis.assetProfiles}
-                totalAssets={assets.length}
+                totalAssets={analysisAssets.length}
             />
 
             {/* 2. Winner card — only when there are 2+ assets to compare */}
-            {assets.length >= 2 && (
+            {analysisAssets.length >= 2 && (
                 <motion.div variants={itemVariants}>
                     <WinnerCard
                         symbol={winner.asset.profile.symbol}
@@ -517,12 +476,12 @@ export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnal
             )}
 
             {/* 3. Category Leaders + Ranking — only when there are 2+ assets */}
-            {assets.length >= 2 && (
+            {analysisAssets.length >= 2 && (
                 <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                     <CategoryLeaders
                         categoryWinners={analysis.categoryWinners}
                         categories={analysis.categories}
-                        assets={assets}
+                        assets={analysisAssets}
                         indicatorConfig={indicatorConfig}
                     />
                     <RankingList rankedAssets={analysis.rankedAssets} />

@@ -32,7 +32,7 @@ export function RecommendationModal({ symbol, result }: RecommendationModalProps
                     <InfoIcon className="w-4 h-4 text-muted-foreground opacity-30 group-hover:opacity-100 transition-opacity" />
                 </div>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[450px] glass-morphism border-none shadow-premium">
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[560px] glass-morphism border-none shadow-premium">
                 <DialogHeader>
                     <DialogTitle className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -43,7 +43,7 @@ export function RecommendationModal({ symbol, result }: RecommendationModalProps
                         </div>
                     </DialogTitle>
                     <DialogDescription>
-                        Recomendación generada por el algoritmo de datos técnicos fundamentales.
+                        Señal cuantitativa por reglas fundamentales y de tendencia. No constituye asesoramiento financiero.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -51,7 +51,7 @@ export function RecommendationModal({ symbol, result }: RecommendationModalProps
                     {/* Confianza / Sentimiento */}
                     <div className="space-y-1.5">
                         <div className="flex justify-between text-sm">
-                            <span className="font-semibold text-foreground/80">Confianza del Algoritmo</span>
+                            <span className="font-semibold text-foreground/80">Solidez de la señal</span>
                             <span className="font-bold">{result.confidence}/100</span>
                         </div>
                         <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
@@ -60,6 +60,29 @@ export function RecommendationModal({ symbol, result }: RecommendationModalProps
                                 style={{ width: `${result.confidence}%` }}
                             />
                         </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                        <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
+                            <span className="text-muted-foreground">Valor justo:</span>
+                            <span className="font-bold">{result.valuation.fairValue !== null ? `$${result.valuation.fairValue.toFixed(2)}` : 'N/A'}</span>
+                        </div>
+                        <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
+                            <span className="text-muted-foreground">Potencial:</span>
+                            <span className="font-bold">{result.valuation.upsidePct !== null ? `${result.valuation.upsidePct > 0 ? '+' : ''}${result.valuation.upsidePct.toFixed(1)}%` : 'N/A'}</span>
+                        </div>
+                        {result.valuation.fairValueRange && (
+                            <div className="col-span-2 p-2 bg-muted/30 border rounded flex justify-between items-center">
+                                <span className="text-muted-foreground">Rango entre modelos:</span>
+                                <span className="font-bold">${result.valuation.fairValueRange.low.toFixed(2)} – ${result.valuation.fairValueRange.high.toFixed(2)}</span>
+                            </div>
+                        )}
+                        {result.valuation.forwardEpsGrowthPct !== null && (
+                            <div className="col-span-2 p-2 bg-muted/30 border rounded flex justify-between items-center">
+                                <span className="text-muted-foreground">Crecimiento EPS estimado:</span>
+                                <span className="font-bold">{result.valuation.forwardEpsGrowthPct.toFixed(1)}%</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Justificación */}
@@ -81,14 +104,18 @@ export function RecommendationModal({ symbol, result }: RecommendationModalProps
                     </div>
 
                     {/* Datos Técnicos Mini-Grid */}
-                    <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
                         <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
                             <span className="text-muted-foreground">P/E Ratio:</span>
                             <span className="font-bold">{result.techData.pe ? result.techData.pe.toFixed(2) : 'N/A'}</span>
                         </div>
                         <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
-                            <span className="text-muted-foreground">Deuda/Equity:</span>
-                            <span className="font-bold">{result.techData.debtToEquity ? result.techData.debtToEquity.toFixed(2) : 'N/A'}</span>
+                            <span className="text-muted-foreground">P/E forward:</span>
+                            <span className="font-bold">{result.techData.forwardPE && result.techData.forwardPE > 0 ? result.techData.forwardPE.toFixed(2) : 'N/A'}</span>
+                        </div>
+                        <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
+                            <span className="text-muted-foreground">{result.techData.isFinancialCompany ? 'Deuda/Equity (no comparable):' : 'Deuda/Equity:'}</span>
+                            <span className="font-bold">{result.techData.isFinancialCompany ? 'N/A' : result.techData.debtToEquity ? result.techData.debtToEquity.toFixed(2) : 'N/A'}</span>
                         </div>
                         <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
                             <span className="text-muted-foreground">ROE:</span>
@@ -98,13 +125,33 @@ export function RecommendationModal({ symbol, result }: RecommendationModalProps
                             <span className="text-muted-foreground">Beta:</span>
                             <span className="font-bold">{result.techData.beta ? result.techData.beta.toFixed(2) : 'N/A'}</span>
                         </div>
+                        {!result.techData.isFinancialCompany && (
+                            <>
+                                <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
+                                    <span className="text-muted-foreground">Deuda neta/EBITDA:</span>
+                                    <span className="font-bold">{result.techData.netDebtToEbitda !== null ? result.techData.netDebtToEbitda.toFixed(2) : 'N/A'}</span>
+                                </div>
+                                <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
+                                    <span className="text-muted-foreground">Liquidez corriente:</span>
+                                    <span className="font-bold">{result.techData.currentRatio !== null ? result.techData.currentRatio.toFixed(2) : 'N/A'}</span>
+                                </div>
+                                <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
+                                    <span className="text-muted-foreground">Cobertura intereses:</span>
+                                    <span className="font-bold">{result.techData.interestCoverage !== null ? result.techData.interestCoverage.toFixed(2) : 'N/A'}</span>
+                                </div>
+                            </>
+                        )}
+                        <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
+                            <span className="text-muted-foreground">Margen operativo:</span>
+                            <span className="font-bold">{result.techData.operatingMargin !== null ? `${(result.techData.operatingMargin * 100).toFixed(1)}%` : 'N/A'}</span>
+                        </div>
                     </div>
 
                     {/* Simulador de Impacto */}
                     <div className="mt-4 p-3 bg-primary/10 border border-primary/20 text-primary-foreground dark:text-primary rounded-lg text-xs leading-relaxed flex gap-2 items-start">
                         <TrendingDown className="w-4 h-4 mt-0.5 shrink-0" />
                         <div>
-                            <strong className="font-semibold">Simulador de Riesgo:</strong> Si decides vender este activo, la exposición de tu portafolio al sector <span className="font-bold">"{result.impact.sector}"</span> pasaría del <span className="font-bold underline">{result.impact.currentAllocationPercent.toFixed(1)}%</span> al <span className="font-bold underline">{result.impact.simulatedAllocationPercent.toFixed(1)}%</span>.
+                            <strong className="font-semibold">Simulador de Riesgo:</strong> Si decides vender este activo, la exposición de tu portafolio al sector <span className="font-bold">"{result.impact.sector}"</span> pasaría del <span className="font-bold underline">{result.impact.currentAllocationPercent !== null ? `${result.impact.currentAllocationPercent.toFixed(1)}%` : 'N/D'}</span> al <span className="font-bold underline">{result.impact.simulatedAllocationPercent !== null ? `${result.impact.simulatedAllocationPercent.toFixed(1)}%` : 'N/D'}</span>.
                         </div>
                     </div>
                 </div>

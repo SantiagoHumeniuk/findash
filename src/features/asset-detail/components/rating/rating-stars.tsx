@@ -7,7 +7,7 @@ import { Star } from 'lucide-react';
  * @property score - Puntuación de 0 a 5
  */
 interface RatingStarsProps {
-  score: number;
+  score: number | null;
 }
 
 /**
@@ -21,13 +21,17 @@ interface RatingStarsProps {
  * ```
  */
 export function RatingStars({ score }: RatingStarsProps) {
+  if (score === null || !Number.isFinite(score) || score <= 0) return null;
+
+  const starCount = Math.min(5, Math.max(1, Math.round(score)));
+
   return (
-    <div className="flex">
+    <div className="flex" role="img" aria-label={`${starCount} de 5 estrellas`}>
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
           className={`w-4 h-4 ${
-            i < score
+            i < starCount
               ? 'text-yellow-400 fill-yellow-400'
               : 'text-gray-300 dark:text-gray-600'
           }`}

@@ -6,12 +6,13 @@ import {
   CardHeader,
   CardTitle,
 } from '../../../../components/ui/card';
-import { Scale, TrendingUp, TrendingDown, HelpCircle, AlertTriangle, Calculator, ShieldCheck, ShieldAlert, Shield, Globe, Layers } from 'lucide-react';
+import { Scale, TrendingUp, TrendingDown, HelpCircle, AlertTriangle, Calculator, Building2, ShieldAlert, ShieldCheck, Globe, Layers, ChevronDown } from 'lucide-react';
 import { formatPrice } from '../../lib/asset-formatters';
 import type { AssetData } from '../../../../types/dashboard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../components/ui/tooltip';
 import { Badge } from '../../../../components/ui/badge';
-import { calculateBlendedFairValue } from '../../lib/valuation-models';
+import { calculateBlendedFairValue, classifyBusinessProfile } from '../../lib/valuation-models';
+import { useRiskPremiumQuery } from '../../../risk-premium/hooks/use-risk-premium-query';
 
 interface DCFValuationCardProps {
   asset: AssetData;
@@ -19,9 +20,11 @@ interface DCFValuationCardProps {
 
 export function DCFValuationCard({ asset }: DCFValuationCardProps) {
   const currentPrice = asset.quote?.price ?? 0;
+  const { data: riskPremiumData = [] } = useRiskPremiumQuery();
 
   // Usa el algoritmo robusto multi-modelo calibrado por sector y geografía
-  const { fairValue, modelsUsed, isAnomaly, spread, confidence, context } = calculateBlendedFairValue(asset);
+  const { fairValue, fairValueRange, modelsUsed, isAnomaly, spread, context } = calculateBlendedFairValue(asset, riskPremiumData);
+  const businessProfile = classifyBusinessProfile(asset, context);
   
   const isUndervalued = spread !== null && spread >= 0;
 
@@ -30,9 +33,7 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
     return null;
   }
 
-  const ConfidenceIcon = confidence === 'alta' ? ShieldCheck : confidence === 'media' ? Shield : ShieldAlert;
-  const confidenceColor = confidence === 'alta' ? 'text-green-500' : confidence === 'media' ? 'text-yellow-500' : 'text-red-400';
-  const confidenceLabel = confidence === 'alta' ? 'Alta' : confidence === 'media' ? 'Media' : 'Baja';
+  const riskColor = businessProfile.riskLevel === 'bajo' ? 'text-green-600' : businessProfile.riskLevel === 'moderado' ? 'text-yellow-600' : 'text-red-500';
 
   // Group models by category for display
   const categoryLabels: Record<string, string> = {
@@ -47,66 +48,94 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
   return (
     <Card className="border-l-4 border-l-primary/50 h-full overflow-hidden flex flex-col justify-between">
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Scale className="w-5 h-5 text-primary" />
-            Valor Justo
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            {/* Confidence badge */}
-            {confidence && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="outline" className={`text-[10px] gap-1 px-2 py-0.5 ${confidenceColor} border-current/30`}>
-                      <ConfidenceIcon className="w-3 h-3" />
-                      {confidenceLabel}
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p className="text-sm font-semibold mb-1">Nivel de Confianza: {confidenceLabel}</p>
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {confidence === 'alta' && `Basado en ${modelsUsed.length} modelos con alta convergencia en múltiplos de ${context.sector}.`}
-                      {confidence === 'media' && `Basado en ${modelsUsed.length} modelos calibrados con buena cobertura.`}
-                      {confidence === 'baja' && `Pocos modelos disponibles (${modelsUsed.length}) para este activo.`}
-                    </p>
-                    <div className="pt-1 text-[11px] text-muted-foreground/80 border-t border-white/10 space-y-0.5">
-                      <div><span className="text-foreground">Sector:</span> {context.sector}</div>
-                      <div><span className="text-foreground">Geografía:</span> {context.country}</div>
-                      {hasCountryRisk && (
-                        <div><span className="text-foreground">Ajuste Riesgo País:</span> +{context.countryRiskPremiumPct.toFixed(1)}% Ke (-{context.valuationDiscountPct.toFixed(0)}% múltiplos)</div>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Scale className="w-5 h-5 text-primary" />
+              Valor Justo
+            </CardTitle>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                  <button
+                    type="button"
+                    aria-label="Información sobre el cálculo del valor justo"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <HelpCircle className="h-4 w-4" aria-hidden="true" />
+                  </button>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-md">
+                <TooltipContent className="max-w-md border-border bg-popover text-popover-foreground">
                   <p className="font-semibold mb-1">Modelo de Valoración Multi-Factor</p>
                   <p className="text-xs text-muted-foreground mb-2">
                     Calibrado para el sector <strong className="text-foreground">{context.sector}</strong> e industria <strong className="text-foreground">{context.industry}</strong> en <strong className="text-foreground">{context.country}</strong>.
                   </p>
-                  <ul className="text-xs space-y-1.5 list-none pl-0 text-muted-foreground max-h-56 overflow-y-auto">
-                    {modelsUsed.map((m, i) => (
-                      <li key={i} className="flex flex-col gap-0.5 pb-1 border-b border-white/[0.05] last:border-0">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium text-foreground">{m.name}</span>
-                          <span className="text-[10px] uppercase font-medium px-1.5 py-0.5 rounded bg-muted">{categoryLabels[m.category] ?? m.category}</span>
-                        </div>
-                        <span className="text-[10px] leading-snug opacity-70">{m.description}</span>
-                        <span className="font-medium text-foreground text-[11px]">{formatPrice(m.value)} <span className="opacity-50">(Peso: {m.weight}x)</span></span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="space-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
+                    <p>{modelsUsed.length} modelos válidos participan del valor ponderado.</p>
+                    <p>La mediana FMP se usa cuando hay tres o más pares con múltiplos comparables.</p>
+                    <p>El precio objetivo de analistas tiene un peso secundario.</p>
+                  </div>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`Perfil: ${businessProfile.typeLabel}. Riesgo ${businessProfile.riskLevel}. Ver detalles`}
+                  className="flex max-w-full flex-wrap items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <Badge variant="outline" className="max-w-full gap-1.5 whitespace-normal border-primary/25 px-2.5 py-1.5 text-xs font-medium text-foreground">
+                    <Building2 className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    <span>{businessProfile.typeLabel}</span>
+                  </Badge>
+                  <Badge variant="outline" className={`gap-1.5 px-2.5 py-1.5 text-xs capitalize ${riskColor} border-current/30`}>
+                    {businessProfile.riskLevel === 'bajo' ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+                    Riesgo {businessProfile.riskLevel}
+                  </Badge>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="bottom"
+                align="start"
+                className="w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-popover p-4 text-popover-foreground shadow-xl [&>svg]:bg-popover [&>svg]:fill-popover"
+              >
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-semibold">{businessProfile.typeLabel}</p>
+                    </div>
+                    <p className="text-xs leading-relaxed text-muted-foreground">{businessProfile.description}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 border-t border-border pt-3">
+                    <span className="rounded-sm bg-muted px-2 py-1 text-[11px]">{context.sector}</span>
+                    <span className="rounded-sm bg-muted px-2 py-1 text-[11px]">{context.country}</span>
+                    {asset.profile?.beta > 0 && (
+                      <span className="rounded-sm bg-muted px-2 py-1 text-[11px]">Beta {asset.profile.beta.toFixed(2)}</span>
+                    )}
+                    {hasCountryRisk && (
+                      <span className="rounded-sm bg-muted px-2 py-1 text-[11px]">Riesgo país {context.countryRiskPremiumPct.toFixed(1)}%</span>
+                    )}
+                    {context.forwardEpsGrowthPct !== null && (
+                      <span className="rounded-sm bg-muted px-2 py-1 text-[11px]">EPS estimado {context.forwardEpsGrowthPct.toFixed(1)}%</span>
+                    )}
+                  </div>
+                  {businessProfile.riskFactors.length > 0 && (
+                    <div className="flex gap-2 border-t border-border pt-3">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold">Riesgos a considerar</p>
+                        <p className="mt-1 break-words text-xs leading-relaxed text-muted-foreground">{businessProfile.riskFactors.join('; ')}.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </CardHeader>
 
@@ -135,6 +164,11 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
             <p className={`text-3xl font-bold tracking-tighter ${isAnomaly ? 'text-yellow-600 decoration-yellow-600/30 line-through decoration-2' : 'text-primary'}`}>
               {formatPrice(fairValue)}
             </p>
+            {fairValueRange && (
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Rango entre modelos: {formatPrice(fairValueRange.low)} – {formatPrice(fairValueRange.high)}
+              </p>
+            )}
           </div>
         </div>
 
@@ -194,11 +228,37 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
 
             <p className="text-xs text-muted-foreground text-center pt-1 font-medium">
               {isUndervalued
-                ? `El activo cotiza un ${Math.abs(spread).toFixed(0)}% por debajo de su valor teórico real.`
-                : `El activo cotiza un ${Math.abs(spread).toFixed(0)}% por encima de su valor teórico real.`}
+                ? `El activo cotiza un ${Math.abs(spread).toFixed(0)}% por debajo del valor justo estimado por los modelos.`
+                : `El activo cotiza un ${Math.abs(spread).toFixed(0)}% por encima del valor justo estimado por los modelos.`}
             </p>
           </div>
         )}
+
+        <details className="group border-t border-border pt-2">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-sm py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+            <span>Modelos de inversión <span className="font-normal text-muted-foreground">({modelsUsed.length})</span></span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="mt-1 max-h-80 divide-y divide-border overflow-y-auto border-y border-border">
+            {modelsUsed.map((model, index) => (
+              <div key={`${model.name}-${index}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold">{model.name}</p>
+                    <Badge variant="outline" className="text-[10px] font-medium">
+                      {categoryLabels[model.category] ?? model.category}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{model.description}</p>
+                </div>
+                <div className="text-right">
+                  <p className="whitespace-nowrap text-sm font-bold tabular-nums">{formatPrice(model.value)}</p>
+                  <p className="mt-1 whitespace-nowrap text-[10px] text-muted-foreground">Peso {model.weight.toFixed(2)}x</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
       </CardContent>
     </Card>
   );

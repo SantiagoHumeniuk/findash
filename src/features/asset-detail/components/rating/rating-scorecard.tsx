@@ -11,6 +11,8 @@ import { RatingStars } from './rating-stars';
 import type { AssetData } from '../../../../types/dashboard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../components/ui/tooltip';
 import { Badge } from '../../../../components/ui/badge';
+import { calculateContextualRatingScores } from '../../lib/valuation-models';
+import { useRiskPremiumQuery } from '../../../risk-premium/hooks/use-risk-premium-query';
 
 interface RatingScorecardProps {
   asset: AssetData;
@@ -18,11 +20,14 @@ interface RatingScorecardProps {
 
 export function RatingScorecard({ asset }: RatingScorecardProps) {
   const { rating } = asset;
+  const { data: riskPremiumData = [] } = useRiskPremiumQuery();
+  const contextualScores = calculateContextualRatingScores(asset, riskPremiumData);
 
   if (!rating) return null;
 
   // Función auxiliar para colores de texto según el score (1-5)
-  const getScoreColor = (score: number) => {
+  const getScoreColor = (score: number | null) => {
+    if (score === null) return 'text-muted-foreground';
     if (score >= 4) return 'text-green-600 dark:text-green-400';
     if (score >= 3) return 'text-yellow-600 dark:text-yellow-400';
     return 'text-red-600 dark:text-red-400';
@@ -32,8 +37,8 @@ export function RatingScorecard({ asset }: RatingScorecardProps) {
   const metrics = [
     {
       label: 'DCF (Flujo de Caja)',
-      score: rating.discountedCashFlowScore,
-      description: 'Puntaje basado en la valoración intrínseca (DCF). Indica si el activo está infravalorado según sus flujos futuros.'
+      score: contextualScores.discountedCashFlow,
+      description: 'Puntaje derivado del precio por acción del DCF disponible comparado con el precio de mercado.'
     },
     {
       label: 'ROE (Retorno Equity)',
@@ -47,18 +52,18 @@ export function RatingScorecard({ asset }: RatingScorecardProps) {
     },
     {
       label: 'Deuda / Equity',
-      score: rating.debtToEquityScore,
-      description: 'Calificación del apalancamiento. Un puntaje alto (5/5) indica una deuda baja y saludable; un puntaje bajo indica alto riesgo de deuda.'
+      score: contextualScores.debtToEquity,
+      description: 'Puntaje relativo a la mediana deuda/equity de pares FMP cuando hay al menos tres comparables.'
     },
     {
       label: 'P/E (Precio/Ganancia)',
-      score: rating.priceToEarningsScore,
-      description: 'Calificación basada en el ratio P/E. Un puntaje alto indica que la acción está barata respecto a sus ganancias.'
+      score: contextualScores.priceToEarnings,
+      description: 'Puntaje basado en el valor por acción del modelo P/E forward frente al precio de mercado, con crecimiento estimado y pares cuando están disponibles.'
     },
     {
       label: 'P/B (Precio/Libros)',
-      score: rating.priceToBookScore,
-      description: 'Calificación basada en el ratio P/B. Compara el precio de mercado con el valor contable de la empresa.'
+      score: contextualScores.priceToBook,
+      description: 'Puntaje basado en P/B de pares ajustado por ROE; usa ingreso residual como respaldo si faltan comparables.'
     },
   ];
 
@@ -96,7 +101,7 @@ export function RatingScorecard({ asset }: RatingScorecardProps) {
         {/* Rating General Destacado */}
         <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg border border-border/50">
           <div className="space-y-0.5">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Rating General</span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Rating General FMP</span>
             <div className="flex items-baseline gap-2">
               <span className={`text-3xl font-bold ${getScoreColor(rating.overallScore)}`}>
                 {rating.rating}
@@ -114,7 +119,7 @@ export function RatingScorecard({ asset }: RatingScorecardProps) {
 
         {/* Lista de Métricas */}
         <div className="space-y-3">
-          {metrics.map((metric) => (
+          {metrics.filter(({ score }) => score !== null && Number.isFinite(score) && score >= 1 && score <= 5).map((metric) => (
             <div key={metric.label} className="flex items-center justify-between text-sm group">
               <div className="flex items-center gap-1.5">
                 <span className="text-foreground/80 font-medium group-hover:text-foreground transition-colors">
@@ -133,7 +138,7 @@ export function RatingScorecard({ asset }: RatingScorecardProps) {
               </div>
               <div className="flex items-center gap-3">
                 {/* Mostramos el número pequeño para precisión */}
-                <span className="text-xs font-mono text-muted-foreground w-3 text-right">{metric.score}</span>
+                {metric.score !== null && <span className="text-xs font-mono text-muted-foreground w-3 text-right">{metric.score}</span>}
                 <RatingStars score={metric.score} />
               </div>
             </div>
@@ -141,7 +146,7 @@ export function RatingScorecard({ asset }: RatingScorecardProps) {
         </div>
 
         <div className="text-[10px] text-muted-foreground pt-2 border-t text-center italic">
-          Puntuaciones calculadas automáticamente sobre reportes fundamentales.
+          Estrellas individuales ajustadas por valoración y pares; el rating general es el de FMP.
         </div>
       </CardContent>
     </Card>

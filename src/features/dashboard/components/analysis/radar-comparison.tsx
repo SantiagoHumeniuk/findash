@@ -84,24 +84,33 @@ const normalizeForRadar = (value: number | null, key: string): number => {
 
 // --- Componente Principal ---
 export const RadarComparison = React.memo(function RadarComparison({ assets }: RadarComparisonProps) {
+    const fallbackAssets = React.useMemo(
+        () => assets.filter(asset => asset.dataSource === 'Yahoo Finance'),
+        [assets]
+    );
+    const chartAssets = React.useMemo(
+        () => assets.filter(asset => asset.dataSource !== 'Yahoo Finance'),
+        [assets]
+    );
+
     // Estado de visibilidad por activo
     const [visibleAssets, setVisibleAssets] = React.useState<Record<string, boolean>>(() =>
-        Object.fromEntries(assets.map(a => [a.profile.symbol, true]))
+        Object.fromEntries(chartAssets.map(a => [a.profile.symbol, true]))
     );
 
     // Sincroniza el mapa de visibilidad cuando cambian los assets
     React.useEffect(() => {
         setVisibleAssets(prev => {
             const next = { ...prev } as Record<string, boolean>;
-            assets.forEach(a => {
+            chartAssets.forEach(a => {
                 next[a.profile.symbol] ??= true;
             });
             Object.keys(next).forEach(k => {
-                if (!assets.some(a => a.profile.symbol === k)) delete next[k];
+                if (!chartAssets.some(a => a.profile.symbol === k)) delete next[k];
             });
             return next;
         });
-    }, [assets]);
+    }, [chartAssets]);
 
     function toggleAsset(symbol: string) {
         setVisibleAssets(prev => ({ ...prev, [symbol]: !prev[symbol] }));
@@ -114,7 +123,7 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
                 metric: label,
             };
 
-            assets.forEach(asset => {
+            chartAssets.forEach(asset => {
                 const rawValue = resolveValue(asset, key);
                 const symbol = asset.profile.symbol;
 
@@ -141,23 +150,29 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
 
             return metricData;
         });
-    }, [assets]);
+    }, [chartAssets]);
 
     type ChartConfig = Record<string, { label: string }>;
     const chartConfig: ChartConfig = React.useMemo(() => {
         const config: ChartConfig = {};
-        assets.forEach(asset => {
+        chartAssets.forEach(asset => {
             config[asset.profile.symbol] = { label: asset.profile.symbol };
         });
         return config;
-    }, [assets]);
+    }, [chartAssets]);
 
-    if (assets.length === 0) {
+    if (chartAssets.length === 0) {
         return (
             <Card className="flex items-center justify-center h-64 sm:h-96">
                 <div className="text-center text-muted-foreground px-4">
-                    <p className="font-semibold text-sm sm:text-base">Sin activos para comparar</p>
-                    <p className="text-xs sm:text-sm">Añade al menos un activo para ver el gráfico radar.</p>
+                    <p className="font-semibold text-sm sm:text-base">
+                        {fallbackAssets.length > 0 ? 'Radar no disponible para datos de Yahoo' : 'Sin activos para comparar'}
+                    </p>
+                    <p className="text-xs sm:text-sm">
+                        {fallbackAssets.length > 0
+                            ? 'Yahoo Finance no devolvió todas las métricas necesarias. El activo sigue disponible en precios y PER.'
+                            : 'Añade al menos un activo para ver el gráfico radar.'}
+                    </p>
                 </div>
             </Card>
         );
@@ -178,7 +193,7 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
                 <div className="w-full flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 mb-4">
-                    {assets.map((asset, index) => {
+                    {chartAssets.map((asset, index) => {
                         const symbol = asset.profile.symbol;
                         const color = `var(--chart-${(index % 12) + 1})`;
                         return (
@@ -242,7 +257,7 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
                             }}
                         />
                         {/* Legend opcional, ya tenemos los checkboxes arriba */}
-                        {assets.map((asset, index) => {
+                        {chartAssets.map((asset, index) => {
                             const symbol = asset.profile.symbol;
                             if (!visibleAssets[symbol]) return null;
                             const colorVar = `var(--chart-${(index % 12) + 1})`;

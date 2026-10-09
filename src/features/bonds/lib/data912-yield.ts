@@ -1,28 +1,49 @@
 import type { Data912BondQuote } from '@/services/api/data912-fixed-income-api';
 
-function getZeroCouponMaturity(symbol: string, asOf: Date): Date | null {
-  const match = /^([ST])(\d{2})([A-Z])(\d)$/.exec(symbol);
-  if (!match) return null;
-  const [, , dayText, monthCode, yearDigit] = match;
-  const monthByCode: Record<string, number> = {
-    E: 0, F: 1, M: 2, A: 3, Y: 4, J: 5, L: 6, G: 7, S: 8, O: 9, N: 10, D: 11,
-  };
-  const month = monthByCode[monthCode];
-  if (month === undefined) return null;
+const sovereignMaturityMonthDay: Record<string, [number, number]> = {
+  '29': [6, 9],
+  '30': [6, 9],
+  '35': [6, 9],
+  '38': [0, 9],
+  '41': [0, 9],
+  '46': [6, 9],
+};
 
-  const currentDecade = Math.floor(asOf.getFullYear() / 10) * 10;
-  for (const year of [currentDecade + Number(yearDigit), currentDecade + Number(yearDigit) + 10]) {
-    const maturity = new Date(year, month, Number(dayText), 12);
-    if (
-      maturity.getFullYear() === year &&
-      maturity.getMonth() === month &&
-      maturity.getDate() === Number(dayText) &&
-      maturity.getTime() > asOf.getTime()
-    ) {
-      return maturity;
+/**
+ * Returns an encoded maturity date for instruments with an explicit date in their
+ * symbol. Known year-only sovereign tickers use a local month/day mapping.
+ * Corporate symbols without a public cash-flow reference remain unknown.
+ */
+export function getData912MaturityDate(symbol: string, asOf = new Date()): Date | null {
+  const match = /^([ST])(\d{2})([A-Z])(\d)$/.exec(symbol);
+  if (match) {
+    const [, , dayText, monthCode, yearDigit] = match;
+    const monthByCode: Record<string, number> = {
+      E: 0, F: 1, M: 2, A: 3, Y: 4, J: 5, L: 6, G: 7, S: 8, O: 9, N: 10, D: 11,
+    };
+    const month = monthByCode[monthCode];
+    if (month === undefined) return null;
+
+    const currentDecade = Math.floor(asOf.getFullYear() / 10) * 10;
+    for (const year of [currentDecade + Number(yearDigit), currentDecade + Number(yearDigit) + 10]) {
+      const maturity = new Date(year, month, Number(dayText), 12);
+      if (
+        maturity.getFullYear() === year &&
+        maturity.getMonth() === month &&
+        maturity.getDate() === Number(dayText) &&
+        maturity.getTime() > asOf.getTime()
+      ) {
+        return maturity;
+      }
     }
+    return null;
   }
-  return null;
+
+  const sovereign = /^(?:AL|GD|AE|AN|AS|BP|PAR|DICA|PARY)(\d{2})[CDP]?$/.exec(symbol);
+  const maturity = sovereign ? sovereignMaturityMonthDay[sovereign[1]] : undefined;
+  if (!sovereign || !maturity) return null;
+  const year = 2000 + Number(sovereign[1]);
+  return new Date(year, maturity[0], maturity[1], 12);
 }
 
 /**
@@ -36,7 +57,8 @@ export function calculateData912ZeroCouponYield(
   quote: Data912BondQuote,
   asOf = new Date(),
 ): number | null {
-  const maturity = getZeroCouponMaturity(quote.symbol, asOf);
+  const maturity = getData912MaturityDate(quote.symbol, asOf);
+  if (!/^[ST]\d{2}[A-Z]\d$/.test(quote.symbol)) return null;
   const bid = Number.isFinite(quote.px_bid) && quote.px_bid > 0 ? quote.px_bid : null;
   const ask = Number.isFinite(quote.px_ask) && quote.px_ask > 0 ? quote.px_ask : null;
   const marketPrice = bid !== null && ask !== null
