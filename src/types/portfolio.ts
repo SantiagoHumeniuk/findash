@@ -71,6 +71,7 @@ export interface PortfolioContextType {
     createPortfolio: (name: string) => Promise<Portfolio>;
     deletePortfolio: (portfolioId: number) => Promise<void>;
     addTransaction: (transaction: Omit<Transaction, 'id' | 'user_id'>) => Promise<Transaction[] | null>;
+    importTransactions: (transactions: Omit<Transaction, 'id' | 'user_id'>[]) => Promise<Transaction[]>;
     deleteAsset: (symbol: string) => Promise<void>;
     refreshPortfolio: () => Promise<void>;
 }

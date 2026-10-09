@@ -193,6 +193,24 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         return Promise.resolve(null);
     };
 
+    const importTransactions = async (transactionsToImport: Omit<Transaction, 'id' | 'user_id'>[]) => {
+        if (!user) throw new Error('Debes iniciar sesión para importar transacciones.');
+        if (transactionsToImport.length === 0) return [];
+
+        const result = await supabase
+            .from('transactions')
+            .insert(transactionsToImport.map((transaction) => ({
+                ...transaction,
+                user_id: user.id,
+            })))
+            .select();
+
+        if (result.error) throw new Error(result.error.message);
+
+        await queryClient.invalidateQueries({ queryKey: ['portfolio', user.id] });
+        return (result.data ?? []) as Transaction[];
+    };
+
     const deleteAsset = async (symbol: string) => {
         if (!user) {
             toast.error("Debes iniciar sesión.");
@@ -247,6 +265,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         createPortfolio,
         deletePortfolio,
         addTransaction,
+        importTransactions,
         deleteAsset,
         refreshPortfolio: async () => {
             await refetch();

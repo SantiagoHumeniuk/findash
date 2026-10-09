@@ -18,3 +18,4 @@ export { TransactionHistory } from './table/transaction-history';
 export { PortfolioSkeleton } from './skeleton/portfolio-skeleton';
 
 export { PortfolioSelector } from './portfolio-selector';
+export { CsvImportButton } from './csv-import-button';
