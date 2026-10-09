@@ -96,7 +96,6 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     const { user, profile } = useAuth();
     const config = useConfig();
     const queryClient = useQueryClient();
-    const isPortfolioLoading = !!user && !!profile && isLoading;
 
     // Local state for selected portfolio ID
     const [currentPortfolioId, setCurrentPortfolioId] = useState<number | null>(null);
@@ -108,6 +107,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         staleTime: 2 * 60 * 60 * 1000,
         gcTime: 2 * 60 * 60 * 1000,
     });
+    const isPortfolioLoading = !!user && !!profile && isLoading;
 
     const { addTransaction: addTransactionMutation } = usePortfolioMutations();
 
