@@ -56,3 +56,31 @@ Reemplaza la gestión manual de estado asíncrono. Resuelve de forma nativa prob
 
 ### ¿Por qué shadcn/ui y Tailwind CSS?
 Esta combinación ofrece la máxima flexibilidad. No es una librería de componentes tradicional, sino una colección de componentes reutilizables que se copian en el proyecto. Esto permite una personalización total del estilo a través de Tailwind CSS sin estar atado a las opiniones de diseño de una librería externa.
+
+## 4. Proveedores de datos financieros
+
+### Acciones: FMP y Yahoo Finance
+
+FMP sigue siendo el proveedor principal de estados financieros, calificaciones y demás datos fundamentales. Yahoo Finance complementa las cotizaciones cuando devuelve valores disponibles —incluidos PER y EPS forward— y se usa como fallback si la consulta o los datos esenciales de FMP fallan. Los precios de Yahoo sustituyen a los de FMP únicamente cuando Yahoo informa una cotización más reciente.
+
+La verificación del límite del plan sucede antes de consultar cualquiera de los proveedores. Si el usuario no tiene llamadas FMP disponibles, se usa la caché válida o se muestra el error; Yahoo no se consulta para eludir el límite. Un fallback Yahoo exitoso también cuenta como una consulta de activo. Las métricas de variación de Yahoo se conservan en puntos porcentuales y su historial se ordena cronológicamente antes de calcular cambios.
+
+El comparador histórico SPY/QQQ consulta ambos índices en una operación Yahoo únicamente al seleccionarlo, verifica y actualiza el contador diario del usuario, y normaliza el portafolio y el índice como retornos porcentuales desde el mismo período. No se generan series simuladas para sustituir datos faltantes. La analítica y el historial del portafolio reutilizan el `AssetData` ya cargado para evitar consultas paralelas por cada holding.
+
+Para publicar el proxy actualizado de Yahoo Finance:
+
+```bash
+supabase functions deploy yahoo-finance-proxy
+```
+
+### Renta fija argentina: DATA912
+
+La pestaña **Renta Fija en Vivo** consulta los endpoints públicos `/live/arg_bonds` y `/live/arg_corp` a través de `data912-fixed-income-proxy`, y muestra por separado bonos soberanos y obligaciones negociables. La pantalla actualiza las cotizaciones cada 30 segundos. DATA912 es un feed público separado del contador de consultas de activos; si falla uno de sus endpoints, la respuesta conserva y muestra los datos del otro junto con el error parcial.
+
+Desde la raíz del proyecto, publicar la función nueva con:
+
+```bash
+supabase functions deploy data912-fixed-income-proxy
+```
+
+Después del despliegue de ambas funciones y del frontend actualizado, verificar en Supabase que `data912-fixed-income-proxy` devuelva `fetchedAt`, `sovereign`, `corporate` y el objeto `errors`. La API de cotizaciones no incluye calendarios de cupones, amortizaciones ni flujos de fondos: por eso la TIR se estima únicamente para letras cero cupón cuyo vencimiento se puede inferir del ticker; para los demás instrumentos se indica que no está disponible, en vez de presentar una tasa inventada.

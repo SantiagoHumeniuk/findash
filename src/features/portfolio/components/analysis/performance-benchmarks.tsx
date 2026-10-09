@@ -1,8 +1,6 @@
 // src/features/portfolio/components/analysis/performance-benchmarks.tsx
 
-import { useMemo } from 'react';
 import { Card } from "../../../../components/ui/card";
-import { AssetData } from '../../../../types/dashboard';
 import { formatPercent } from '../../../../lib/utils';
 import { TrendingUp, TrendingDown, Target, Info } from 'lucide-react';
 import { Badge } from '../../../../components/ui/badge';
@@ -10,29 +8,23 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../../../components/ui/accordion";
 
 interface PerformanceBenchmarksProps {
-    portfolioReturn: number; // Porcentual, ej: 15.5
-    portfolioData: Record<string, AssetData>;
+    portfolioReturn: number;
+    spyReturn: number | null;
+    qqqReturn: number | null;
+    periodLabel: string;
 }
 
-export function PerformanceBenchmarks({ portfolioReturn, portfolioData }: PerformanceBenchmarksProps) {
-    const benchmarks = useMemo(() => {
-        const spyPrice = portfolioData['SPY']?.quote?.price;
-        const spyPrevPrice = portfolioData['SPY']?.quote?.previousClose;
-        const spyReturn = spyPrice && spyPrevPrice ? ((spyPrice - spyPrevPrice) / spyPrevPrice) * 100 : 5.2;
-
-        const qqqPrice = portfolioData['QQQ']?.quote?.price;
-        const qqqPrevPrice = portfolioData['QQQ']?.quote?.previousClose;
-        const qqqReturn = qqqPrice && qqqPrevPrice ? ((qqqPrice - qqqPrevPrice) / qqqPrevPrice) * 100 : 8.4;
-
-        const alpha = portfolioReturn - spyReturn;
-
-        return {
-            spy: spyReturn,
-            qqq: qqqReturn,
-            alpha,
-            isBeating: alpha > 0
-        };
-    }, [portfolioReturn, portfolioData]);
+/**
+ * Displays percentage returns already aligned to the same comparison period.
+ */
+export function PerformanceBenchmarks({
+    portfolioReturn,
+    spyReturn,
+    qqqReturn,
+    periodLabel,
+}: PerformanceBenchmarksProps) {
+    const alpha = spyReturn === null ? null : portfolioReturn - spyReturn;
+    const isBeating = alpha !== null && alpha > 0;
 
     return (
         <Card className="bg-card/50 backdrop-blur-sm border-primary/10 shadow-premium overflow-hidden relative">
@@ -50,10 +42,10 @@ export function PerformanceBenchmarks({ portfolioReturn, portfolioData }: Perfor
                                         </Tooltip>
                                     </TooltipProvider>
                                 </h3>
-                                <p className="text-sm text-muted-foreground">Comparativa de retorno total acumulado vs Índices</p>
+                                <p className="text-sm text-muted-foreground">Rendimiento porcentual en {periodLabel}</p>
                             </div>
-                            <Badge variant={benchmarks.isBeating ? "default" : "outline"} className={benchmarks.isBeating ? "bg-green-500 hover:bg-green-600" : ""}>
-                                {benchmarks.isBeating ? "Batiendo al Mercado" : "Debajo del Mercado"}
+                            <Badge variant={alpha === null ? "outline" : isBeating ? "default" : "secondary"} className={isBeating ? "bg-green-500 hover:bg-green-600" : ""}>
+                                {alpha === null ? "Datos no disponibles" : isBeating ? "Batiendo al Mercado" : "Debajo del Mercado"}
                             </Badge>
                         </div>
                     </AccordionTrigger>
@@ -78,11 +70,13 @@ export function PerformanceBenchmarks({ portfolioReturn, portfolioData }: Perfor
                                 <div className="p-4 rounded-xl bg-muted/30 border space-y-2">
                                     <span className="text-xs font-semibold text-muted-foreground uppercase">S&P 500 (SPY)</span>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-2xl font-bold">{formatPercent(benchmarks.spy)}</span>
-                                        <span className={`text-xs flex items-center gap-0.5 ${portfolioReturn >= benchmarks.spy ? 'text-green-500' : 'text-red-500'}`}>
-                                            {portfolioReturn >= benchmarks.spy ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                                            {formatPercent(Math.abs(portfolioReturn - benchmarks.spy))} diff
-                                        </span>
+                                        <span className="text-2xl font-bold">{spyReturn === null ? 'N/D' : formatPercent(spyReturn)}</span>
+                                        {spyReturn !== null && (
+                                            <span className={`text-xs flex items-center gap-0.5 ${portfolioReturn >= spyReturn ? 'text-green-500' : 'text-red-500'}`}>
+                                                {portfolioReturn >= spyReturn ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                                {formatPercent(Math.abs(portfolioReturn - spyReturn))} diff
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
@@ -90,21 +84,25 @@ export function PerformanceBenchmarks({ portfolioReturn, portfolioData }: Perfor
                                 <div className="p-4 rounded-xl bg-muted/30 border space-y-2">
                                     <span className="text-xs font-semibold text-muted-foreground uppercase">Nasdaq 100 (QQQ)</span>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-2xl font-bold">{formatPercent(benchmarks.qqq)}</span>
-                                        <span className={`text-xs flex items-center gap-0.5 ${portfolioReturn >= benchmarks.qqq ? 'text-green-500' : 'text-red-500'}`}>
-                                            {portfolioReturn >= benchmarks.qqq ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                                            {formatPercent(Math.abs(portfolioReturn - benchmarks.qqq))} diff
-                                        </span>
+                                        <span className="text-2xl font-bold">{qqqReturn === null ? 'N/D' : formatPercent(qqqReturn)}</span>
+                                        {qqqReturn !== null && (
+                                            <span className={`text-xs flex items-center gap-0.5 ${portfolioReturn >= qqqReturn ? 'text-green-500' : 'text-red-500'}`}>
+                                                {portfolioReturn >= qqqReturn ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                                {formatPercent(Math.abs(portfolioReturn - qqqReturn))} diff
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className={`p-4 rounded-lg flex items-center gap-3 ${benchmarks.isBeating ? 'bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-400' : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-700 dark:text-yellow-400'}`}>
-                                {benchmarks.isBeating ? <TrendingUp className="w-5 h-5" /> : <Info className="w-5 h-5" />}
+                            <div className={`p-4 rounded-lg flex items-center gap-3 ${alpha === null ? 'bg-muted/30 text-muted-foreground' : isBeating ? 'bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-400' : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-700 dark:text-yellow-400'}`}>
+                                {alpha === null ? <Info className="w-5 h-5" /> : isBeating ? <TrendingUp className="w-5 h-5" /> : <Info className="w-5 h-5" />}
                                 <p className="text-sm font-medium">
-                                    {benchmarks.isBeating 
-                                        ? `¡Felicidades! Estás generando un Alpha de ${benchmarks.alpha.toFixed(2)}% sobre el S&P 500. Tu estrategia está superando el mercado institucional.`
-                                        : `Tu portafolio está rindiendo un ${Math.abs(benchmarks.alpha).toFixed(2)}% menos que el S&P 500. Considera revisar tu alocación de activos.`
+                                    {alpha === null
+                                        ? 'No hay un retorno del S&P 500 disponible para el período seleccionado.'
+                                        : isBeating
+                                        ? `¡Felicidades! Estás generando un Alpha de ${alpha.toFixed(2)}% sobre el S&P 500.`
+                                        : `Tu portafolio está rindiendo un ${Math.abs(alpha).toFixed(2)}% menos que el S&P 500.`
                                     }
                                 </p>
                             </div>

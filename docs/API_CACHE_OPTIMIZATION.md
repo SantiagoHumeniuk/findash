@@ -6,37 +6,15 @@ Este documento explica cómo funciona el sistema de caché optimizado para minim
 
 ## 🎯 Problemas Resueltos
 
-### 1. **Activos del Portafolio Consumían API Calls**
+### 1. **Llamadas por activo y por plan**
 
-**Problema Anterior:**
-- Cuando un usuario con un portafolio ingresaba al dashboard, se cargaban automáticamente todos sus activos
-- Cada activo contaba como 1 API call, incluso si ya estaban cacheados
-- Un usuario con 5 activos en su portafolio consumía 5 API calls solo por entrar al dashboard
-
-**Solución Actual:**
-- Los activos cargados desde el portafolio NO cuentan como API calls
-- Se usa solo la caché de Supabase (válida por 2 horas)
-- Si la caché existe (aunque esté un poco vieja), se usa sin contar API call
-- Solo los activos agregados manualmente desde el input consumen API calls
-
-**Implementación:**
-```typescript
-// dashboard-page.tsx
-const portfolioTickersRef = useRef<Set<string>>(new Set());
-
-// Marcar tickers del portafolio
-portfolioSymbols.forEach(symbol => {
-    portfolioTickersRef.current.add(symbol);
-    addTicker(symbol);
-});
-
-// Al hacer fetch
-const isFromPortfolio = portfolioTickersRef.current.has(ticker);
-queryFn: () => fetchTickerData({ 
-    queryKey: ['assetData', ticker, config, user, profile],
-    fromPortfolio: isFromPortfolio // No cuenta API call
-})
-```
+- `fetchTickerData` consulta primero la caché de Supabase; los datos de hasta 2 horas se reutilizan sin consumir el límite diario.
+- Al vencer la caché, se verifica `plans.roleLimits` antes de consultar FMP o Yahoo. El fallback de Yahoo se ejecuta bajo la misma verificación y cuenta como parte de la consulta del activo, no como una llamada adicional.
+- Si la consulta de FMP falla pero Yahoo devuelve datos utilizables, esa consulta exitosa también actualiza el contador diario.
+- El proveedor del portafolio usa el mismo servicio: reutiliza la caché aunque esté vencida y solo consulta APIs para símbolos sin datos guardados. Esas consultas faltantes se verifican y cuentan según el plan del usuario.
+- Los gráficos de composición e historia del portafolio reutilizan el `AssetData` ya cargado por el proveedor en vez de iniciar consultas paralelas por cada posición.
+- El comparador SPY/QQQ consulta Yahoo solo al seleccionarse, agrupa ambos símbolos en una operación y cuenta esa operación contra el límite del usuario. La respuesta se conserva en caché de React Query durante una hora.
+- DATA912 entrega cotizaciones públicas y no consume el contador de consultas de activos; sus fallas se reportan por mercado para no ocultar el mercado que sí respondió.
 
 ### 2. **Tiempos de Caché Optimizados**
 
@@ -86,14 +64,16 @@ graph TD
 graph TD
     A[Carga portafolio con AAPL] --> B{¿Existe en caché?}
     B -->|Sí, cualquier antigüedad| C[Retorna datos cacheados]
-    B -->|No| D[Muestra toast info]
-    C --> E[NO cuenta API call]
-    D --> E
+    B -->|No| D{¿Tiene API calls disponibles?}
+    D -->|Sí| E[Consulta activos por el servicio compartido]
+    D -->|No| F[Informa que no se pudo cargar el activo]
+    C --> G[NO cuenta API call]
+    E --> H[Actualiza caché y contador del plan]
 ```
 
 ## 📊 Ejemplo Práctico
 
-### Escenario: Usuario Plan Básico (5 API calls/día)
+### Escenario: Usuario Plan Básico (5 llamadas diarias)
 
 **Antes de la optimización:**
 ```
@@ -133,20 +113,25 @@ graph TD
 
 ## ⚙️ Configuración
 
-### Archivo: `asset-api.ts`
+### Servicio: `asset-api.ts`
 
 ```typescript
-// Caché de Supabase
+// Consultas de activos: caché de Supabase antes de verificar el cupo.
 const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-
-// Si viene del portafolio, usa caché sin importar antigüedad
-if (fromPortfolio && cached?.data) {
-    toast.info(`Mostrando datos cacheados para ${ticker} desde tu portafolio.`);
+if (!forceRefresh && cached && new Date(cached.last_updated_at) > twoHoursAgo) {
     return cached.data as AssetData;
 }
 ```
 
-### Archivo: `dashboard-page.tsx`
+El contador por rol está en `public/config.json` (`basico: 5`, `plus: 25`,
+`premium: 50`, `administrador: 100000`). Los gráficos de análisis e historia
+del portafolio reutilizan los datos ya cargados; no inician una segunda
+consulta por cada posición. Yahoo fallback/suplemento forma parte de la misma
+consulta del activo. La comparación SPY/QQQ sí consume una llamada cuando se
+selecciona por primera vez y se guarda en caché durante una hora. DATA912 es
+un feed público y queda fuera de ese contador.
+
+### Caché de React Query
 
 ```typescript
 staleTime: 1000 * 60 * 10, // 10 minutos
@@ -159,9 +144,9 @@ gcTime: 1000 * 60 * 30,    // 30 minutos
 - ✅ Pueden tener 3 activos en portafolio + agregar 5 más manualmente
 - ✅ Total: 8 activos analizables vs 5 antes
 
-### Para Usuarios Plan Plus (15 calls/día)
-- ✅ Pueden tener 5 activos en portafolio + agregar 15 más
-- ✅ Total: 20 activos analizables vs 15 antes
+### Para Usuarios Plan Plus (25 llamadas/día)
+- ✅ Pueden tener 5 activos en portafolio + agregar 25 más
+- ✅ Total: 30 activos analizables en el dashboard
 
 ### Para Usuarios Plan Premium (50 calls/día)
 - ✅ Pueden tener 10 activos en portafolio + agregar 50 más
@@ -179,9 +164,9 @@ gcTime: 1000 * 60 * 30,    // 30 minutos
    - A medianoche UTC todos los contadores vuelven a 0
    - La caché de Supabase NO se borra (sigue válida por 2 horas desde su creación)
 
-4. **Toast informativos**
-   - Usuario ve cuando se usan datos cacheados del portafolio
-   - Usuario ve warning cuando alcanza el límite pero hay caché disponible
+4. **Avisos del portafolio**
+   - Los datos guardados se reutilizan sin consumir consultas del plan
+   - Si faltan datos guardados y el usuario no tiene consultas disponibles, se informa qué activos no pudieron cargarse
 
 ## 🔮 Mejoras Futuras
 

@@ -28,7 +28,7 @@ import { ErrorBoundary } from '../../../components/error-boundary';
 // import { PerformanceBenchmarks } from '../components/analysis/performance-benchmarks';
 
 function PortfolioPageContent() {
-  const { holdings, transactions, totalPerformance, loading, deleteAsset, portfolioData, portfolios, currentPortfolio } = usePortfolio();
+  const { holdings, transactions, totalPerformance, loading, deleteAsset, portfolioData } = usePortfolio();
   const { metrics: historicalMetrics, portfolioHistory } = usePortfolioHistory(holdings);
 
   const { theme } = useTheme();
@@ -170,9 +170,6 @@ function PortfolioPageContent() {
               holdings={holdings} 
               portfolioHistory={portfolioHistory} 
               portfolioData={portfolioData} 
-              portfolioReturn={totalPerformance.percent}
-              portfolios={portfolios}
-              currentPortfolio={currentPortfolio}
             />
         </div>
 

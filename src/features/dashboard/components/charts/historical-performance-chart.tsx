@@ -1,45 +1,87 @@
 // src/features/dashboard/components/charts/historical-performance-chart.tsx
 
 import * as React from "react"
+import { useQuery } from "@tanstack/react-query"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "../../../../components/charts/lazy-recharts"
 import { AssetData } from "../../../../types/dashboard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card"
 import { ChartContainer, ChartTooltip, ChartLegend, ChartLegendContent } from "../../../../components/ui/chart"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "../../../../components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select"
 import { Checkbox } from "../../../../components/ui/checkbox"
 import { AreaChartIcon } from "lucide-react"
+import { useAuth } from "../../../../hooks/use-auth"
+import { useConfig } from "../../../../hooks/use-config"
+import { hasApiCallsAvailable, incrementApiCallCounter } from "../../../../services/api/apiLimiter"
+import { fetchYahooFinanceQuotes } from "../../../../services/api/yahoo-finance-api"
+import { normalizeHistoricalPerformance, type HistoricalPerformanceRow } from "../../lib/historical-performance"
 
 interface HistoricalPerformanceChartProps {
   assets: AssetData[];
-  portfolios?: { id: number; name: string }[];
-  currentPortfolio?: { id: number; name: string } | null;
 }
 
 type TimeRange = "7d" | "30d" | "90d" | "1y" | "ytd" | "all";
 
-// ✅ Envolvemos el componente con React.memo para evitar re-renders innecesarios
-export const HistoricalPerformanceChart = React.memo(function HistoricalPerformanceChart({ assets, portfolios, currentPortfolio }: HistoricalPerformanceChartProps) {
+interface BenchmarkHistory {
+  histories: Partial<Record<'SPY' | 'QQQ', { date: string; close: number }[]>>;
+  errors: Partial<Record<'SPY' | 'QQQ', string>>;
+}
+
+export const HistoricalPerformanceChart = React.memo(function HistoricalPerformanceChart({ assets }: HistoricalPerformanceChartProps) {
   const [timeRange, setTimeRange] = React.useState<TimeRange>("all");
+  const [selectedBenchmark, setSelectedBenchmark] = React.useState<"none" | "SPY" | "QQQ">("none");
+  const { user, profile } = useAuth();
+  const config = useConfig();
 
   // Estado para controlar qué series (activos) son visibles en el gráfico
   const [visibleAssets, setVisibleAssets] = React.useState<Record<string, boolean>>(() =>
     Object.fromEntries(assets.filter(a => !['SPY', 'QQQ'].includes(a.profile.symbol)).map(a => [a.profile.symbol, true]))
   );
-  
-  // Estado para el benchmark seleccionado
-  const [selectedBenchmark, setSelectedBenchmark] = React.useState<string>("none");
+
+  const benchmarkQuery = useQuery({
+    queryKey: ['historical-benchmark', user?.id, profile?.id],
+    enabled: selectedBenchmark !== 'none' && !!user && !!profile,
+    staleTime: 60 * 60 * 1000,
+    retry: 1,
+    queryFn: async (): Promise<BenchmarkHistory> => {
+      if (!await hasApiCallsAvailable(user, profile, config)) {
+        throw new Error('Se alcanzó el límite diario de consultas del plan o no se pudo verificar el uso.');
+      }
+
+      const response = await fetchYahooFinanceQuotes(['SPY', 'QQQ']);
+      const histories: BenchmarkHistory['histories'] = {};
+      const errors: BenchmarkHistory['errors'] = {};
+      for (const symbol of ['SPY', 'QQQ'] as const) {
+        const quote = response.quotes.find((item) => item.symbol === symbol);
+        const history = quote?.history.filter((point) =>
+          Number.isFinite(Date.parse(point.date)) && Number.isFinite(point.close) && point.close > 0
+        ) ?? [];
+        if (history.length >= 2) {
+          histories[symbol] = history.map(({ date, close }) => ({ date, close }));
+        } else {
+          errors[symbol] = quote?.error ?? 'Yahoo no devolvió historial suficiente';
+        }
+      }
+
+      if (!histories.SPY && !histories.QQQ) {
+        throw new Error(Object.entries(errors).map(([symbol, message]) => `${symbol}: ${message}`).join('. ') ||
+          'Yahoo Finance no devolvió historial de los índices.');
+      }
+      await incrementApiCallCounter(user.id);
+      return { histories, errors };
+    },
+  });
 
   // Sincronizar visibilidad cuando cambian los assets prop
   React.useEffect(() => {
     setVisibleAssets(prev => {
       const next = { ...prev };
       assets.forEach(a => {
-        if (!['SPY', 'QQQ'].includes(a.profile.symbol) && !a.profile.symbol.startsWith('PORT_')) {
+        if (!['SPY', 'QQQ'].includes(a.profile.symbol)) {
           next[a.profile.symbol] ??= true;
         }
       });
       Object.keys(next).forEach(k => {
-        if (!assets.some(a => a.profile.symbol === k) && !k.startsWith('PORT_')) delete next[k];
+        if (!assets.some(a => a.profile.symbol === k)) delete next[k];
       });
       return next;
     });
@@ -56,138 +98,123 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
           delete next[b]; // Ocultar los no seleccionados
         }
       });
-      // Handle other portfolios
-      portfolios?.forEach(p => {
-        const symbol = `PORT_${p.id}`;
-        if (selectedBenchmark === symbol) {
-            next[symbol] = true;
-        } else {
-            delete next[symbol];
-        }
-      });
       return next;
     });
-  }, [selectedBenchmark, portfolios]);
-
-  interface ChartRow {
-    day: string;
-    originalDate: string; // Para filtrado preciso
-    [symbol: string]: string | number | null;
-  }
+  }, [selectedBenchmark]);
 
   type ChartConfigLocal = Record<string, { label: string; color: string }>;
 
   // --- Procesamiento de Datos del Gráfico ---
   const { chartData, chartConfig } = React.useMemo(() => {
     if (assets.length === 0) {
-      return { chartData: [] as ChartRow[], chartConfig: {} as ChartConfigLocal };
+      return { chartData: [] as HistoricalPerformanceRow[], chartConfig: {} as ChartConfigLocal };
     }
 
-    const pricesByDateByAsset: Record<string, Map<string, number>> = {};
+    const histories: Record<string, { date: string; close: number }[]> = {};
     const allDates = new Set<string>();
 
-    // 1. Recopilar todos los precios por fecha
     assets.forEach(asset => {
       if (asset.historicalReturns && asset.historicalReturns.length > 0) {
-        pricesByDateByAsset[asset.profile.symbol] = new Map();
-
-        asset.historicalReturns.forEach(item => {
-          const dateStr = item.date.split('T')[0];
-          pricesByDateByAsset[asset.profile.symbol].set(dateStr, item.close);
-          allDates.add(dateStr);
-        });
+        histories[asset.profile.symbol] = asset.historicalReturns
+          .filter(item => Number.isFinite(item.close) && item.close > 0)
+          .map(item => ({ date: item.date.split('T')[0], close: item.close }))
+          .sort((left, right) => left.date.localeCompare(right.date));
       }
     });
 
-    // Añadir mock data para otros portfolios o índices faltantes si están seleccionados
-    if (selectedBenchmark !== 'none') {
-        const isPort = selectedBenchmark.startsWith('PORT_');
-        const isMissingIndex = ['SPY', 'QQQ'].includes(selectedBenchmark) && !pricesByDateByAsset[selectedBenchmark];
-        
-        if (isPort || isMissingIndex) {
-            pricesByDateByAsset[selectedBenchmark] = new Map();
-            // Generar una línea simulada para visualización
-            let mockValue = 100;
-            const sorted = Array.from(allDates).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-            sorted.forEach(dateStr => {
-                mockValue = mockValue * (1 + (Math.random() * 0.04 - 0.015)); // Random drift
-                pricesByDateByAsset[selectedBenchmark].set(dateStr, mockValue);
-            });
-        }
+    const indexHistory = selectedBenchmark === 'none'
+      ? undefined
+      : benchmarkQuery.data?.histories[selectedBenchmark];
+    if (selectedBenchmark !== 'none' && indexHistory) {
+      histories[selectedBenchmark] = indexHistory;
+    } else if (selectedBenchmark !== 'none' && !histories[selectedBenchmark]) {
+      return {
+        chartData: [] as HistoricalPerformanceRow[],
+        chartConfig: {} as ChartConfigLocal,
+      };
     }
 
-    // 2. Ordenar todas las fechas únicas cronológicamente
-    const sortedDates = Array.from(allDates).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    Object.values(histories).forEach(history => history.forEach(point => allDates.add(point.date)));
+    const sortedDates = [...allDates].sort((left, right) => left.localeCompare(right));
+    const seriesSymbols = Object.keys(histories);
+    const firstAvailableDate = (history: { date: string; close: number }[]) => history[0]?.date;
+    const comparisonStart = selectedBenchmark !== 'none'
+      ? [selectedBenchmark, ...seriesSymbols.filter(symbol => symbol !== 'SPY' && symbol !== 'QQQ')]
+          .map(symbol => histories[symbol] && firstAvailableDate(histories[symbol]))
+          .filter((date): date is string => !!date)
+          .sort()
+          .at(-1)
+      : undefined;
+    const activeDates = comparisonStart
+      ? sortedDates.filter(date => date >= comparisonStart)
+      : sortedDates;
 
-    // 3. Construir filas del gráfico (unificando datos por fecha)
-    let finalChartData: ChartRow[] = sortedDates.map(dateStr => {
-      const dateObj = new Date(dateStr);
-      const entry: ChartRow = {
+    const getPriceAtDate = (history: { date: string; close: number }[] | undefined, date: string) => {
+      if (!history) return null;
+      for (let index = history.length - 1; index >= 0; index -= 1) {
+        if (history[index].date <= date) return history[index].close;
+      }
+      return null;
+    };
+
+    let finalChartData: HistoricalPerformanceRow[] = activeDates.map(dateStr => {
+      const entry: HistoricalPerformanceRow = {
         originalDate: dateStr,
-        day: dateObj.toLocaleDateString("es-ES", {
+        day: new Date(`${dateStr}T12:00:00`).toLocaleDateString("es-ES", {
           year: "numeric",
           month: "short",
           day: "numeric",
         }),
       };
-
-      assets.forEach(asset => {
-        entry[asset.profile.symbol] = pricesByDateByAsset[asset.profile.symbol]?.get(dateStr) ?? null;
+      seriesSymbols.forEach(symbol => {
+        entry[symbol] = getPriceAtDate(histories[symbol], dateStr);
       });
-      if (selectedBenchmark !== 'none') {
-        entry[selectedBenchmark] = pricesByDateByAsset[selectedBenchmark]?.get(dateStr) ?? null;
-      }
-
       return entry;
     });
 
-    // 4. Filtrar por rango de tiempo seleccionado
-    const dataLength = finalChartData.length;
-    if (timeRange !== 'all' && dataLength > 1) {
-      let startIndex = 0;
-
-      switch (timeRange) {
-        case '7d': startIndex = Math.max(0, dataLength - 7); break;
-        case '30d': startIndex = Math.max(0, dataLength - 30); break;
-        case '90d': startIndex = Math.max(0, dataLength - 90); break;
-        case '1y': startIndex = Math.max(0, dataLength - 365); break; // Aprox 252 días de trading, pero tomamos calendario
-        case 'ytd': {
-          const currentYear = new Date().getFullYear();
-          startIndex = finalChartData.findIndex(d => new Date(d.originalDate).getFullYear() === currentYear);
-          if (startIndex === -1) startIndex = 0; // Si no hay datos de este año, mostrar todo o nada
-          break;
-        }
-        default: startIndex = 0;
+    if (timeRange !== 'all' && finalChartData.length > 0) {
+      const endDate = new Date(`${finalChartData[finalChartData.length - 1].originalDate}T12:00:00`);
+      const startDate = new Date(endDate);
+      if (timeRange === 'ytd') {
+        startDate.setMonth(0, 1);
+        startDate.setHours(0, 0, 0, 0);
+      } else {
+        const days = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 }[timeRange];
+        startDate.setDate(startDate.getDate() - days);
       }
-
-      finalChartData = finalChartData.slice(startIndex);
+      const startDateString = startDate.toISOString().slice(0, 10);
+      finalChartData = finalChartData.filter(row => row.originalDate >= startDateString);
     }
 
-    // 5. Generar configuración de colores para el gráfico
+    if (selectedBenchmark !== 'none') {
+      const comparableSymbols = assets
+        .map(asset => asset.profile.symbol)
+        .filter(symbol => !['SPY', 'QQQ'].includes(symbol) && histories[symbol]);
+      finalChartData = finalChartData.filter(row =>
+        typeof row[selectedBenchmark] === 'number' &&
+        comparableSymbols.every(symbol => typeof row[symbol] === 'number')
+      );
+      finalChartData = normalizeHistoricalPerformance(finalChartData, seriesSymbols);
+    }
+
     const config: ChartConfigLocal = {};
     assets.forEach((asset, index) => {
+      const symbol = asset.profile.symbol;
       config[asset.profile.symbol] = {
-        label: asset.profile.symbol,
+        label: symbol === 'PORTFOLIO' ? 'Mi Portafolio' : symbol,
         color: `var(--chart-${(index % 12) + 1})`,
       };
     });
     if (selectedBenchmark !== 'none') {
-        const isPort = selectedBenchmark.startsWith('PORT_');
-        let label = selectedBenchmark;
-        if (isPort && portfolios) {
-            const port = portfolios.find(p => `PORT_${p.id}` === selectedBenchmark);
-            if (port) label = port.name;
-        } else if (selectedBenchmark === 'SPY') label = 'S&P 500 (SPY)';
-        else if (selectedBenchmark === 'QQQ') label = 'Nasdaq 100 (QQQ)';
-        
+        const label = selectedBenchmark === 'SPY' ? 'S&P 500 (SPY)' : 'Nasdaq 100 (QQQ)';
         config[selectedBenchmark] = {
             label,
-            color: 'var(--chart-3)' // Usar un color distinto para comparaciones
+            color: 'var(--chart-3)'
         };
     }
 
     return { chartData: finalChartData, chartConfig: config };
-  }, [assets, timeRange, selectedBenchmark, portfolios]);
+  }, [assets, timeRange, selectedBenchmark, benchmarkQuery.data]);
 
   // --- Cálculo del Dominio Y (Auto-zoom) ---
   const yDomain = React.useMemo(() => {
@@ -213,7 +240,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
     if (minVal === Infinity) return [0, 100];
 
     // Añadir un poco de padding (10%) arriba y abajo para que no toque los bordes
-    const padding = (maxVal - minVal) * 0.1;
+    const padding = Math.max((maxVal - minVal) * 0.1, 0.5);
     return [Math.floor(Math.max(0, minVal - padding)), Math.ceil(maxVal + padding)];
   }, [chartData, visibleAssets]);
 
@@ -237,7 +264,15 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
             <AreaChartIcon className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             <div>
               <CardTitle className="text-lg sm:text-xl">Rendimiento Histórico</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Evolución del precio de cierre de los activos.</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
+                {selectedBenchmark === 'none'
+                  ? assets.some(asset => asset.profile.symbol === 'PORTFOLIO')
+                    ? 'Evolución del valor histórico reconstruido con tus tenencias actuales.'
+                    : 'Evolución del precio de cierre de los activos.'
+                  : assets.some(asset => asset.profile.symbol === 'PORTFOLIO')
+                    ? 'Cotizaciones reales en porcentaje; el portafolio se reconstruye con las tenencias actuales, no con cambios históricos de composición.'
+                    : 'Rendimiento porcentual acumulado desde el inicio del período seleccionado.'}
+              </CardDescription>
             </div>
           </div>
           <Select value={timeRange} onValueChange={(value: TimeRange) => setTimeRange(value)}>
@@ -274,7 +309,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
               );
             })}
           </div>
-          {/* Select para benchmarks y otros portafolios */}
+          {/* Los índices se consultan al seleccionarlos y respetan el límite diario del plan. */}
           <div className="w-full sm:w-[220px]">
             <Select value={selectedBenchmark} onValueChange={setSelectedBenchmark}>
               <SelectTrigger className="w-full rounded-lg h-9 sm:h-10 text-xs sm:text-sm">
@@ -282,27 +317,23 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 <SelectItem value="none">Sin comparación</SelectItem>
-                
-                {/* Grupo de Índices */}
-                <SelectGroup>
-                  <SelectLabel>Índices del Mercado</SelectLabel>
-                  <SelectItem value="SPY">S&P 500 (SPY)</SelectItem>
-                  <SelectItem value="QQQ">Nasdaq 100 (QQQ)</SelectItem>
-                </SelectGroup>
-
-                  {/* Grupo de Portafolios (Si hay más de uno) */}
-                  {portfolios && portfolios.length > 1 && (
-                    <SelectGroup>
-                        <SelectLabel>Mis Otros Portafolios</SelectLabel>
-                        {portfolios.filter(p => p.id !== currentPortfolio?.id).map(p => (
-                            <SelectItem key={p.id} value={`PORT_${p.id}`}>{p.name}</SelectItem>
-                        ))}
-                    </SelectGroup>
-                  )}
-                </SelectContent>
+                <SelectItem value="SPY">S&P 500 (SPY)</SelectItem>
+                <SelectItem value="QQQ">Nasdaq 100 (QQQ)</SelectItem>
+              </SelectContent>
             </Select>
           </div>
         </div>
+        {selectedBenchmark !== 'none' && benchmarkQuery.isLoading && (
+          <p className="text-xs text-muted-foreground" role="status">Consultando historial real de SPY y QQQ...</p>
+        )}
+        {selectedBenchmark !== 'none' && benchmarkQuery.isError && (
+          <p className="text-xs text-destructive" role="alert">{benchmarkQuery.error.message}</p>
+        )}
+        {selectedBenchmark !== 'none' && benchmarkQuery.data && !benchmarkQuery.data.histories[selectedBenchmark] && (
+          <p className="text-xs text-destructive" role="alert">
+            {selectedBenchmark}: {benchmarkQuery.data.errors[selectedBenchmark] ?? 'No hay datos históricos disponibles.'}
+          </p>
+        )}
       </CardHeader>
       <CardContent className="px-2 pt-3 sm:px-6 sm:pt-6">
         <ChartContainer config={chartConfig} className="w-full h-[280px] sm:h-[350px] lg:h-[400px]">
@@ -323,7 +354,9 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
             />
             <YAxis
               domain={yDomain as [number, number]}
-              tickFormatter={(value) => `$${Math.round(Number(value))}`}
+              tickFormatter={(value) => selectedBenchmark === 'none'
+                ? `$${Math.round(Number(value))}`
+                : `${Number(value).toFixed(1)}%`}
               tickLine={false}
               axisLine={false}
               width={50}
@@ -347,6 +380,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
                       {payload.map((itemRaw, index) => {
                         const item = itemRaw as AreaTooltipItem;
                         const name = typeof item.name === 'string' ? item.name : '';
+                        const displayName = chartConfig[name]?.label ?? name;
 
                         // Si está oculto, no mostrar (aunque Recharts suele filtrarlo, es doble seguridad)
                         if (!visibleAssets[name]) return null;
@@ -358,10 +392,12 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
                           <div key={index} className="flex items-center justify-between gap-4 min-w-[120px]">
                             <div className="flex items-center gap-2">
                               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                              <span className="text-xs font-medium text-muted-foreground">{name}:</span>
+                              <span className="text-xs font-medium text-muted-foreground">{displayName}:</span>
                             </div>
                             <span className="font-bold text-xs">
-                              {value !== null ? `$${value.toFixed(2)}` : 'N/A'}
+                              {value !== null
+                                ? selectedBenchmark === 'none' ? `$${value.toFixed(2)}` : `${value.toFixed(2)}%`
+                                : 'N/A'}
                             </span>
                           </div>
                         );
@@ -372,8 +408,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
               }}
             />
             <ChartLegend content={<ChartLegendContent />} />
-            {[...assets, { profile: { symbol: selectedBenchmark !== 'none' ? selectedBenchmark : '' } }].map((asset) => {
-              const symbol = asset.profile?.symbol;
+            {[...new Set([...assets.map(asset => asset.profile.symbol), ...(selectedBenchmark !== 'none' ? [selectedBenchmark] : [])])].map((symbol) => {
               if (!symbol || !visibleAssets[symbol]) return null;
               const color = chartConfig[symbol]?.color ?? `var(--chart-1)`;
               return (
@@ -392,8 +427,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
               );
             })}
             <defs>
-              {[...assets, { profile: { symbol: selectedBenchmark !== 'none' ? selectedBenchmark : '' } }].map((asset) => {
-                const symbol = asset.profile?.symbol;
+              {[...new Set([...assets.map(asset => asset.profile.symbol), ...(selectedBenchmark !== 'none' ? [selectedBenchmark] : [])])].map((symbol) => {
                 if (!symbol) return null;
                 const color = chartConfig[symbol]?.color ?? `var(--chart-1)`;
                 return (

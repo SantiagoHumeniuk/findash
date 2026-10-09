@@ -1,9 +1,5 @@
 // src/features/portfolio/hooks/use-portfolio-history.ts
 
-import { useQueries } from '@tanstack/react-query';
-import { useAuth } from '../../../hooks/use-auth';
-import { useConfig } from '../../../hooks/use-config';
-import { fetchTickerData } from '../../../services/api/asset-api';
 import { Holding } from '../../../types/portfolio';
 import { AssetHistorical } from '../../../types/dashboard';
 import { calculatePerformanceMetrics, PerformanceMetrics } from '../../../utils/performance-metrics';
@@ -14,44 +10,22 @@ import { useMemo } from 'react';
  * Calcula el valor histórico del portafolio basado en la estrategia "Buy and Hold" con las tenencias actuales.
  */
 export function usePortfolioHistory(holdings: Holding[]) {
-    const { user, profile } = useAuth();
-    const config = useConfig();
-
-    const userId = user?.id ?? null;
-    const profileId = profile?.id ?? null;
-    const useMockData = config?.useMockData ?? false;
-
-    // 1. Obtener datos completos para cada activo en paralelo
-    const queries = useQueries({
-        queries: holdings.map((holding) => ({
-            queryKey: ['assetData', holding.symbol, userId, profileId, useMockData] as const,
-            queryFn: () => fetchTickerData({ queryKey: ['assetData', holding.symbol, config, user, profile] }),
-            staleTime: 1000 * 60 * 60, // 1 hora (historial no cambia tanto)
-            enabled: !!holding.symbol,
-        })),
-    });
-
-    const isLoading = queries.some((q) => q.isLoading);
-    const isError = queries.some((q) => q.isError);
-
-    // 2. Agregar historial
+    // La carga del portafolio ya incluye AssetData; no volver a consultar FMP/Yahoo por cada holding.
     const portfolioHistory = useMemo(() => {
-        if (isLoading || isError || holdings.length === 0) return [];
+        if (holdings.length === 0) return [];
 
         // Mapa: Símbolo -> Map<Fecha, ClosePrice>
         const historyMap: Record<string, Map<string, number>> = {};
         const availableDatesPerAsset: Record<string, string[]> = {};
 
-        // Validar que todos los queries tengan datos
-        const allDataLoaded = queries.every(q => q.data?.historicalReturns?.length);
+        const allDataLoaded = holdings.every(holding => holding.assetData?.historicalReturns?.length);
         if (!allDataLoaded) return [];
 
         let latestStartDate = 0; // Timestamp de la fecha más RECIENTE de inicio (el "maximo de los minimos")
         let driverSymbol = '';
 
-        queries.forEach((q, index) => {
-            const holding = holdings[index];
-            const rawHistory = q.data?.historicalReturns ?? [];
+        holdings.forEach(holding => {
+            const rawHistory = holding.assetData?.historicalReturns ?? [];
 
             // 1. Ordenar DESC (Más reciente a más antiguo) para consistencia
             // FMP suele devolver DESC.
@@ -132,7 +106,7 @@ export function usePortfolioHistory(holdings: Holding[]) {
 
         return sortedAggregated;
 
-    }, [queries, holdings, isLoading, isError]);
+    }, [holdings]);
 
     // 3. Calcular métricas sobre la serie agregada
     const metrics: PerformanceMetrics = useMemo(() => {
@@ -142,7 +116,7 @@ export function usePortfolioHistory(holdings: Holding[]) {
     return {
         portfolioHistory,
         metrics,
-        isLoading,
-        isError
+        isLoading: false,
+        isError: false
     };
 }

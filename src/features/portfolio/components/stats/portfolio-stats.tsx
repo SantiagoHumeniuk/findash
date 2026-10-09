@@ -22,7 +22,8 @@ import {
     DollarSign,
     Percent,
     Calendar,
-    ShieldAlert
+    ShieldAlert,
+    type LucideIcon,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -37,7 +38,7 @@ const StatCard = ({
 }: { 
     label: string, 
     value: React.ReactNode, 
-    icon: any,
+    icon: LucideIcon,
     colorClass?: string, 
     helpText?: string,
     trend?: number,
@@ -72,7 +73,11 @@ const StatCard = ({
                             </div>
                         </div>
                     </TooltipTrigger>
-                    {helpText && <TooltipContent side="top" className="glass-morphism border-none"><p className="text-xs max-w-[200px]">{helpText}</p></TooltipContent>}
+                    {helpText && (
+                        <TooltipContent side="top" className="max-w-xs border border-border bg-popover text-popover-foreground shadow-md">
+                            <p className="text-xs">{helpText}</p>
+                        </TooltipContent>
+                    )}
                 </Tooltip>
             </TooltipProvider>
         </Card>

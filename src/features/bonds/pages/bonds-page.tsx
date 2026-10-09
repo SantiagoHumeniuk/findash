@@ -46,9 +46,10 @@ import {
   UvaDato,
   LecapInstrumento,
 } from '@/services/macro-api';
+import { Data912FixedIncome } from '../components/data912-fixed-income';
 
 export default function BondsPage() {
-  const [activeTab, setActiveTab] = useState<'macro' | 'lecaps'>('macro');
+  const [activeTab, setActiveTab] = useState<'macro' | 'live' | 'lecaps'>('live');
 
   // Estados de Dólares y Macro
   const [provider, setProvider] = useState<'argentinadatos' | 'dolarazo'>('argentinadatos');
@@ -58,7 +59,6 @@ export default function BondsPage() {
   const [plazosFijos, setPlazosFijos] = useState<PlazoFijoDato[]>([]);
   const [uvaList, setUvaList] = useState<UvaDato[]>([]);
   const [loadingMacro, setLoadingMacro] = useState<boolean>(true);
-  const [errorMacro, setErrorMacro] = useState<string | null>(null);
 
   // Estados del Conversor de Moneda
   const [conversorMonto, setConversorMonto] = useState<number>(100000);
@@ -293,9 +293,11 @@ export default function BondsPage() {
         </div>
       </div>
 
-      {/* Selector de Pestañas Principales (Las 2 opciones solicitadas) */}
-      <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-xl mx-auto h-12 p-1 bg-muted/40 border border-white/10 rounded-xl">
+      {/* Macro data, live DATA912 bonds, and the legacy estimated LECAP projection */}
+      <Tabs value={activeTab} onValueChange={(val) => {
+        if (val === 'macro' || val === 'live' || val === 'lecaps') setActiveTab(val);
+      }} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 max-w-3xl mx-auto h-12 p-1 bg-muted/40 border border-white/10 rounded-xl">
           <TabsTrigger
             value="macro"
             className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold transition-all"
@@ -304,11 +306,18 @@ export default function BondsPage() {
             <span>1. Dólares & Variables Macro</span>
           </TabsTrigger>
           <TabsTrigger
-            value="lecaps"
+            value="live"
             className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold transition-all"
           >
             <TrendingUp className="h-4 w-4" />
-            <span>2. Curva LECAP & Tasa Fija</span>
+            <span>2. Renta Fija en Vivo</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="lecaps"
+            className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold transition-all"
+          >
+            <Calculator className="h-4 w-4" />
+            <span>Proyección LECAP (estimada)</span>
           </TabsTrigger>
         </TabsList>
 
@@ -724,6 +733,10 @@ export default function BondsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="live" className="space-y-6 mt-6">
+          <Data912FixedIncome />
         </TabsContent>
 
         {/* ========================================================================= */}

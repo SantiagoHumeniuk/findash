@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { Transaction, PortfolioContextType, Holding, Portfolio } from '../types/portfolio';
 import { AssetData } from '../types/dashboard';
 import { useAuth } from '../hooks/use-auth';
+import { useConfig } from '../hooks/use-config';
 import { calculateHoldings, calculateTotalPerformance } from '../utils/portfolio-calculations';
 import { LoadingScreen } from '../components/ui/loading-screen';
 import { ErrorScreen } from '../components/ui/error-screen';
@@ -13,6 +14,10 @@ import { usePortfolioMutations } from '../features/portfolio/hooks/use-portfolio
 import { toast } from 'sonner';
 import { logger } from '../lib/logger';
 import { errorToString } from '../utils/type-guards';
+import { fetchTickerData } from '../services/api/asset-api';
+import type { Config } from '../types/config';
+import type { Profile } from '../types/auth';
+import type { User } from '@supabase/supabase-js';
 
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -25,10 +30,15 @@ interface FetchPortfolioResult {
     portfolios: Portfolio[];
 }
 
-const fetchPortfolioData = async (userId: string | undefined): Promise<FetchPortfolioResult> => {
-    if (!userId) {
+const fetchPortfolioData = async (
+    user: User | null,
+    profile: Profile | null,
+    config: Config,
+): Promise<FetchPortfolioResult> => {
+    if (!user || !profile) {
         return { transactions: [], portfolioData: {}, portfolios: [] };
     }
+    const userId = user.id;
 
     // 1. Fetch User Portfolios
     const portfoliosResult = await supabase
@@ -55,22 +65,29 @@ const fetchPortfolioData = async (userId: string | undefined): Promise<FetchPort
 
     const transactions = (transResult.data || []) as Transaction[];
     const symbols = [...new Set(transactions.map((t: Transaction) => t.symbol))];
-    let portfolioData: Record<string, AssetData> = {};
+    const portfolioData: Record<string, AssetData> = {};
+    const unavailableSymbols: string[] = [];
 
-    // 3. Fetch Asset Data - Usar estructura completa de AssetData
-    if (symbols.length > 0) {
+    // Use shared cache first; only cache misses use a plan-metered asset lookup.
+    for (const symbol of symbols) {
         try {
-            const assetResult = await supabase.functions.invoke('get-asset-data', {
-                body: { symbols },
+            portfolioData[symbol] = await fetchTickerData({
+                queryKey: ['assetData', symbol, config, user, profile],
+                fromPortfolio: true,
             });
-            if (assetResult.error) throw assetResult.error;
-            
-            // Usar directamente la estructura completa de AssetData sin mapeo limitado
-            portfolioData = (assetResult.data as Record<string, AssetData>) ?? {};
         } catch (error) {
-            void logger.error('PORTFOLIO_FETCH_ERROR', 'Error al traer datos de activos', { error: errorToString(error) });
-            portfolioData = {};
+            unavailableSymbols.push(symbol);
+            void logger.error('PORTFOLIO_ASSET_FETCH_FAILED', `Could not load portfolio asset ${symbol}`, {
+                symbol,
+                error: errorToString(error),
+            });
         }
+    }
+
+    if (unavailableSymbols.length > 0) {
+        toast.warning('No se pudieron cargar algunos activos del portafolio.', {
+            description: unavailableSymbols.join(', '),
+        });
     }
 
     return { transactions, portfolioData, portfolios };
@@ -78,7 +95,8 @@ const fetchPortfolioData = async (userId: string | undefined): Promise<FetchPort
 
 
 export function PortfolioProvider({ children }: { children: React.ReactNode }) {
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
+    const config = useConfig();
     const queryClient = useQueryClient();
 
     // Local state for selected portfolio ID
@@ -86,8 +104,10 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
 
     const { data, isLoading, isError, error, refetch } = useQuery({
         queryKey: ['portfolio', user?.id],
-        queryFn: () => fetchPortfolioData(user?.id),
-        enabled: !!user,
+        queryFn: () => fetchPortfolioData(user, profile, config),
+        enabled: !!user && !!profile,
+        staleTime: 2 * 60 * 60 * 1000,
+        gcTime: 2 * 60 * 60 * 1000,
     });
 
     const { addTransaction: addTransactionMutation } = usePortfolioMutations();

@@ -65,14 +65,20 @@ export function calculateTotalPerformance(
   transactions: Transaction[],
   holdings: Holding[]
 ) {
-  let totalInvested = 0;
-  let totalSoldValue = 0;
+  let cash = 0;
+  let contributedCapital = 0;
+  const sortedTransactions = [...transactions].sort((a, b) =>
+    new Date(a.purchase_date).getTime() - new Date(b.purchase_date).getTime() || a.id - b.id
+  );
 
-  for (const tx of transactions) {
+  for (const tx of sortedTransactions) {
+    const tradeValue = Number(tx.quantity) * Number(tx.purchase_price);
     if (tx.transaction_type === 'buy') {
-      totalInvested += Number(tx.quantity) * Number(tx.purchase_price);
+      const externalFunding = Math.max(0, tradeValue - cash);
+      contributedCapital += externalFunding;
+      cash = Math.max(0, cash - tradeValue);
     } else {
-      totalSoldValue += Number(tx.quantity) * Number(tx.purchase_price);
+      cash += tradeValue;
     }
   }
 
@@ -81,8 +87,8 @@ export function calculateTotalPerformance(
     return sum + (h.quantity * currentPrice);
   }, 0);
 
-  const totalPL = (currentValue + totalSoldValue) - totalInvested;
-  const totalPLPercent = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
+  const totalPL = currentValue + cash - contributedCapital;
+  const totalPLPercent = contributedCapital > 0 ? (totalPL / contributedCapital) * 100 : 0;
 
   return {
     pl: totalPL,

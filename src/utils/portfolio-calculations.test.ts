@@ -295,6 +295,53 @@ describe('portfolio-calculations', () => {
       expect(performance.percent).toBe(35);
     });
 
+    it('does not count reinvested sale proceeds as new invested capital', () => {
+      const transactions: Transaction[] = [
+        {
+          id: 1,
+          user_id: 'user1',
+          portfolio_id: 1,
+          symbol: 'AAPL',
+          quantity: 10,
+          purchase_price: 100,
+          purchase_date: '2024-01-01',
+          transaction_type: 'buy',
+        },
+        {
+          id: 2,
+          user_id: 'user1',
+          portfolio_id: 1,
+          symbol: 'AAPL',
+          quantity: 5,
+          purchase_price: 150,
+          purchase_date: '2024-02-01',
+          transaction_type: 'sell',
+        },
+        {
+          id: 3,
+          user_id: 'user1',
+          portfolio_id: 1,
+          symbol: 'AAPL',
+          quantity: 5,
+          purchase_price: 150,
+          purchase_date: '2024-03-01',
+          transaction_type: 'buy',
+        },
+      ];
+      const holdings = [{
+        symbol: 'AAPL',
+        quantity: 10,
+        avgPurchasePrice: 125,
+        totalCost: 1250,
+        assetData: { symbol: 'AAPL', quote: { price: 160, change: 0, changePercentage: 0 } },
+      }] as any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      const performance = calculateTotalPerformance(transactions, holdings);
+
+      expect(performance.pl).toBe(600);
+      expect(performance.percent).toBe(60);
+    });
+
     it('should return 0 percent for empty portfolio', () => {
       const transactions: Transaction[] = [];
       const holdings: never[] = [];

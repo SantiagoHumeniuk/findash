@@ -77,12 +77,6 @@ interface PortfolioChartsProps {
   portfolioHistory?: AssetHistorical[];
   /** Datos completos del dashboard para acceder a SPY y QQQ */
   portfolioData?: Record<string, AssetData>;
-  /** Porcentaje de retorno del portafolio */
-  portfolioReturn?: number;
-  /** Lista de portafolios del usuario */
-  portfolios?: any[];
-  /** Portafolio actual */
-  currentPortfolio?: any;
 }
 
 /**
@@ -94,7 +88,7 @@ interface PortfolioChartsProps {
  * @param holdings - Holdings actuales del portfolio
  * @param portfolioHistory - Historial de rendimiento agregado (opcional)
  */
-export const PortfolioCharts = React.memo(function PortfolioCharts({ holdings, portfolioHistory, portfolioData, portfolioReturn, portfolios, currentPortfolio }: PortfolioChartsProps) {
+export const PortfolioCharts = React.memo(function PortfolioCharts({ holdings, portfolioHistory, portfolioData }: PortfolioChartsProps) {
   const { allocationData, plData, chartConfig } = useChartData(holdings);
   const { data: analyticsData, isLoading: isAnalyticsLoading } = usePortfolioAnalytics();
 
@@ -296,8 +290,8 @@ export const PortfolioCharts = React.memo(function PortfolioCharts({ holdings, p
   const historicalAssets = useMemo(() => {
     const arr: AssetData[] = [];
     if (portfolioAsset) arr.push(portfolioAsset);
-    if (portfolioData?.['SPY']) arr.push(portfolioData['SPY']);
-    if (portfolioData?.['QQQ']) arr.push(portfolioData['QQQ']);
+    if (portfolioData?.SPY) arr.push(portfolioData.SPY);
+    if (portfolioData?.QQQ) arr.push(portfolioData.QQQ);
     return arr;
   }, [portfolioAsset, portfolioData]);
 
@@ -310,7 +304,7 @@ export const PortfolioCharts = React.memo(function PortfolioCharts({ holdings, p
         {/* Gráfico Histórico */}
         {portfolioAsset && (
           <div className="col-span-1 lg:col-span-2">
-            <HistoricalPerformanceChart assets={historicalAssets} portfolios={portfolios} currentPortfolio={currentPortfolio} />
+            <HistoricalPerformanceChart assets={historicalAssets} />
           </div>
         )}
 

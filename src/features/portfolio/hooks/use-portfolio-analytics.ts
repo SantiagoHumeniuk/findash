@@ -1,42 +1,20 @@
 // src/features/portfolio/hooks/use-portfolio-analytics.ts
 
-import { useQueries } from '@tanstack/react-query';
 import { usePortfolio } from '../../../hooks/use-portfolio';
-import { useAuth } from '../../../hooks/use-auth';
-import { useConfig } from '../../../hooks/use-config';
-import { fetchTickerData } from '../../../services/api/asset-api';
 import { AssetData } from '../../../types/dashboard';
 import { useMemo } from 'react';
 
+/**
+ * Builds sector and country allocations from the portfolio's already-loaded asset data.
+ */
 export function usePortfolioAnalytics() {
     const { holdings, loading: portfolioLoading } = usePortfolio();
-    const { user, profile } = useAuth();
-    const config = useConfig();
-
-    const userId = user?.id ?? null;
-    const profileId = profile?.id ?? null;
-    const useMockData = config?.useMockData ?? false;
-
-    const assetQueries = useQueries({
-        queries: holdings.map(holding => ({
-            queryKey: ['assetData', holding.symbol, userId, profileId, useMockData] as const,
-            queryFn: () => fetchTickerData({
-                queryKey: ['assetData', holding.symbol, config, user, profile]
-            }),
-            staleTime: 1000 * 60 * 60, // 1 hora
-            enabled: !!config && !!holding.symbol,
-        })),
-    });
-
-    const isLoading = portfolioLoading || assetQueries.some(q => q.isLoading);
 
     const analyticsData = useMemo(() => {
-        if (isLoading) return null;
-
-        // Extraer datos exitosos
-        const assets = assetQueries
-            .map(q => q.data)
-            .filter((a): a is AssetData => !!a);
+        if (portfolioLoading) return null;
+        const assets = holdings
+            .map(holding => holding.assetData)
+            .filter((asset): asset is AssetData => !!asset);
 
         const assetMap = new Map<string, AssetData>();
         assets.forEach(a => {
@@ -82,10 +60,10 @@ export function usePortfolioAnalytics() {
         };
 
         return result;
-    }, [holdings, assetQueries, isLoading]);
+    }, [holdings, portfolioLoading]);
 
     return {
         data: analyticsData,
-        isLoading
+        isLoading: portfolioLoading
     };
 }
