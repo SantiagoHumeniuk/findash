@@ -12,6 +12,14 @@ import { Button } from '../../../components/ui/button';
 import { usePlanFeature } from '../../../hooks/use-plan-feature';
 import { UpgradeModal } from '../../../components/shared/upgrade-modal';
 import { HoldingWithMetrics, AddModalInfo } from '../../../types/portfolio';
+import { formatCurrency, formatPercent } from '../../../lib/utils';
+import {
+  calculateAllocationData,
+  calculateDailyPlPercent,
+  calculatePlData,
+  calculatePortfolioMetrics,
+} from '../lib/portfolio.utils';
+import { usePortfolioAnalytics } from '../hooks/use-portfolio-analytics';
 import {
   PortfolioStats,
   PortfolioCharts,
@@ -32,6 +40,7 @@ import { ErrorScreen } from '../../../components/ui/error-screen';
 function PortfolioPageContent() {
   const { holdings, transactions, totalPerformance, loading, error, refreshPortfolio, deleteAsset, portfolioData } = usePortfolio();
   const { metrics: historicalMetrics, portfolioHistory } = usePortfolioHistory(holdings);
+  const { data: portfolioAnalytics } = usePortfolioAnalytics();
 
   const { theme } = useTheme();
   const { hasAccess: canExportPdf, requiredPlan } = usePlanFeature('exportPdf');
@@ -92,6 +101,92 @@ function PortfolioPageContent() {
       const totalInvestment = holdings.reduce((sum, h) => sum + h.totalCost, 0);
       const currentValue = holdingsWithMetrics.reduce((sum, h) => sum + h.marketValue, 0);
       const totalQuantity = holdings.reduce((sum, h) => sum + h.quantity, 0);
+      const portfolioMetrics = calculatePortfolioMetrics(holdings, portfolioData);
+      const portfolioDailyReturn = calculateDailyPlPercent(portfolioMetrics.currentValue, portfolioMetrics.dailyPL);
+      const allocation = calculateAllocationData(holdings).allocationData;
+      const assetReturns = calculatePlData(holdings);
+      const pdfMetrics = [
+        { label: 'Valor actual', value: formatCurrency(portfolioMetrics.currentValue) },
+        { label: 'G/P de posiciones', value: formatCurrency(portfolioMetrics.currentPL) },
+        { label: 'Rendimiento actual', value: formatPercent(portfolioMetrics.currentPLPercent) },
+        { label: 'G/P del día', value: `${formatCurrency(portfolioMetrics.dailyPL)} (${formatPercent(portfolioDailyReturn)})` },
+        { label: 'G/P histórico total', value: formatCurrency(totalPerformance.pl) },
+        { label: 'Rendimiento histórico total', value: formatPercent(totalPerformance.percent) },
+        { label: 'Costo total invertido', value: formatCurrency(portfolioMetrics.totalInvested) },
+        { label: 'Permanencia promedio', value: `${Math.round(avgHoldingDays)} días` },
+        {
+          label: 'Beta ponderado',
+          value: typeof portfolioMetrics.portfolioBeta === 'number'
+            ? portfolioMetrics.portfolioBeta.toFixed(2)
+            : 'N/A',
+        },
+        {
+          label: 'Máx. drawdown',
+          value: historicalMetrics?.maxDrawdown
+            ? `${(historicalMetrics.maxDrawdown * 100).toFixed(2)}%`
+            : 'N/A',
+        },
+        {
+          label: 'Mejor activo por G/P',
+          value: `${portfolioMetrics.bestPerformerUsd.symbol} (${formatCurrency(portfolioMetrics.bestPerformerUsd.plValue)})`,
+        },
+        {
+          label: 'Peor activo por G/P',
+          value: `${portfolioMetrics.worstPerformerUsd.symbol} (${formatCurrency(portfolioMetrics.worstPerformerUsd.plValue)})`,
+        },
+        {
+          label: 'Mejor activo por rendimiento',
+          value: `${portfolioMetrics.bestPerformer.symbol} (${formatPercent(portfolioMetrics.bestPerformer.plPercent)})`,
+        },
+        {
+          label: 'Peor activo por rendimiento',
+          value: `${portfolioMetrics.worstPerformer.symbol} (${formatPercent(portfolioMetrics.worstPerformer.plPercent)})`,
+        },
+        {
+          label: 'Mejor año simulado',
+          value: historicalMetrics?.bestYear
+            ? `${historicalMetrics.bestYear.year} (${(historicalMetrics.bestYear.return * 100).toFixed(2)}%)`
+            : 'N/A',
+        },
+        {
+          label: 'Peor año simulado',
+          value: historicalMetrics?.worstYear
+            ? `${historicalMetrics.worstYear.year} (${(historicalMetrics.worstYear.return * 100).toFixed(2)}%)`
+            : 'N/A',
+        },
+      ];
+      const pdfCharts = [
+        ...(portfolioHistory.length > 1 ? [{
+          title: 'Evolución histórica simulada del portafolio',
+          description: 'Tenencias actuales a precios históricos; no incorpora transacciones ni conversión cambiaria.',
+          kind: 'line' as const,
+          data: portfolioHistory.map((point) => ({
+            label: new Date(point.date).toLocaleDateString('es-AR'),
+            value: point.close,
+          })),
+        }] : []),
+        ...(allocation.length > 0 ? [{
+          title: 'Distribución por activo',
+          kind: 'donut' as const,
+          data: allocation.map((item) => ({ label: item.name, value: item.value })),
+        }] : []),
+        ...(assetReturns.length > 0 ? [{
+          title: 'Rendimiento por activo',
+          description: 'Ganancia o pérdida porcentual respecto del costo de adquisición.',
+          kind: 'bar' as const,
+          data: assetReturns.map((item) => ({ label: item.symbol, value: item.pl })),
+        }] : []),
+        ...(portfolioAnalytics?.sectorAllocation.length ? [{
+          title: 'Diversificación por sector',
+          kind: 'donut' as const,
+          data: portfolioAnalytics.sectorAllocation.map((item) => ({ label: item.name, value: item.value })),
+        }] : []),
+        ...(portfolioAnalytics?.countryAllocation.length ? [{
+          title: 'Exposición geográfica',
+          kind: 'donut' as const,
+          data: portfolioAnalytics.countryAllocation.map((item) => ({ label: item.name, value: item.value })),
+        }] : []),
+      ];
 
       await exportPortfolioToPdf({
         holdings: holdingsWithMetrics.map(h => ({
@@ -114,6 +209,8 @@ function PortfolioPageContent() {
           averageBuyPrice: totalQuantity > 0 ? totalInvestment / totalQuantity : 0,
         },
         theme,
+        metrics: pdfMetrics,
+        charts: pdfCharts,
         portfolioName: 'Mi Portafolio',
       });
       toast.success('Portafolio exportado correctamente.');

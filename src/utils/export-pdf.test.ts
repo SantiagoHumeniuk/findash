@@ -7,11 +7,14 @@ interface MockPdfDocument {
 
 interface MockTableOptions {
   body: unknown[][];
+  head?: unknown[][];
 }
 
-const { autoTableMock, savedFileNames } = vi.hoisted(() => ({
+const { autoTableMock, savedFileNames, pdfTexts, drawnTriangles } = vi.hoisted(() => ({
   autoTableMock: vi.fn<(doc: MockPdfDocument, options: MockTableOptions) => void>(),
   savedFileNames: [] as string[],
+  pdfTexts: [] as string[],
+  drawnTriangles: [] as number[],
 }));
 
 vi.mock('jspdf', () => ({
@@ -26,10 +29,40 @@ vi.mock('jspdf', () => ({
     setTextColor() {
       return this;
     }
+    setFillColor() {
+      return this;
+    }
+    setDrawColor() {
+      return this;
+    }
+    setLineWidth() {
+      return this;
+    }
     setFontSize() {
       return this;
     }
-    text() {
+    text(text: string) {
+      pdfTexts.push(text);
+      return this;
+    }
+    line() {
+      return this;
+    }
+    rect() {
+      return this;
+    }
+    circle() {
+      return this;
+    }
+    triangle() {
+      drawnTriangles.push(1);
+      return this;
+    }
+    addPage() {
+      this.pageCount += 1;
+      return this;
+    }
+    setPage() {
       return this;
     }
     save(fileName: string) {
@@ -46,6 +79,8 @@ describe('exportPortfolioToPdf', () => {
   beforeEach(() => {
     autoTableMock.mockReset();
     savedFileNames.length = 0;
+    pdfTexts.length = 0;
+    drawnTriangles.length = 0;
     autoTableMock.mockImplementation((doc, options) => {
       doc.lastAutoTable = { finalY: (doc.lastAutoTable?.finalY ?? 30) + 20 };
       doc.pageCount = Math.max(doc.pageCount, Math.ceil(options.body.length / 40));
@@ -89,5 +124,54 @@ describe('exportPortfolioToPdf', () => {
     expect(autoTableMock.mock.calls[1][1].body[0][3]).toContain('US$');
     expect(autoTableMock.mock.calls[1][1].body[1][3]).toContain('$');
     expect(savedFileNames[0]).toMatch(/^Portafolio_Mi_Portafolio_\d{4}-\d{2}-\d{2}\.pdf$/);
+  });
+
+  it('exports all supplied metrics and draws line, allocation, and per-asset charts', async () => {
+    await exportPortfolioToPdf({
+      holdings: [{
+        symbol: 'AAPL',
+        currency: 'USD',
+        quantity: 2,
+        averagePrice: 100,
+        currentPrice: 120,
+        totalCost: 200,
+        currentValue: 240,
+        gainLoss: 40,
+        gainLossPercentage: 20,
+      }],
+      stats: {
+        totalInvestment: 200,
+        currentValue: 240,
+        totalGainLoss: 40,
+        totalGainLossPercentage: 20,
+        averageBuyPrice: 100,
+      },
+      theme: 'light',
+      metrics: [{ label: 'Beta ponderado', value: '1,12' }],
+      charts: [
+        {
+          title: 'Evolución histórica',
+          kind: 'line',
+          data: [{ label: '2025-01-01', value: 100 }, { label: '2026-01-01', value: 120 }],
+        },
+        {
+          title: 'Distribución',
+          kind: 'donut',
+          data: [{ label: 'AAPL', value: 240 }, { label: 'MSFT', value: 60 }],
+        },
+        {
+          title: 'Rendimiento',
+          kind: 'bar',
+          data: [{ label: 'AAPL', value: 20 }],
+        },
+      ],
+    });
+
+    expect(autoTableMock).toHaveBeenCalledTimes(3);
+    expect(autoTableMock.mock.calls[1][1].body[0]).toEqual(['Beta ponderado', '1,12', '', '']);
+    expect(pdfTexts).toContain('Evolución histórica');
+    expect(pdfTexts).toContain('Distribución');
+    expect(pdfTexts).toContain('Rendimiento');
+    expect(drawnTriangles.length).toBeGreaterThan(10);
   });
 });

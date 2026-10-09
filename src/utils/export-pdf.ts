@@ -273,6 +273,18 @@ interface PortfolioStats {
   averageBuyPrice: number;
 }
 
+interface PortfolioReportMetric {
+  label: string;
+  value: string;
+}
+
+interface PortfolioReportChart {
+  title: string;
+  description?: string;
+  kind: 'line' | 'bar' | 'donut';
+  data: { label: string; value: number }[];
+}
+
 /**
  * Interfaz para un holding (posición) del portafolio.
  */
@@ -297,15 +309,19 @@ interface ExportPortfolioOptions {
   stats: PortfolioStats;
   theme: Theme;
   portfolioName?: string;
+  metrics?: PortfolioReportMetric[];
+  charts?: PortfolioReportChart[];
 }
 
 /**
- * Exports portfolio metrics and every open position as a paginated, printer-friendly PDF.
+ * Exports portfolio metrics, positions, and visualizations as a paginated PDF report.
  */
 export const exportPortfolioToPdf = async ({
   holdings,
   stats,
   portfolioName = 'Mi Portafolio',
+  metrics = [],
+  charts = [],
 }: ExportPortfolioOptions) => {
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
@@ -327,9 +343,16 @@ export const exportPortfolioToPdf = async ({
     maximumFractionDigits: 2,
   }).format(Number.isFinite(value) ? value : 0);
   const formatPercent = (value: number) => `${Number.isFinite(value) ? value.toFixed(2) : '0.00'}%`;
+  const formatNumber = (value: number) => new Intl.NumberFormat('es-AR', {
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(value) ? value : 0);
   const formatPortfolioTotal = (value: number) => commonCurrency
     ? formatMoney(value, commonCurrency)
     : 'Multimoneda';
+  const colors: [number, number, number][] = [
+    [37, 99, 235], [16, 185, 129], [245, 158, 11], [139, 92, 246],
+    [236, 72, 153], [14, 165, 233], [249, 115, 22], [100, 116, 139],
+  ];
 
   pdf.setTextColor(32, 48, 75);
   pdf.setFontSize(20);
@@ -355,11 +378,41 @@ export const exportPortfolioToPdf = async ({
     bodyStyles: { fillColor: [248, 250, 252], fontStyle: 'bold' },
   });
   let table = pdf as typeof pdf & { lastAutoTable?: { finalY: number } };
-  const summaryEndY = table.lastAutoTable?.finalY ?? 42;
+  let nextTableY = table.lastAutoTable?.finalY ?? 42;
   if (!commonCurrency) {
     pdf.setFontSize(8);
     pdf.setTextColor(100, 116, 139);
-    pdf.text('Totales no convertidos: las posiciones conservan sus monedas de cotización.', margin, summaryEndY + 6);
+    pdf.text('Totales no convertidos: las posiciones conservan sus monedas de cotización.', margin, nextTableY + 6);
+    nextTableY += 8;
+  }
+
+  if (metrics.length > 0) {
+    const metricRows: string[][] = [];
+    for (let index = 0; index < metrics.length; index += 2) {
+      const left = metrics[index];
+      const right = metrics[index + 1];
+      metricRows.push([left.label, left.value, right?.label ?? '', right?.value ?? '']);
+    }
+    pdf.setFontSize(12);
+    pdf.setTextColor(32, 48, 75);
+    pdf.text('Métricas de cartera', margin, nextTableY + 8);
+    autoTable(pdf, {
+      startY: nextTableY + 11,
+      head: [['Métrica', 'Resultado', 'Métrica', 'Resultado']],
+      body: metricRows,
+      theme: 'grid',
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 8, cellPadding: 2.5, textColor: [32, 48, 75], lineColor: [220, 226, 235] },
+      headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontStyle: 'bold' },
+      columnStyles: {
+        0: { cellWidth: 58, fontStyle: 'bold' },
+        1: { cellWidth: 77 },
+        2: { cellWidth: 58, fontStyle: 'bold' },
+        3: { cellWidth: 77 },
+      },
+    });
+    table = pdf as typeof pdf & { lastAutoTable?: { finalY: number } };
+    nextTableY = table.lastAutoTable?.finalY ?? nextTableY + 20;
   }
 
   const body = holdings.map((holding) => [
@@ -373,8 +426,7 @@ export const exportPortfolioToPdf = async ({
     formatMoney(holding.gainLoss, getCurrency(holding.currency)),
     formatPercent(holding.gainLossPercentage),
   ]);
-  table = pdf as typeof pdf & { lastAutoTable?: { finalY: number } };
-  const tableStartY = Math.max(table.lastAutoTable?.finalY ?? 42, summaryEndY + (commonCurrency ? 0 : 8)) + 8;
+  const tableStartY = nextTableY + 8;
   autoTable(pdf, {
     startY: tableStartY,
     head: [['Ticker', 'Activo', 'Cantidad', 'Costo prom.', 'Precio actual', 'Costo total', 'Valor actual', 'G/P', 'G/P %']],
@@ -402,13 +454,164 @@ export const exportPortfolioToPdf = async ({
         data.cell.styles.textColor = value >= 0 ? [21, 128, 61] : [185, 28, 28];
       }
     },
-    didDrawPage: (data) => {
-      pdf.setFontSize(8);
-      pdf.setTextColor(100, 116, 139);
-      pdf.text(`FinDash · ${portfolioName}`, margin, pdf.internal.pageSize.getHeight() - 6);
-      pdf.text(`Página ${data.pageNumber}`, pageWidth - margin, pdf.internal.pageSize.getHeight() - 6, { align: 'right' });
-    },
   });
+
+  const drawLineChart = (data: PortfolioReportChart['data']) => {
+    const points = data.filter((point) => Number.isFinite(point.value));
+    if (points.length < 2) {
+      pdf.setFontSize(10);
+      pdf.text('No hay suficientes observaciones históricas para graficar.', 20, 60);
+      return;
+    }
+    const left = 25;
+    const top = 55;
+    const width = pageWidth - 50;
+    const height = 112;
+    const minimum = Math.min(...points.map((point) => point.value));
+    const maximum = Math.max(...points.map((point) => point.value));
+    const span = maximum - minimum || 1;
+    pdf.setDrawColor(210, 218, 230);
+    pdf.setLineWidth(0.25);
+    for (let row = 0; row <= 4; row += 1) {
+      const y = top + (height * row) / 4;
+      pdf.line(left, y, left + width, y);
+    }
+    const step = Math.max(1, Math.ceil(points.length / 150));
+    const sampled = points.filter((_, index) => index % step === 0 || index === points.length - 1);
+    pdf.setDrawColor(37, 99, 235);
+    pdf.setLineWidth(0.8);
+    for (let index = 1; index < sampled.length; index += 1) {
+      const previousX = left + ((index - 1) / (sampled.length - 1)) * width;
+      const currentX = left + (index / (sampled.length - 1)) * width;
+      const previousY = top + height - ((sampled[index - 1].value - minimum) / span) * height;
+      const currentY = top + height - ((sampled[index].value - minimum) / span) * height;
+      pdf.line(previousX, previousY, currentX, currentY);
+    }
+    pdf.setFontSize(8);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(points[0].label, left, top + height + 7);
+    pdf.text(points[points.length - 1].label, left + width, top + height + 7, { align: 'right' });
+    pdf.text(`Máx. ${formatNumber(maximum)}`, left, top - 4);
+    pdf.text(`Mín. ${formatNumber(minimum)}`, left + width, top - 4, { align: 'right' });
+  };
+
+  const drawBarChart = (data: PortfolioReportChart['data'], pageIndex: number, pageTotal: number) => {
+    const left = 62;
+    const top = 54;
+    const width = pageWidth - left - 22;
+    const rowHeight = 5.4;
+    const pageSize = 24;
+    const pageData = data.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
+    const maxMagnitude = Math.max(1, ...pageData.map((point) => Math.abs(point.value)));
+    const zeroX = left + width * 0.55;
+    const maxBarWidth = width * 0.43;
+    pdf.setDrawColor(148, 163, 184);
+    pdf.line(zeroX, top - 4, zeroX, top + pageData.length * rowHeight);
+    pdf.setFontSize(7);
+    pageData.forEach((point, index) => {
+      const y = top + index * rowHeight;
+      const barWidth = (Math.abs(point.value) / maxMagnitude) * maxBarWidth;
+      pdf.setTextColor(51, 65, 85);
+      pdf.text(point.label.slice(0, 28), left - 4, y + 3, { align: 'right' });
+      pdf.setFillColor(...(point.value >= 0 ? [16, 185, 129] : [239, 68, 68]));
+      pdf.rect(point.value >= 0 ? zeroX : zeroX - barWidth, y, barWidth, 3, 'F');
+      pdf.text(
+        `${point.value >= 0 ? '+' : ''}${point.value.toFixed(2)}%`,
+        point.value >= 0 ? zeroX + barWidth + 2 : zeroX - barWidth - 2,
+        y + 3,
+        { align: point.value >= 0 ? 'left' : 'right' },
+      );
+    });
+    if (pageTotal > 1) {
+      pdf.setFontSize(8);
+      pdf.text(
+        `Posiciones ${pageIndex * pageSize + 1}–${Math.min((pageIndex + 1) * pageSize, data.length)} de ${data.length}`,
+        pageWidth - 20,
+        42,
+        { align: 'right' },
+      );
+    }
+  };
+
+  const drawDonutChart = (data: PortfolioReportChart['data']) => {
+    const validData = data.filter((point) => Number.isFinite(point.value) && point.value > 0);
+    const total = validData.reduce((sum, point) => sum + point.value, 0);
+    if (total <= 0) {
+      pdf.setFontSize(10);
+      pdf.text('No hay datos de composición para graficar.', 20, 60);
+      return;
+    }
+    const centerX = pageWidth * 0.32;
+    const centerY = 123;
+    const radius = 48;
+    let startAngle = -Math.PI / 2;
+    validData.forEach((point, index) => {
+      const endAngle = startAngle + (point.value / total) * Math.PI * 2;
+      pdf.setFillColor(...colors[index % colors.length]);
+      const segments = Math.max(1, Math.ceil((endAngle - startAngle) / (Math.PI / 30)));
+      for (let segment = 0; segment < segments; segment += 1) {
+        const angle1 = startAngle + ((endAngle - startAngle) * segment) / segments;
+        const angle2 = startAngle + ((endAngle - startAngle) * (segment + 1)) / segments;
+        pdf.triangle(
+          centerX,
+          centerY,
+          centerX + Math.cos(angle1) * radius,
+          centerY + Math.sin(angle1) * radius,
+          centerX + Math.cos(angle2) * radius,
+          centerY + Math.sin(angle2) * radius,
+          'F',
+        );
+      }
+      startAngle = endAngle;
+    });
+    pdf.setFillColor(255, 255, 255);
+    pdf.circle(centerX, centerY, radius * 0.52, 'F');
+    pdf.setTextColor(32, 48, 75);
+    pdf.setFontSize(9);
+    pdf.text('Total', centerX, centerY - 1, { align: 'center' });
+    pdf.setFontSize(8);
+    pdf.text(String(validData.length), centerX, centerY + 5, { align: 'center' });
+
+    const legendX = pageWidth * 0.58;
+    const legendY = 57;
+    const rowHeight = Math.min(5.5, 132 / validData.length);
+    validData.forEach((point, index) => {
+      const y = legendY + index * rowHeight;
+      pdf.setFillColor(...colors[index % colors.length]);
+      pdf.rect(legendX, y - 2.4, 3, 3, 'F');
+      pdf.setTextColor(51, 65, 85);
+      pdf.setFontSize(Math.min(8, rowHeight * 1.25));
+      pdf.text(`${point.label.slice(0, 30)} · ${((point.value / total) * 100).toFixed(1)}%`, legendX + 5, y);
+    });
+  };
+
+  for (const chart of charts) {
+    const pageSize = chart.kind === 'bar' ? 24 : Math.max(chart.data.length, 1);
+    const pageTotal = Math.max(1, Math.ceil(chart.data.length / pageSize));
+    for (let pageIndex = 0; pageIndex < pageTotal; pageIndex += 1) {
+      pdf.addPage('a4', 'landscape');
+      pdf.setTextColor(32, 48, 75);
+      pdf.setFontSize(15);
+      pdf.text(chart.title, margin, 20);
+      if (chart.description) {
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text(chart.description, margin, 27);
+      }
+      if (chart.kind === 'line') drawLineChart(chart.data);
+      if (chart.kind === 'donut') drawDonutChart(chart.data);
+      if (chart.kind === 'bar') drawBarChart(chart.data, pageIndex, pageTotal);
+    }
+  }
+
+  const pageCount = pdf.internal.getNumberOfPages();
+  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+    pdf.setPage(pageNumber);
+    pdf.setFontSize(8);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(`FinDash · ${portfolioName}`, margin, pdf.internal.pageSize.getHeight() - 6);
+    pdf.text(`Página ${pageNumber} de ${pageCount}`, pageWidth - margin, pdf.internal.pageSize.getHeight() - 6, { align: 'right' });
+  }
 
   const fileName = `Portafolio_${portfolioName.replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
   pdf.save(fileName);

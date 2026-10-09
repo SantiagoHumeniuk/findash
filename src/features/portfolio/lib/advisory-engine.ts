@@ -73,7 +73,9 @@ export function generateAdvisory(
   const latestRatios = Array.isArray(asset.ratios)
     ? [...asset.ratios].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ?? null
     : null;
-  const pe = latestRatios?.priceToEarningsRatio ?? null;
+  const pe = asset.quote?.pe && asset.quote.pe > 0
+    ? asset.quote.pe
+    : latestRatios?.priceToEarningsRatio ?? null;
   const forwardPE = asset.quote?.forwardPE ?? null;
   const debtToEquity = latestRatios?.debtToEquityRatio ?? null;
   const netDebtToEbitda = asset.keyMetrics?.netDebtToEBITDATTM ?? null;
@@ -96,6 +98,14 @@ export function generateAdvisory(
         : 'baja';
   const upsidePct = valuation.spread;
   const forwardEpsGrowthPct = valuation.context.forwardEpsGrowthPct;
+  const yahooTargetPrice = asset.yahooMetrics?.['financialData.targetMeanPrice'];
+  const yahooAnalystCount = asset.yahooMetrics?.['financialData.numberOfAnalystOpinions'] ?? 0;
+  const yahooTargetUpside = yahooTargetPrice !== undefined &&
+    Number.isFinite(yahooTargetPrice) &&
+    yahooTargetPrice > 0 &&
+    asset.quote.price > 0
+    ? ((yahooTargetPrice / asset.quote.price) - 1) * 100
+    : null;
   const positiveDomains = new Set<string>();
   const negativeDomains = new Set<string>();
 
@@ -143,6 +153,34 @@ export function generateAdvisory(
     }
   } else {
     reasons.push({ text: 'Yahoo/FMP no entregó PER forward válido; no se usa una proyección faltante como señal positiva.', type: 'neutral' });
+  }
+
+  if (yahooTargetUpside !== null && yahooAnalystCount >= 3) {
+    if (yahooTargetUpside >= 20) {
+      score += 8;
+      positiveDomains.add('consenso de analistas');
+      reasons.push({
+        text: `El precio objetivo medio de Yahoo Finance sugiere ${yahooTargetUpside.toFixed(1)}% de potencial, con ${Math.round(yahooAnalystCount)} analistas; se usa como confirmación, no como garantía.`,
+        type: 'positive',
+      });
+    } else if (yahooTargetUpside <= -20) {
+      score -= 8;
+      negativeDomains.add('consenso de analistas');
+      reasons.push({
+        text: `El precio objetivo medio de Yahoo Finance queda ${Math.abs(yahooTargetUpside).toFixed(1)}% bajo la cotización, con ${Math.round(yahooAnalystCount)} analistas; es una alerta de valoración.`,
+        type: 'negative',
+      });
+    } else {
+      reasons.push({
+        text: `El precio objetivo de Yahoo Finance implica ${yahooTargetUpside.toFixed(1)}% de potencial con ${Math.round(yahooAnalystCount)} analistas; no confirma una señal direccional.`,
+        type: 'neutral',
+      });
+    }
+  } else if (yahooTargetUpside !== null) {
+    reasons.push({
+      text: `Yahoo Finance informa un objetivo medio con cobertura insuficiente (${Math.round(yahooAnalystCount)} analistas); no se puntúa como consenso.`,
+      type: 'neutral',
+    });
   }
 
   if (forwardEpsGrowthPct !== null) {
@@ -325,6 +363,7 @@ export function generateAdvisory(
     operatingMargin !== null,
     beta !== null,
     forwardPE !== null && forwardPE > 0,
+    yahooTargetUpside !== null && yahooAnalystCount >= 3,
     !isFinancialCompany && debtToEquity !== null,
     !isFinancialCompany && netDebtToEbitda !== null,
     !isFinancialCompany && currentRatio !== null,

@@ -247,6 +247,96 @@ function attachHistory(quote: YahooQuote, history: YahooQuote["history"]): Yahoo
   return quote;
 }
 
+type YahooMarketSnapshot = {
+  name: string | null;
+  currency: string | null;
+  exchange: string | null;
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
+  volume: number | null;
+  dayLow: number | null;
+  dayHigh: number | null;
+  yearLow: number | null;
+  yearHigh: number | null;
+  open: number | null;
+  previousClose: number | null;
+  marketTimestamp: number | null;
+  priceAvg50: number | null;
+  priceAvg200: number | null;
+};
+
+async function fetchMarketSnapshot(symbol: string): Promise<YahooMarketSnapshot | null> {
+  const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`);
+  url.searchParams.set("range", "1y");
+  url.searchParams.set("interval", "1d");
+  const response = await fetch(url, { headers: { "User-Agent": yahooUserAgent } });
+  if (!response.ok) return null;
+
+  const payload: unknown = await response.json();
+  const chart = asRecord(asRecord(payload)?.chart);
+  const result = Array.isArray(chart?.result) ? asRecord(chart.result[0]) : null;
+  const meta = asRecord(result?.meta);
+  if (!meta) return null;
+  const indicators = asRecord(result?.indicators);
+  const quote = Array.isArray(indicators?.quote) ? asRecord(indicators.quote[0]) : null;
+  const closes = Array.isArray(quote?.close)
+    ? quote.close.filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+    : [];
+  const average = (count: number) => closes.length >= count
+    ? closes.slice(-count).reduce((sum, value) => sum + value, 0) / count
+    : null;
+  const price = getNumber(meta.regularMarketPrice) ?? closes.at(-1) ?? null;
+  const previousClose = getNumber(meta.chartPreviousClose) ?? getNumber(meta.previousClose);
+
+  return {
+    name: getString(meta.longName) ?? getString(meta.shortName),
+    currency: getString(meta.currency),
+    exchange: getString(meta.fullExchangeName) ?? getString(meta.exchangeName),
+    price,
+    change: price !== null && previousClose !== null ? price - previousClose : null,
+    changePercent: getNumber(meta.regularMarketChangePercent) ??
+      (price !== null && previousClose !== null && previousClose > 0
+        ? ((price - previousClose) / previousClose) * 100
+        : null),
+    volume: getNumber(meta.regularMarketVolume),
+    dayLow: getNumber(meta.regularMarketDayLow),
+    dayHigh: getNumber(meta.regularMarketDayHigh),
+    yearLow: getNumber(meta.fiftyTwoWeekLow),
+    yearHigh: getNumber(meta.fiftyTwoWeekHigh),
+    open: getNumber(meta.regularMarketOpen),
+    previousClose,
+    marketTimestamp: getNumber(meta.regularMarketTime),
+    priceAvg50: average(50),
+    priceAvg200: average(200),
+  };
+}
+
+function applyMarketSnapshot(quote: YahooQuote, snapshot: YahooMarketSnapshot | null): YahooQuote {
+  if (!snapshot) return quote;
+  const snapshotIsNewer = snapshot.marketTimestamp !== null &&
+    (quote.marketTimestamp === null || snapshot.marketTimestamp > quote.marketTimestamp);
+  if (snapshotIsNewer || quote.price.value === null) {
+    quote.name = snapshot.name ?? quote.name;
+    quote.currency = snapshot.currency ?? quote.currency;
+    quote.exchange = snapshot.exchange ?? quote.exchange;
+    quote.price = { value: snapshot.price };
+    quote.change = { value: snapshot.change };
+    quote.changePercent = { value: snapshot.changePercent };
+    quote.volume = { value: snapshot.volume };
+    quote.dayLow = { value: snapshot.dayLow };
+    quote.dayHigh = { value: snapshot.dayHigh };
+    quote.open = { value: snapshot.open };
+    quote.previousClose = { value: snapshot.previousClose };
+    quote.marketTimestamp = snapshot.marketTimestamp;
+  }
+  quote.yearLow = { value: quote.yearLow.value ?? snapshot.yearLow };
+  quote.yearHigh = { value: quote.yearHigh.value ?? snapshot.yearHigh };
+  quote.priceAvg50 = { value: quote.priceAvg50.value ?? snapshot.priceAvg50 };
+  quote.priceAvg200 = { value: quote.priceAvg200.value ?? snapshot.priceAvg200 };
+  return quote;
+}
+
 async function fetchHistory(symbol: string): Promise<YahooQuote["history"]> {
   const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`);
   url.searchParams.set("range", "5y");
@@ -284,7 +374,11 @@ async function getYahooSession(): Promise<{ cookie: string; crumb: string }> {
   const cookieResponse = await fetch("https://fc.yahoo.com", {
     headers: { "User-Agent": yahooUserAgent },
   });
-  const cookies = cookieResponse.headers.getSetCookie()
+  const setCookieHeaders = typeof cookieResponse.headers.getSetCookie === "function"
+    ? cookieResponse.headers.getSetCookie()
+    : [];
+  const combinedSetCookie = cookieResponse.headers.get("set-cookie");
+  const cookies = [...setCookieHeaders, ...(combinedSetCookie ? combinedSetCookie.split(/,\s*(?=[^;, ]+=)/) : [])]
     .map((header) => header.split(";")[0])
     .filter(Boolean);
   if (cookies.length === 0) {
@@ -311,19 +405,37 @@ async function fetchQuote(symbol: string, cookie: string, crumb: string): Promis
   url.searchParams.set("modules", modules);
   url.searchParams.set("crumb", crumb);
 
-  const response = await fetch(url, {
-    headers: { Cookie: cookie, "User-Agent": yahooUserAgent },
-  });
+  const [responseResult, historyResult, snapshotResult] = await Promise.allSettled([
+    fetch(url, { headers: { Cookie: cookie, "User-Agent": yahooUserAgent } }),
+    fetchHistory(symbol),
+    fetchMarketSnapshot(symbol),
+  ]);
+  const history = historyResult.status === "fulfilled" ? historyResult.value : [];
+  const marketSnapshot = snapshotResult.status === "fulfilled" ? snapshotResult.value : null;
+  if (historyResult.status === "rejected") {
+    console.error(`Yahoo history request failed for ${symbol}:`, historyResult.reason);
+  }
+  if (snapshotResult.status === "rejected") {
+    console.error(`Yahoo chart quote request failed for ${symbol}:`, snapshotResult.reason);
+  }
+  if (responseResult.status === "rejected") {
+    const quote = emptyQuote(symbol, "Yahoo Finance no pudo consultar las métricas fundamentales");
+    return attachHistory(applyMarketSnapshot(quote, marketSnapshot), history);
+  }
+  const response = responseResult.value;
   if (!response.ok) {
     return attachHistory(
-      emptyQuote(symbol, `Yahoo Finance respondió HTTP ${response.status}`),
-      await fetchHistory(symbol),
+      applyMarketSnapshot(
+        emptyQuote(symbol, `Yahoo Finance respondió HTTP ${response.status}; se usa la cotización pública del gráfico`),
+        marketSnapshot,
+      ),
+      history,
     );
   }
 
   const payload: unknown = await response.json();
-  const quote = normalizeQuote(symbol, payload);
-  return attachHistory(quote, await fetchHistory(symbol));
+  const quote = applyMarketSnapshot(normalizeQuote(symbol, payload), marketSnapshot);
+  return attachHistory(quote, history);
 }
 
 serve(async (request) => {

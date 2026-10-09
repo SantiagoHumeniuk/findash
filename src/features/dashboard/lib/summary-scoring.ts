@@ -76,10 +76,18 @@ export function scoreAssetSummary(asset: SummaryAssetInput): SummaryScore {
     if (signal.polarity === 'negative') weaknesses.push(signal.reason);
   };
 
-  const trailingPe = asset.quote.pe ?? ratios?.priceToEarningsRatio;
-  const forwardPe = asset.quote.forwardPE ?? null;
-  const forwardEps = asset.quote.forwardEPS ?? null;
-  const trailingEps = asset.quote.trailingEPS ?? null;
+  const trailingPe = validNumber(asset.quote.pe) && asset.quote.pe > 0
+    ? asset.quote.pe
+    : ratios?.priceToEarningsRatio;
+  const forwardPe = validNumber(asset.quote.forwardPE) && asset.quote.forwardPE > 0
+    ? asset.quote.forwardPE
+    : null;
+  const forwardEps = validNumber(asset.quote.forwardEPS) && asset.quote.forwardEPS > 0
+    ? asset.quote.forwardEPS
+    : null;
+  const trailingEps = validNumber(asset.quote.trailingEPS) && asset.quote.trailingEPS > 0
+    ? asset.quote.trailingEPS
+    : null;
   const operatingMargin = ratios?.operatingProfitMargin;
   const netMargin = ratios?.netProfitMargin;
   const roe = asset.keyMetrics?.returnOnEquityTTM || null;

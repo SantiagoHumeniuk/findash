@@ -25,6 +25,8 @@ export interface AssetData {
     dataSource?: 'FMP' | 'Yahoo Finance' | 'FMP + Yahoo Finance';
     dataFetchedAt?: string;
     yahooMetrics?: Record<string, number | null>;
+    yahooAttemptedAt?: string;
+    yahooError?: string | null;
 }
 
 export interface AssetAnalystGradeUpdate {

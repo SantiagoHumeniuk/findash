@@ -286,7 +286,13 @@ export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnal
         [assets],
     );
     const analysisAssets = useMemo(
-        () => assets.filter(asset => asset.dataSource !== 'Yahoo Finance'),
+        () => assets.filter((asset) =>
+            asset.dataSource !== 'Yahoo Finance' || scoreAssetSummary(asset).coverage > 0
+        ),
+        [assets],
+    );
+    const yahooPartialAssets = useMemo(
+        () => assets.filter((asset) => Boolean(asset.yahooError)),
         [assets],
     );
 
@@ -449,8 +455,17 @@ export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnal
                 <Card className="border-amber-500/30">
                     <CardContent className="p-4 text-sm text-muted-foreground">
                         FMP no respondió para {fallbackAssets.map(asset => asset.profile.symbol).join(', ')}.
-                        Se muestran sus cotizaciones de Yahoo Finance, pero se excluyen del ranking
-                        fundamental para no presentar métricas faltantes como calificaciones.
+                        Se incorporan al análisis solo las señales que Yahoo Finance sí entregó;
+                        la cobertura se indica para no presentar métricas faltantes como certezas.
+                    </CardContent>
+                </Card>
+            )}
+            {yahooPartialAssets.length > 0 && (
+                <Card className="border-amber-500/30">
+                    <CardContent className="p-4 text-sm text-muted-foreground">
+                        Yahoo Finance entregó datos parciales para{' '}
+                        {yahooPartialAssets.map((asset) => asset.profile.symbol).join(', ')}.
+                        Las cotizaciones e indicadores disponibles se usan; algunas métricas fundamentales pueden faltar.
                     </CardContent>
                 </Card>
             )}

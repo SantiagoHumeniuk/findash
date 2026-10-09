@@ -248,6 +248,8 @@ export function createYahooAssetData(
         dataSource: 'Yahoo Finance',
         dataFetchedAt: fetchedAt,
         yahooMetrics: yahoo.metrics,
+        yahooAttemptedAt: fetchedAt,
+        yahooError: yahoo.error,
     };
 }
 
@@ -257,7 +259,10 @@ function enrichAssetWithYahoo(
     fetchedAt: string,
 ): AssetData {
     const yahooTimestamp = yahoo.marketTimestamp ?? 0;
-    const fmpTimestamp = asset.quote.timestamp ?? 0;
+    const rawFmpTimestamp = asset.quote.timestamp ?? 0;
+    const fmpTimestamp = rawFmpTimestamp > 1_000_000_000_000
+        ? Math.floor(rawFmpTimestamp / 1000)
+        : rawFmpTimestamp;
     const yahooIsNewer = yahooTimestamp > 0 && yahooTimestamp > fmpTimestamp;
     const metric = (value: YahooFinanceQuote['price']) => value.value;
     const prefer = (current: number, value: YahooFinanceQuote['price']) =>
@@ -362,10 +367,28 @@ function enrichAssetWithYahoo(
     asset.dataSource = 'FMP + Yahoo Finance';
     asset.dataFetchedAt = fetchedAt;
     asset.yahooMetrics = yahoo.metrics;
+    asset.yahooAttemptedAt = fetchedAt;
+    asset.yahooError = yahoo.error;
     if (yahoo.history.length > 0) {
         asset.historicalReturns = mapYahooHistory(asset.symbol, yahoo.history);
     }
     return asset;
+}
+
+function hasUsableYahooData(quote: YahooFinanceQuote): boolean {
+    return (quote.price.value !== null && quote.price.value > 0) ||
+        quote.history.length > 0 ||
+        Object.values(quote.metrics).some((value) => value !== null);
+}
+
+function shouldRefreshYahooData(asset: AssetData, now: number): boolean {
+    const attemptedAt = asset.yahooAttemptedAt ? Date.parse(asset.yahooAttemptedAt) : Number.NaN;
+    const needsYahooData = asset.dataSource !== 'FMP + Yahoo Finance' ||
+        !asset.yahooMetrics ||
+        Object.keys(asset.yahooMetrics).length === 0 ||
+        (asset.yahooError !== null && asset.yahooError !== undefined);
+    return needsYahooData &&
+        (!Number.isFinite(attemptedAt) || now - attemptedAt >= 15 * 60 * 1000);
 }
 
 function getRecords(result: unknown): Record<string, unknown>[] {
@@ -546,20 +569,76 @@ export async function fetchTickerData({
     const [, ticker, config, user, profile] = queryKey;
 
     // 1. Consultar caché de Supabase
-    const { data: cached } = await supabase
+    const { data: cached, error: cacheReadError } = await supabase
         .from('asset_data_cache')
         .select('data, last_updated_at')
         .eq('symbol', ticker)
         .single();
+    if (cacheReadError && cacheReadError.code !== 'PGRST116') {
+        void logger.warn('ASSET_CACHE_READ_FAILED', `Could not read cached data for ${ticker}`, {
+            ticker,
+            errorMessage: cacheReadError.message,
+        });
+    }
 
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
 
     if (!forceRefresh && cached && new Date(cached.last_updated_at as string) > twoHoursAgo) {
-        return cached.data as AssetData;
-    }
+        const cachedAsset = cached.data as AssetData;
+        if (!shouldRefreshYahooData(cachedAsset, Date.now())) return cachedAsset;
 
-    if (!forceRefresh && fromPortfolio && cached?.data) {
-        return cached.data as AssetData;
+        if (await hasApiCallsAvailable(user, profile, config)) {
+            const attemptedAt = new Date().toISOString();
+            try {
+                const response = await fetchYahooFinanceQuotes([ticker]);
+                const yahooQuote = response.quotes.find((item) => item.symbol === ticker.toUpperCase());
+                if (yahooQuote && hasUsableYahooData(yahooQuote)) {
+                    const refreshedAsset = enrichAssetWithYahoo(cachedAsset, yahooQuote, response.fetchedAt);
+                    if (user?.id) await incrementApiCallCounter(user.id);
+                    const { error: cacheError } = await supabase.from('asset_data_cache').upsert({
+                        symbol: ticker,
+                        data: refreshedAsset,
+                        last_updated_at: refreshedAsset.dataFetchedAt,
+                    });
+                    if (cacheError) {
+                        void logger.warn('ASSET_CACHE_WRITE_FAILED', `Could not cache Yahoo data for ${ticker}`, {
+                            ticker,
+                            errorMessage: cacheError.message,
+                        });
+                    }
+                    return refreshedAsset;
+                }
+
+                const yahooError = yahooQuote?.error ?? 'Yahoo Finance no devolvió métricas ni cotización utilizables';
+                cachedAsset.yahooAttemptedAt = attemptedAt;
+                cachedAsset.yahooError = yahooError;
+                void logger.warn('YAHOO_SUPPLEMENT_EMPTY', `Yahoo Finance returned no usable data for ${ticker}`, {
+                    ticker,
+                    errorMessage: yahooError,
+                });
+            } catch (error) {
+                const yahooError = error instanceof Error ? error.message : String(error);
+                cachedAsset.yahooAttemptedAt = attemptedAt;
+                cachedAsset.yahooError = yahooError;
+                void logger.warn('YAHOO_SUPPLEMENT_FAILED', `Could not refresh cached Yahoo data for ${ticker}`, {
+                    ticker,
+                    errorMessage: yahooError,
+                });
+            }
+
+            const { error: cacheError } = await supabase.from('asset_data_cache').upsert({
+                symbol: ticker,
+                data: cachedAsset,
+                last_updated_at: cached.last_updated_at,
+            });
+            if (cacheError) {
+                void logger.warn('ASSET_CACHE_WRITE_FAILED', `Could not cache Yahoo refresh status for ${ticker}`, {
+                    ticker,
+                    errorMessage: cacheError.message,
+                });
+            }
+        }
+        return cachedAsset;
     }
 
     if (forceRefresh && cached && new Date(cached.last_updated_at as string) > twoHoursAgo) {
@@ -724,15 +803,24 @@ export async function fetchTickerData({
         const yahooQuote = yahooSupplement.response.quotes.find(
             (item) => item.symbol === ticker.toUpperCase(),
         );
-        if (yahooQuote && !yahooQuote.error) {
+        if (yahooQuote && hasUsableYahooData(yahooQuote)) {
             enrichAssetWithYahoo(processedAsset, yahooQuote, yahooSupplement.response.fetchedAt);
+        } else {
+            processedAsset.yahooAttemptedAt = yahooSupplement.response.fetchedAt;
+            processedAsset.yahooError = yahooQuote?.error ?? 'Yahoo Finance no devolvió métricas ni cotización utilizables';
+            void logger.warn('YAHOO_SUPPLEMENT_EMPTY', `Yahoo Finance returned no usable data for ${ticker}`, {
+                ticker,
+                errorMessage: processedAsset.yahooError,
+            });
         }
     } else {
+        processedAsset.yahooAttemptedAt = new Date().toISOString();
+        processedAsset.yahooError = yahooSupplement.error instanceof Error
+            ? yahooSupplement.error.message
+            : String(yahooSupplement.error);
         void logger.warn('YAHOO_SUPPLEMENT_FAILED', `Could not supplement ${ticker} with Yahoo Finance data`, {
             ticker,
-            errorMessage: yahooSupplement.error instanceof Error
-                ? yahooSupplement.error.message
-                : String(yahooSupplement.error),
+            errorMessage: processedAsset.yahooError,
         });
     }
 

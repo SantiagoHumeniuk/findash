@@ -81,6 +81,26 @@ describe('growth-aware financial valuation', () => {
     expect(recommendation.status).not.toBe('BUY');
   });
 
+  it('uses Yahoo target consensus only when analyst coverage is sufficient', () => {
+    const asset = makeTechnologyAsset('US');
+    asset.quote.price = 100;
+    asset.yahooMetrics = {
+      'financialData.targetMeanPrice': 70,
+      'financialData.numberOfAnalystOpinions': 6,
+    };
+
+    const coveredRecommendation = generateAdvisory('TECH', { TECH: asset }, []);
+    expect(coveredRecommendation.reasons.some((reason) =>
+      reason.text.includes('objetivo medio de Yahoo Finance') && reason.type === 'negative'
+    )).toBe(true);
+
+    asset.yahooMetrics['financialData.numberOfAnalystOpinions'] = 2;
+    const sparseRecommendation = generateAdvisory('TECH', { TECH: asset }, []);
+    expect(sparseRecommendation.reasons.some((reason) =>
+      reason.text.includes('cobertura insuficiente') && reason.type === 'neutral'
+    )).toBe(true);
+  });
+
   it('does not calculate sector concentration across mixed quote currencies', () => {
     const usdAsset = makeFintechAsset(6.4);
     const arsAsset = {
