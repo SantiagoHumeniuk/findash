@@ -83,4 +83,12 @@ Desde la raíz del proyecto, publicar la función nueva con:
 supabase functions deploy data912-fixed-income-proxy
 ```
 
+### Variables macroeconómicas: ArgentinaDatos y Dolarazo
+
+Las cotizaciones de dólares, inflación, plazos fijos y UVA, junto con la fuente alternativa Dolarazo, se solicitan a través de `argentina-macro-proxy`. Esto evita depender de políticas CORS inconsistentes de los proveedores, en particular la restricción de origen del endpoint UVA de ArgentinaDatos. El proxy acepta únicamente recursos predefinidos y valida los errores de respuesta antes de mostrarlos en la interfaz.
+
+```bash
+supabase functions deploy argentina-macro-proxy
+```
+
 Después del despliegue de ambas funciones y del frontend actualizado, verificar en Supabase que `data912-fixed-income-proxy` devuelva `fetchedAt`, `sovereign`, `corporate` y el objeto `errors`. La API de cotizaciones no incluye calendarios de cupones, amortizaciones ni flujos de fondos: por eso la TIR se estima únicamente para letras cero cupón cuyo vencimiento se puede inferir del ticker; para los demás instrumentos se indica que no está disponible, en vez de presentar una tasa inventada.

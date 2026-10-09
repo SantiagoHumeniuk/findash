@@ -1,6 +1,7 @@
 // src/features/asset-detail/components/header/asset-header.tsx
 
 import { TrendingDown, TrendingUp } from 'lucide-react';
+import { Badge } from '../../../../components/ui/badge';
 import { formatPrice, formatPercentage } from '../../lib/asset-formatters';
 import type { AssetData } from '../../../../types/dashboard';
 import { WatchlistToggleButton } from '../../../watchlist/components';
@@ -62,6 +63,16 @@ export function AssetHeader({ asset }: AssetHeaderProps) {
             )}
             {formatPercentage(Math.abs(changePercentage))}
           </span>
+          {asset.dataSource === 'Yahoo Finance' && (
+            <Badge variant="outline" className="border-amber-500/40 text-amber-700 dark:text-amber-400">
+              Yahoo Finance · fallback de FMP
+            </Badge>
+          )}
+          {asset.dataSource === 'FMP + Yahoo Finance' && (
+            <Badge variant="outline" className="border-blue-500/40 text-blue-700 dark:text-blue-400">
+              FMP + métricas recientes de Yahoo
+            </Badge>
+          )}
         </div>
       </div>
     </div>

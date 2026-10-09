@@ -1,5 +1,7 @@
 // src/services/macro-api.ts
 
+import { supabase } from '../lib/supabase';
+
 export interface DolarCotizacion {
   casa: string;
   nombre: string;
@@ -60,17 +62,53 @@ const CASA_NOMBRES: Record<string, string> = {
   solidario: 'Dólar Solidario',
 };
 
+type MacroResource = 'dolares' | 'inflacion' | 'plazos-fijos' | 'uva' | 'dolarazo';
+
+async function fetchMacroResource(resource: MacroResource): Promise<unknown> {
+  const { data, error } = await supabase.functions.invoke('argentina-macro-proxy', {
+    body: { resource },
+  });
+  if (error) throw new Error(`No se pudo consultar ${resource}: ${error.message}`);
+  if (data === null || data === undefined) {
+    throw new Error(`ArgentinaDatos no devolvió datos para ${resource}`);
+  }
+  if (
+    typeof data === 'object' &&
+    'error' in data &&
+    typeof data.error === 'string'
+  ) {
+    throw new Error(data.error);
+  }
+  return data;
+}
+
 /**
- * Obtener cotizaciones de ArgentinaDatos API (100% gratuita, CORS habilitado)
+ * Obtener cotizaciones de ArgentinaDatos a través del proxy de Supabase.
  */
 export async function fetchDolaresArgentinaDatos(): Promise<DolarCotizacion[]> {
-  const res = await fetch('https://api.argentinadatos.com/v1/cotizaciones/dolares');
-  if (!res.ok) throw new Error(`ArgentinaDatos HTTP ${res.status}`);
-  const data: Array<{ casa: string; compra: number; venta: number; fecha: string }> = await res.json();
+  const data = await fetchMacroResource('dolares');
+  if (
+    !Array.isArray(data) ||
+    !data.every((item: unknown) =>
+      typeof item === 'object' &&
+      item !== null &&
+      'casa' in item &&
+      typeof item.casa === 'string' &&
+      'compra' in item &&
+      typeof item.compra === 'number' &&
+      'venta' in item &&
+      typeof item.venta === 'number' &&
+      'fecha' in item &&
+      typeof item.fecha === 'string'
+    )
+  ) {
+    throw new Error('ArgentinaDatos devolvió cotizaciones de dólares con formato inválido');
+  }
+  const records = data as { casa: string; compra: number; venta: number; fecha: string }[];
 
   // El endpoint devuelve histórico cronológico. Agrupamos por casa quedándonos con el último registro disponible
   const mapLatest = new Map<string, { casa: string; compra: number; venta: number; fecha: string }>();
-  for (const item of data) {
+  for (const item of records) {
     if (item.casa) {
       mapLatest.set(item.casa.toLowerCase(), item);
     }
@@ -99,33 +137,41 @@ export async function fetchDolaresArgentinaDatos(): Promise<DolarCotizacion[]> {
  * Obtener cotizaciones de Dolarazo API
  */
 export async function fetchDolaresDolarazo(): Promise<DolarCotizacion[]> {
-  // Intentar primero a través del proxy de Vite si estamos en dev o directamente
-  const urls = ['/api/dolarazo/api/v1/cotizaciones/dolares', 'https://www.dolarazo.com.ar/api/v1/cotizaciones/dolares'];
-  let json: any = null;
-
-  for (const url of urls) {
-    try {
-      const res = await fetch(url);
-      if (res.ok) {
-        json = await res.json();
-        if (json && json.ok && Array.isArray(json.data)) break;
-      }
-    } catch {
-      // Intentar siguiente URL
-    }
+  const payload = await fetchMacroResource('dolarazo');
+  if (
+    typeof payload !== 'object' ||
+    payload === null ||
+    !('ok' in payload) ||
+    payload.ok !== true ||
+    !('data' in payload) ||
+    !Array.isArray(payload.data)
+  ) {
+    throw new Error('Dolarazo devolvió cotizaciones con formato inválido');
   }
 
-  if (!json || !json.data) throw new Error('No se pudo contactar con Dolarazo');
-
   const list: DolarCotizacion[] = [];
-  for (const item of json.data) {
+  for (const item of payload.data) {
+    if (
+      typeof item !== 'object' ||
+      item === null ||
+      !('casa' in item) ||
+      typeof item.casa !== 'string' ||
+      !('compra' in item) ||
+      typeof item.compra !== 'number' ||
+      !('venta' in item) ||
+      typeof item.venta !== 'number'
+    ) {
+      throw new Error('Dolarazo devolvió una cotización con formato inválido');
+    }
     const casa = item.casa.toLowerCase();
     list.push({
       casa,
-      nombre: item.nombre || CASA_NOMBRES[casa] || casa.toUpperCase(),
+      nombre: ('nombre' in item && typeof item.nombre === 'string' ? item.nombre : null) ?? CASA_NOMBRES[casa] ?? casa.toUpperCase(),
       compra: item.compra,
       venta: item.venta,
-      fecha: item.fechaActualizacion || new Date().toISOString(),
+      fecha: ('fechaActualizacion' in item && typeof item.fechaActualizacion === 'string'
+        ? item.fechaActualizacion
+        : null) ?? new Date().toISOString(),
     });
   }
 
@@ -179,31 +225,67 @@ export async function fetchUnifiedDolares(
  * Obtener histórico de inflación (IPC) mensual
  */
 export async function fetchInflacion(): Promise<InflacionDato[]> {
-  const res = await fetch('https://api.argentinadatos.com/v1/finanzas/indices/inflacion');
-  if (!res.ok) throw new Error(`Inflacion HTTP ${res.status}`);
-  const data: Array<{ fecha: string; valor: number }> = await res.json();
-  return data;
+  const data = await fetchMacroResource('inflacion');
+  if (
+    !Array.isArray(data) ||
+    !data.every((item: unknown) =>
+      typeof item === 'object' &&
+      item !== null &&
+      'fecha' in item &&
+      typeof item.fecha === 'string' &&
+      'valor' in item &&
+      typeof item.valor === 'number' &&
+      Number.isFinite(item.valor)
+    )
+  ) {
+    throw new Error('ArgentinaDatos devolvió datos de inflación con formato inválido');
+  }
+  return data as InflacionDato[];
 }
 
 /**
  * Obtener tasas de Plazo Fijo bancario
  */
 export async function fetchPlazosFijos(): Promise<PlazoFijoDato[]> {
-  const res = await fetch('https://api.argentinadatos.com/v1/finanzas/tasas/plazoFijo');
-  if (!res.ok) throw new Error(`Plazos Fijos HTTP ${res.status}`);
-  const data: PlazoFijoDato[] = await res.json();
+  const data = await fetchMacroResource('plazos-fijos');
+  if (
+    !Array.isArray(data) ||
+    !data.every((item: unknown) =>
+      typeof item === 'object' &&
+      item !== null &&
+      'entidad' in item &&
+      typeof item.entidad === 'string' &&
+      'tnaClientes' in item &&
+      typeof item.tnaClientes === 'number'
+    )
+  ) {
+    throw new Error('ArgentinaDatos devolvió tasas de plazo fijo con formato inválido');
+  }
+  const deposits = data as PlazoFijoDato[];
   // Ordenar por mejor TNA clientes descendente
-  return data.sort((a, b) => (b.tnaClientes || 0) - (a.tnaClientes || 0));
+  return deposits.sort((a, b) => (b.tnaClientes || 0) - (a.tnaClientes || 0));
 }
 
 /**
  * Obtener índice UVA / CER
  */
 export async function fetchUva(): Promise<UvaDato[]> {
-  const res = await fetch('https://api.argentinadatos.com/v1/finanzas/indices/uva');
-  if (!res.ok) throw new Error(`UVA HTTP ${res.status}`);
-  const data: UvaDato[] = await res.json();
-  return data;
+  const data = await fetchMacroResource('uva');
+  if (
+    !Array.isArray(data) ||
+    !data.every((item: unknown) =>
+      typeof item === 'object' &&
+      item !== null &&
+      'fecha' in item &&
+      typeof item.fecha === 'string' &&
+      'valor' in item &&
+      typeof item.valor === 'number' &&
+      Number.isFinite(item.valor)
+    )
+  ) {
+    throw new Error('La API UVA devolvió datos incompletos o con formato desconocido');
+  }
+  return data as UvaDato[];
 }
 
 /**
@@ -380,8 +462,10 @@ export function getCurvaLecapYTasaFija(
       ((Math.pow(1 + tem / 100, 365 / 30) - 1) * 100).toFixed(2)
     );
 
-    // Valor técnico estimado
-    const valorTecnico = Number((item.precioBase * 1.005).toFixed(2));
+    // Project the technical value to maturity using this instrument's monthly yield.
+    const valorTecnico = Number(
+      (item.precioBase * Math.pow(1 + tem / 100, diffDays / 30)).toFixed(2)
+    );
 
     return {
       ticker: item.ticker,

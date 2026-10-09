@@ -12,8 +12,10 @@ import { OnboardingProfile, UserProfile } from "../types/profile.types";
 import { extractOnboardingProfile, formatSupabaseError } from "../lib/profile.utils";
 import {
   ProfileSkeleton,
+  ProfileAvatarEditor,
   PersonalInfoForm,
   InvestmentPreferencesForm,
+  SubscriptionPlanCard,
 } from "../components";
 
 export default function ProfilePage() {
@@ -53,7 +55,15 @@ export default function ProfilePage() {
     setLoading(true);
     const toastId = toast.loading("Guardando cambios...");
 
-    const onboardingProfile: OnboardingProfile = { investorProfile, experience, interests };
+    const savedAvatarIndex = profile?.onboarding_profile?.avatarIndex;
+    const savedAvatarImage = profile?.onboarding_profile?.avatarImage;
+    const onboardingProfile: OnboardingProfile = {
+      investorProfile,
+      experience,
+      interests,
+      avatarIndex: typeof savedAvatarIndex === 'number' ? savedAvatarIndex : undefined,
+      avatarImage: typeof savedAvatarImage === 'string' ? savedAvatarImage : undefined,
+    };
 
     try {
       const { error }: { error: unknown } = await supabase
@@ -128,6 +138,8 @@ export default function ProfilePage() {
         }}
         className="space-y-6 sm:space-y-8"
       >
+        <ProfileAvatarEditor />
+
         {/* Información Personal */}
         <PersonalInfoForm
           firstName={firstName}
@@ -145,6 +157,8 @@ export default function ProfilePage() {
           onExperienceChange={setExperience}
           onInterestChange={handleInterestChange}
         />
+
+        <SubscriptionPlanCard profile={profile} />
 
         {/* Botón de acción */}
         <div className="flex justify-end pt-4">

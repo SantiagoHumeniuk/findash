@@ -7,8 +7,6 @@ import { AssetData } from '../types/dashboard';
 import { useAuth } from '../hooks/use-auth';
 import { useConfig } from '../hooks/use-config';
 import { calculateHoldings, calculateTotalPerformance } from '../utils/portfolio-calculations';
-import { LoadingScreen } from '../components/ui/loading-screen';
-import { ErrorScreen } from '../components/ui/error-screen';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePortfolioMutations } from '../features/portfolio/hooks/use-portfolio-mutations';
 import { toast } from 'sonner';
@@ -98,6 +96,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     const { user, profile } = useAuth();
     const config = useConfig();
     const queryClient = useQueryClient();
+    const isPortfolioLoading = !!user && !!profile && isLoading;
 
     // Local state for selected portfolio ID
     const [currentPortfolioId, setCurrentPortfolioId] = useState<number | null>(null);
@@ -242,7 +241,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         portfolioData,
         portfolios,
         currentPortfolio,
-        loading: isLoading,
+        loading: isPortfolioLoading,
         error: isError ? error.message : null,
         selectPortfolio,
         createPortfolio,
@@ -253,19 +252,6 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
             await refetch();
         },
     };
-
-    if (isLoading && !data) {
-        return <LoadingScreen message="Cargando portafolio..." />;
-    }
-    if (isError) {
-        return (
-            <ErrorScreen
-                title="Error al Cargar el Portafolio"
-                message={error.message}
-                onRetry={() => void refetch()}
-            />
-        );
-    }
 
     return (
         <PortfolioContext.Provider value={value}>

@@ -40,6 +40,11 @@ export function extractOnboardingProfile(raw: unknown): OnboardingProfile {
         typeof obj.experience === "string" && obj.experience !== "" 
           ? obj.experience 
           : "",
+      avatarIndex:
+        typeof obj.avatarIndex === "number" && obj.avatarIndex >= 1 && obj.avatarIndex <= 3
+          ? obj.avatarIndex
+          : undefined,
+      avatarImage: typeof obj.avatarImage === "string" ? obj.avatarImage : undefined,
       interests:
         typeof obj.interests === "object" && obj.interests !== null
           ? obj.interests

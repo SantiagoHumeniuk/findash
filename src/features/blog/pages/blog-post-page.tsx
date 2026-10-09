@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
-import { Avatar, AvatarFallback } from '../../../components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
 import { Card, CardHeader, CardContent } from '../../../components/ui/card';
 import { BlogInteractions } from '../components/blog-interactions';
 import { BlogComments } from '../components/blog-comments';
@@ -12,6 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/use-auth';
+import { getProfileAvatarIndex, getProfileAvatarUrl } from '../../../lib/profile-avatar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -30,8 +31,12 @@ interface BlogPost {
   user_id: string;
   status: 'draft' | 'pending_review' | 'approved' | 'rejected';
   author: {
+    id: string;
     first_name: string;
     last_name: string;
+    avatar_index?: number | string | null;
+    avatar_image?: string | null;
+    can_upload_blog?: boolean | null;
   };
 }
 
@@ -84,7 +89,7 @@ function BlogPostPage() {
         .from('blogs')
         .select(`
           *,
-          author:profiles!fk_author(first_name, last_name)
+          author:profiles!fk_author(id, first_name, last_name, avatar_index:onboarding_profile->avatarIndex, avatar_image:onboarding_profile->avatarImage, can_upload_blog)
         `)
         .eq('slug', slug)
         .single();
@@ -287,33 +292,6 @@ function BlogPostPage() {
     })();
   };
 
-  const handleAddComment = async (content: string, parentId?: string) => {
-    if (!user || !blog) return;
-
-    try {
-      const commentResult = await supabase
-        .from('blog_comments')
-        .insert({
-          blog_id: blog.id,
-          user_id: user.id,
-          content,
-          parent_comment_id: parentId ?? null
-        })
-        .select(`
-          *,
-          author:profiles!blog_comments_user_id_fkey(first_name, last_name)
-        `)
-        .single();
-
-      if (commentResult.error) throw commentResult.error;
-      if (commentResult.data) {
-        setComments(prev => [...prev, commentResult.data as unknown as Comment]);
-      }
-    } catch (error) {
-      console.error('Error adding comment:', error);
-    }
-  };
-
   const handleShare = () => {
     const url = window.location.href;
     if (navigator.share) {
@@ -393,6 +371,9 @@ function BlogPostPage() {
         <div className="flex items-center justify-between flex-wrap gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12">
+              {blog.author.can_upload_blog && (
+                <AvatarImage src={getProfileAvatarUrl(getProfileAvatarIndex(blog.author.id, blog.author.avatar_index), blog.author.avatar_image)} alt="" />
+              )}
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
             <div>
@@ -477,8 +458,6 @@ function BlogPostPage() {
       {/* Comentarios */}
       <BlogComments
         comments={comments}
-        onAddComment={handleAddComment}
-        currentUserId={user?.id}
       />
         </div>
 
@@ -551,6 +530,9 @@ function BlogPostPage() {
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-3">
                 <Avatar className="h-12 w-12">
+                  {blog.author.can_upload_blog && (
+                    <AvatarImage src={getProfileAvatarUrl(getProfileAvatarIndex(blog.author.id, blog.author.avatar_index), blog.author.avatar_image)} alt="" />
+                  )}
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
                 <div>

@@ -20,6 +20,37 @@ export interface AssetData {
     ratios: AssetRatios[];
     analystEstimates: AssetAnalystEstimates[];
     gradesConsensus: AssetGradesConsensus;
+    peerValuations?: AssetPeerValuation[];
+    analystGradeUpdates?: AssetAnalystGradeUpdate[];
+    dataSource?: 'FMP' | 'Yahoo Finance' | 'FMP + Yahoo Finance';
+    dataFetchedAt?: string;
+    yahooMetrics?: Record<string, number | null>;
+}
+
+export interface AssetAnalystGradeUpdate {
+    symbol: string;
+    date: string;
+    gradingCompany: string;
+    previousGrade: string;
+    newGrade: string;
+    action: string;
+}
+
+export interface AssetPeerValuation {
+    symbol: string;
+    companyName: string;
+    price: number;
+    marketCap: number;
+    priceToEarningsRatio: number;
+    priceToBookRatio: number;
+    priceToSalesRatio: number;
+    priceToFreeCashFlowRatio: number;
+    ebitMargin?: number;
+    returnOnEquity?: number;
+    debtToEquity?: number;
+    evToEBITDA: number;
+    evToEBIT: number;
+    evToSales: number;
 }
 
 export interface AssetProfile {
@@ -125,6 +156,10 @@ export interface AssetQuote {
     open: number;
     previousClose: number;
     timestamp: number;
+    pe?: number;
+    forwardPE?: number;
+    forwardEPS?: number;
+    trailingEPS?: number;
 }
 
 export interface AssetHistorical {

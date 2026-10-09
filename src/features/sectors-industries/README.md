@@ -15,6 +15,7 @@ src/features/sectors-industries/
 │   ├── stats-card.tsx                 # Tarjeta de estadísticas
 │   ├── performance-chart.tsx          # Gráfico de líneas
 │   ├── performance-table.tsx          # Tabla de datos
+│   ├── yahoo-finance-test.tsx         # Prueba temporal de cotizaciones y métricas Yahoo
 │   ├── skeleton.tsx                   # Loading skeleton
 │   └── index.ts                       # Barrel export
 ├── hooks/
@@ -82,6 +83,39 @@ Gráfico de líneas usando Recharts que visualiza el cambio promedio diario en e
 
 ### PerformanceTable
 Tabla que muestra los registros más recientes de performance con formato legible.
+
+## Prueba temporal de Yahoo Finance
+
+La pestaña **Yahoo Finance** (se abre por defecto), consulta símbolos individuales de Tecnología
+(por defecto AAPL, MSFT, NVDA y GOOGL). Permite probar otros tickers, hasta un máximo
+de 8 por consulta. Para cada símbolo muestra precio, PER trailing, PER forward, EPS
+trailing/forward, capitalización, estado del mercado y hora de la última cotización
+con su antigüedad. Los ratios se muestran por activo; no se calcula un PER agregado
+del sector.
+
+Las consultas se realizan mediante `supabase/functions/yahoo-finance-proxy`, que
+obtiene el crumb/cookie requerido por Yahoo Finance y solicita `quoteSummary`.
+Despliega esta función en el mismo proyecto Supabase configurado para la aplicación
+antes de probar la pestaña:
+
+```bash
+supabase functions deploy yahoo-finance-proxy
+```
+
+Yahoo Finance puede no devolver ciertos campos para algunos símbolos, y los tiempos
+de mercado pueden estar retrasados. Los campos ausentes se muestran como
+**No disponible**; la hora que se muestra corresponde a la cotización reportada por
+Yahoo, junto con el momento de recepción de la respuesta.
+
+### Fallback automático al buscar un activo
+
+La carga de activos intenta FMP primero. Si FMP falla, devuelve un símbolo inexistente,
+o se alcanzó el límite de llamadas de FMP, `fetchTickerData` consulta el mismo proxy
+Yahoo Finance para el ticker buscado. En ese caso el dashboard muestra cotización,
+PER trailing y forward PER cuando Yahoo los entregue, etiqueta el activo como
+**Yahoo Finance · fallback** y excluye los datos incompletos de las puntuaciones
+fundamentales. Si también falla Yahoo, se usan datos guardados cuando existan; de lo
+contrario se muestran ambos errores.
 
 ## Hooks Personalizados
 

@@ -18,14 +18,13 @@ import { Card, CardContent } from '../../../components/ui/card';
 import { 
   Crown, 
   Rocket, 
-  Copy, 
-  Check, 
   UploadCloud, 
   X, 
   AlertCircle,
   Clock,
   ShieldCheck,
-  QrCode
+  ExternalLink,
+  CreditCard,
 } from 'lucide-react';
 import { useConfig } from '../../../hooks/use-config';
 import { useAuth } from '../../../hooks/use-auth';
@@ -43,53 +42,28 @@ export function PaymentModal({ isOpen, onClose, plan, onSuccess }: PaymentModalP
   const config = useConfig();
   const { user, profile } = useAuth();
 
-  const [copiedAlias, setCopiedAlias] = useState(false);
-  const [copiedCvu, setCopiedCvu] = useState(false);
-
   // Form State
   const [senderName, setSenderName] = useState(
     profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : ''
   );
-  const [receiptReference, setReceiptReference] = useState('');
   const [notes, setNotes] = useState('');
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [imageFileName, setImageFileName] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Payment account defaults from config
-  const paymentInfo = config.payment || {
-    bankName: 'Mercado Pago',
-    accountHolder: 'Santiago Humeniuk',
-    alias: 'santiagohumeniuk',
-    cvu: '00000031300056422142774',
-    cuitCuil: 'Mercado Pago',
-    instructions: 'Transfiere el monto exacto desde tu cuenta bancaria o Mercado Pago.',
-    pricing: {
-      plus: 15000,
-      premium: 25000,
-    },
-  };
-
   const planName = plan === 'plus' ? 'Plus' : 'Premium';
-  const planPrice = plan === 'plus' ? (paymentInfo.pricing?.plus ?? 15000) : (paymentInfo.pricing?.premium ?? 25000);
+  const planPrice = plan === 'plus'
+    ? (config.payment?.pricing?.plus ?? 15000)
+    : (config.payment?.pricing?.premium ?? 25000);
+  const paymentLink = plan === 'plus'
+    ? (config.payment?.links?.plus ?? 'https://mpago.la/2wrJ9MD')
+    : (config.payment?.links?.premium ?? 'https://mpago.la/2U7wTKi');
   const planIcon = plan === 'plus' ? Crown : Rocket;
   const PlanIconComponent = planIcon;
   const planGradient = plan === 'plus' 
     ? 'from-purple-500 to-pink-500' 
     : 'from-orange-500 to-red-500';
-
-  const copyToClipboard = (text: string, type: 'alias' | 'cvu') => {
-    void navigator.clipboard.writeText(text);
-    if (type === 'alias') {
-      setCopiedAlias(true);
-      setTimeout(() => setCopiedAlias(false), 2000);
-    } else {
-      setCopiedCvu(true);
-      setTimeout(() => setCopiedCvu(false), 2000);
-    }
-    toast.success(`${type === 'alias' ? 'Alias' : 'CVU'} copiado al portapapeles`);
-  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,8 +100,8 @@ export function PaymentModal({ isOpen, onClose, plan, onSuccess }: PaymentModalP
       return;
     }
 
-    if (!receiptReference.trim() && !receiptImage) {
-      toast.error('Por favor ingresa el número de comprobante o sube una captura');
+    if (!receiptImage) {
+      toast.error('Adjunta una captura del comprobante de pago para continuar.');
       return;
     }
 
@@ -138,7 +112,6 @@ export function PaymentModal({ isOpen, onClose, plan, onSuccess }: PaymentModalP
         plan,
         amount: planPrice,
         senderName: senderName.trim(),
-        receiptReference: receiptReference.trim() || undefined,
         receiptImage: receiptImage || undefined,
         notes: notes.trim() || undefined,
       });
@@ -166,7 +139,6 @@ export function PaymentModal({ isOpen, onClose, plan, onSuccess }: PaymentModalP
   const handleClose = () => {
     if (submitted) {
       setSubmitted(false);
-      setReceiptReference('');
       setNotes('');
       setReceiptImage(null);
       setImageFileName(null);
@@ -226,77 +198,38 @@ export function PaymentModal({ isOpen, onClose, plan, onSuccess }: PaymentModalP
                 </Badge>
               </div>
               <DialogDescription className="text-xs sm:text-sm">
-                Transfiere mediante <strong>Mercado Pago</strong> o cualquier banco a los siguientes datos y confirma tu comprobante.
+                Paga tu plan mediante el enlace seguro de Mercado Pago y luego confirma la operación adjuntando el comprobante.
               </DialogDescription>
             </DialogHeader>
 
-            {/* Account Details Box */}
+            {/* Mercado Pago checkout */}
             <Card className="border-primary/20 bg-muted/40 my-2">
-              <CardContent className="p-3 sm:p-4 space-y-3">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <span className="text-xs text-muted-foreground font-medium">Billetera / Banco:</span>
-                  <span className="text-xs sm:text-sm font-semibold flex items-center gap-1.5">
-                    <span className="inline-block w-2 h-2 rounded-full bg-blue-500"></span>
-                    {paymentInfo.bankName}
-                  </span>
+              <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <span className="text-xs font-medium text-muted-foreground">Destinatario del pago</span>
+                  <p className="text-base font-bold text-foreground">Findash {planName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    ${planPrice.toLocaleString('es-AR')} ARS · pago mediante Mercado Pago
+                  </p>
                 </div>
-
-                <div className="flex items-center justify-between border-b pb-2">
-                  <span className="text-xs text-muted-foreground font-medium">Titular de la cuenta:</span>
-                  <span className="text-xs sm:text-sm font-semibold">{paymentInfo.accountHolder}</span>
-                </div>
-
-                <div className="flex items-center justify-between border-b pb-2">
-                  <span className="text-xs text-muted-foreground font-medium">CUIT / CUIL:</span>
-                  <span className="text-xs sm:text-sm font-mono">{paymentInfo.cuitCuil}</span>
-                </div>
-
-                {/* Alias with Copy Button */}
-                <div className="flex items-center justify-between bg-background/80 p-2 rounded-md border">
-                  <div>
-                    <span className="text-[11px] text-muted-foreground block">Alias:</span>
-                    <span className="text-xs sm:text-sm font-bold font-mono text-primary">{paymentInfo.alias}</span>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs gap-1"
-                    onClick={() => copyToClipboard(paymentInfo.alias, 'alias')}
-                  >
-                    {copiedAlias ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copiedAlias ? 'Copiado' : 'Copiar'}
-                  </Button>
-                </div>
-
-                {/* CVU with Copy Button */}
-                <div className="flex items-center justify-between bg-background/80 p-2 rounded-md border">
-                  <div>
-                    <span className="text-[11px] text-muted-foreground block">CVU:</span>
-                    <span className="text-xs font-mono break-all">{paymentInfo.cvu}</span>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs gap-1 shrink-0 ml-2"
-                    onClick={() => copyToClipboard(paymentInfo.cvu, 'cvu')}
-                  >
-                    {copiedCvu ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copiedCvu ? 'Copiado' : 'Copiar'}
-                  </Button>
-                </div>
+                <Button asChild className="w-full shrink-0 sm:w-auto">
+                  <a href={paymentLink} target="_blank" rel="noopener noreferrer">
+                    <CreditCard className="h-4 w-4" />
+                    Pagar {planName}
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
               </CardContent>
             </Card>
 
             {/* Notification / Instructions */}
-            <div className="flex items-center gap-2 text-[11px] sm:text-xs text-muted-foreground bg-blue-500/5 text-blue-600 dark:text-blue-400 p-2.5 rounded-lg border border-blue-500/20">
-              <QrCode className="w-4 h-4 shrink-0" />
-              <span>Transfiere exactamente <strong>${planPrice.toLocaleString('es-AR')}</strong> para facilitar la validación inmediata.</span>
+            <div className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 p-2.5 text-[11px] text-blue-600 dark:text-blue-400 sm:text-xs">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>Al completar el pago, vuelve aquí y envía el número de operación o una captura del comprobante.</span>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-3.5 pt-1">
+            <form onSubmit={(event) => void handleSubmit(event)} className="space-y-3.5 pt-1">
               <div className="space-y-1.5">
                 <Label htmlFor="senderName" className="text-xs sm:text-sm">
                   Nombre del Titular de la cuenta que transfiere <span className="text-destructive">*</span>
@@ -311,22 +244,9 @@ export function PaymentModal({ isOpen, onClose, plan, onSuccess }: PaymentModalP
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="receiptReference" className="text-xs sm:text-sm">
-                  N° de Comprobante / Operación de Mercado Pago (Opcional si adjuntas captura)
-                </Label>
-                <Input
-                  id="receiptReference"
-                  placeholder="Ej: 9876543210"
-                  value={receiptReference}
-                  onChange={(e) => setReceiptReference(e.target.value)}
-                  className="text-xs sm:text-sm font-mono"
-                />
-              </div>
-
               {/* Upload Receipt Image */}
               <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm">Comprobante de Transferencia (Captura / Foto)</Label>
+                <Label className="text-xs sm:text-sm">Comprobante de pago (Captura / Foto) *</Label>
                 {receiptImage ? (
                   <div className="relative rounded-lg border p-2 bg-muted/30 flex items-center justify-between">
                     <div className="flex items-center gap-2 overflow-hidden">
