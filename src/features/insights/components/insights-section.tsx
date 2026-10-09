@@ -69,15 +69,17 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({ title, subtitl
 
   return (
     <Card>
-      <CardHeader className="p-4 sm:p-6">
-        <CardTitle className="text-lg">{title}</CardTitle>
-        {subtitle && <CardDescription>{subtitle}</CardDescription>}
-      </CardHeader>
-      <CardContent className="p-4 sm:p-6">
-        <TooltipProvider> {/* Envuelve con TooltipProvider */}
-          <div className="overflow-x-auto border rounded-lg">
+      {(title || subtitle) && (
+        <CardHeader className="p-4 pb-3 sm:p-6 sm:pb-4">
+          {title && <CardTitle className="text-lg">{title}</CardTitle>}
+          {subtitle && <CardDescription>{subtitle}</CardDescription>}
+        </CardHeader>
+      )}
+      <CardContent className={title || subtitle ? 'p-4 pt-0 sm:p-6 sm:pt-0' : 'p-0 sm:p-2'}>
+        <TooltipProvider>
+          <div className="max-h-[min(68vh,720px)] overflow-auto border-y sm:border rounded-md">
             <Table>
-              <TableHeader className="bg-muted/50">
+              <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur">
                 <TableRow>
                   {columns.map((c) => (
                     <TableHead key={c.key} className={`text-xs sm:text-sm font-semibold ${c.align === 'center' ? 'text-center' : ''}`}>
@@ -86,7 +88,13 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({ title, subtitl
                         {c.tooltip && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              <button
+                                type="button"
+                                aria-label={`Información sobre ${c.label}`}
+                                className="inline-flex h-6 w-6 items-center justify-center rounded-sm text-foreground/80 transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <HelpCircle className="h-4 w-4" aria-hidden="true" />
+                              </button>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="max-w-xs">
                               <p>{c.tooltip}</p>
@@ -101,8 +109,10 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({ title, subtitl
               <TableBody>
                 {items.length === 0 ? (
                     <TableRow>
-                        <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                            No hay activos que cumplan los criterios actuales.
+                        <TableCell colSpan={columns.length} className="h-28 text-center text-muted-foreground">
+                            {kind === 'undervalued' || kind === 'overvalued'
+                              ? 'No hay señales de valoración en esta selección.'
+                              : 'No hay recomendaciones para esta selección.'}
                         </TableCell>
                     </TableRow>
                 ) : (

@@ -30,6 +30,7 @@ interface PreparedAssetRow {
     sharpeRatio: number | 'N/A';
     lastMonthAvgPriceTarget: number;
     targetConsensus: number | null;
+    dataSource: AssetData['dataSource'];
     original: AssetData;
 }
 
@@ -112,12 +113,13 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                 image: asset.profile.image,
                 currentPrice: latestPrice,
                 dayChange: asset.quote?.changePercentage || 0,
-                monthChange: asset.stockPriceChange["1M"] || 0,
-                yearChange: asset.stockPriceChange["1Y"] || 0,
+                monthChange: asset.dataSource === 'Yahoo Finance' ? 'N/A' : asset.stockPriceChange["1M"] || 0,
+                yearChange: asset.dataSource === 'Yahoo Finance' ? 'N/A' : asset.stockPriceChange["1Y"] || 0,
                 stdDev,
                 sharpeRatio,
                 lastMonthAvgPriceTarget: asset.priceTarget?.lastMonthAvgPriceTarget || 0,
                 targetConsensus: asset.priceTargetConsensus?.targetConsensus || null,
+                dataSource: asset.dataSource,
                 original: asset
             };
         });
@@ -247,6 +249,9 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                                                         <div className="flex items-center justify-between gap-2">
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="font-bold group-hover:text-primary transition-colors">{asset.symbol}</div>
+                                                                {asset.dataSource === 'Yahoo Finance' && (
+                                                                    <div className="text-[10px] font-normal text-amber-600">Yahoo Finance · fallback</div>
+                                                                )}
                                                                 <div className="caption text-muted-foreground truncate max-w-[180px]">{asset.companyName}</div>
                                                             </div>
                                                         </div>
@@ -292,6 +297,9 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                                             <div className="text-sm flex items-center gap-1.5">
                                                 {asset.symbol}
                                             </div>
+                                            {asset.dataSource === 'Yahoo Finance' && (
+                                                <div className="text-[10px] font-normal text-amber-600">Yahoo Finance · fallback</div>
+                                            )}
                                             <div className="text-xs text-muted-foreground font-normal truncate">{asset.companyName}</div>
                                         </div>
                                     </Link>

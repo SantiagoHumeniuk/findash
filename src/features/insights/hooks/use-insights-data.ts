@@ -9,6 +9,7 @@ import type { InsightsData, InsightItem } from '../types/insights.types';
 import type { AssetData } from '../../../types/dashboard';
 import { toInsightItem, sortUndervalued, sortOvervalued } from '../lib/helpers';
 import { usePlanFeature } from '../../../hooks/use-plan-feature';
+import { useRiskPremiumQuery } from '../../risk-premium/hooks/use-risk-premium-query';
 
 /**
  * Hook que arma las listas de insights a partir del cache, sin consumir API.
@@ -25,10 +26,14 @@ export function useInsightsData() {
   };
   const maxItems: number = insightsCfg.maxItems[role] ?? 5;
   const { hasAccess: hasStockGrades } = usePlanFeature('stockGrades');
+  const { data: riskPremiumData = [] } = useRiskPremiumQuery();
+  const riskPremiumVersion = riskPremiumData
+    .map(({ country, countryRiskPremium }) => `${country}:${countryRiskPremium}`)
+    .join('|');
 
   const queryKey = React.useMemo(() => {
-    return ['insights', role, maxItems, hasStockGrades, insightsCfg.updatedWithinHours] as const;
-  }, [role, maxItems, hasStockGrades, insightsCfg.updatedWithinHours]);
+    return ['insights', role, maxItems, hasStockGrades, insightsCfg.updatedWithinHours, riskPremiumVersion] as const;
+  }, [role, maxItems, hasStockGrades, insightsCfg.updatedWithinHours, riskPremiumVersion]);
 
   return useQuery<InsightsData>({
     queryKey,
@@ -61,7 +66,7 @@ export function useInsightsData() {
         const data = isAssetData(r.data) ? r.data : undefined;
         if (!data) continue;
         
-        const item = toInsightItem(data);
+        const item = toInsightItem(data, riskPremiumData);
         if (item) items.push(item);
       }
 

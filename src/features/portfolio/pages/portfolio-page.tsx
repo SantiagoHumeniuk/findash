@@ -21,6 +21,7 @@ import {
   SellTransactionModal,
   PortfolioSkeleton,
   PortfolioSelector,
+  CsvImportButton,
 } from '../components';
 import { ErrorBoundary } from '../../../components/error-boundary';
 import { ErrorScreen } from '../../../components/ui/error-screen';
@@ -96,6 +97,7 @@ function PortfolioPageContent() {
         holdings: holdingsWithMetrics.map(h => ({
           symbol: h.symbol,
           name: portfolioData[h.symbol]?.profile?.companyName ?? h.symbol,
+          currency: portfolioData[h.symbol]?.profile?.currency,
           quantity: h.quantity,
           averagePrice: h.avgPurchasePrice,
           currentPrice: h.currentPrice,
@@ -155,6 +157,7 @@ function PortfolioPageContent() {
           </div>
           <div className="flex items-center gap-3">
             <PortfolioSelector />
+            <CsvImportButton />
             <Button 
                 onClick={() => void handleExportPdf()} 
                 disabled={exportingPdf || holdingsWithMetrics.length === 0} 

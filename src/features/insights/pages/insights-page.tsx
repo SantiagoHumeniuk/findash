@@ -12,7 +12,7 @@ import { PageHeader } from '../../../components/ui/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, Filter } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Filter, TrendingDown, TrendingUp } from 'lucide-react';
 import type { InsightItem } from '../types/insights.types';
 import { ScreenerTab } from '../components/screener-tab';
 
@@ -46,10 +46,11 @@ const InsightsPage: React.FC = () => {
   // Limit options per role
   const limitOptions = React.useMemo(() => (role === 'basico' ? [max] : [5, 10, 20, 50]), [role, max]);
 
-  // Data query for valuation tab
+  // A single cache-backed query powers both valuation and analyst views.
   const { data: valuationData, isLoading: isValuationLoading, error: valuationError } = useInsightsData();
-  // Data query for analysts tab
-  const { data: analystsData, isLoading: isAnalystsLoading, error: analystsError } = useInsightsData();
+  const analystsData = valuationData;
+  const isAnalystsLoading = isValuationLoading;
+  const analystsError = valuationError;
 
   // Sync limits with role changes
   React.useEffect(() => {
@@ -61,6 +62,12 @@ const InsightsPage: React.FC = () => {
   // Valuation tab data
   const undervalued = valuationData?.undervalued.slice(0, valuationLimit) ?? [];
   const overvalued = valuationData?.overvalued.slice(0, valuationLimit) ?? [];
+  const averageUpside = undervalued.length
+    ? undervalued.reduce((sum, item) => sum + (item.mispricingPct ?? 0), 0) / undervalued.length
+    : null;
+  const averageOverpricing = overvalued.length
+    ? overvalued.reduce((sum, item) => sum + Math.abs(item.mispricingPct ?? 0), 0) / overvalued.length
+    : null;
 
   // Analysts tab data
   const analystItems = React.useMemo(() => {
@@ -129,13 +136,11 @@ const InsightsPage: React.FC = () => {
             <div className="p-6 text-red-600">Error al cargar insights de valoración</div>
           ) : (
             <>
-              <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="flex items-center justify-end mb-4 gap-2">
+              <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Señales de valoración</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Ordenadas por diferencia frente al valor justo ponderado.</p>
+                </div>
                 <LimitSelect
                   value={valuationLimit}
                   options={limitOptions}
@@ -143,6 +148,47 @@ const InsightsPage: React.FC = () => {
                   className="w-[140px]"
                 />
               </div>
+              <div className="grid grid-cols-1 divide-y rounded-md border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                <div className="flex items-center justify-between gap-4 px-4 py-3">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Infravalorados mostrados</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Upside medio</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-semibold tabular-nums">{undervalued.length}</p>
+                    <p className="flex items-center justify-end gap-1 text-sm font-semibold text-green-600 dark:text-green-400">
+                      <ArrowUpRight className="h-4 w-4" />
+                      {averageUpside === null ? 'N/D' : `+${averageUpside.toFixed(1)}%`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-4 px-4 py-3">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Sobrevalorados mostrados</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Sobreprecio medio</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-semibold tabular-nums">{overvalued.length}</p>
+                    <p className="flex items-center justify-end gap-1 text-sm font-semibold text-red-600 dark:text-red-400">
+                      <ArrowDownRight className="h-4 w-4" />
+                      {averageOverpricing === null ? 'N/D' : `${averageOverpricing.toFixed(1)}%`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-4 px-4 py-3">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Activos en ranking</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Sin duplicados</p>
+                  </div>
+                  <p className="text-2xl font-semibold tabular-nums">{undervalued.length + overvalued.length}</p>
+                </div>
+              </div>
+              <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.5 }}
+            >
               <InsightsSection
                 title="Activos Infravalorados"
                 subtitle="Ordenados por mayor descuento relativo entre su valor intrínseco y precio de mercado"

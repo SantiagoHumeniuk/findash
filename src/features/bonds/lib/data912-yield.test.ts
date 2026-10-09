@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateData912ZeroCouponYield } from './data912-yield';
+import { calculateData912ZeroCouponYield, getData912MaturityDate } from './data912-yield';
 import type { Data912BondQuote } from '@/services/api/data912-fixed-income-api';
 
 const quote = (overrides: Partial<Data912BondQuote> = {}): Data912BondQuote => ({
@@ -16,6 +16,12 @@ const quote = (overrides: Partial<Data912BondQuote> = {}): Data912BondQuote => (
 });
 
 describe('calculateData912ZeroCouponYield', () => {
+  it('exposes encoded letter and recognized sovereign maturity dates', () => {
+    expect(getData912MaturityDate('S01E6', new Date(2025, 0, 1, 12))).toEqual(new Date(2026, 0, 1, 12));
+    expect(getData912MaturityDate('AL30C', new Date(2026, 0, 1, 12))).toEqual(new Date(2030, 6, 9, 12));
+    expect(getData912MaturityDate('AEC3O', new Date(2026, 0, 1, 12))).toBeNull();
+  });
+
   it('calculates annual effective yield using the bid/ask midpoint', () => {
     const asOf = new Date(2025, 0, 1, 12);
     const result = calculateData912ZeroCouponYield(quote(), asOf);

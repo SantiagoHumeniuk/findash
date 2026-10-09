@@ -26,7 +26,7 @@ const indicatorSections = [
         id: "valuation",
         title: "Métricas de Valoración",
         subtitle: "Ratios para medir la valoración relativa de la empresa.",
-        keys: ["PER", "pegRatio", "priceToBook", "priceToSales", "pfc_ratio", "evToEbitda", "evToSales", "earningsYield", "grahamNumber", "marketCap"],
+        keys: ["PER", "forwardPER", "pegRatio", "priceToBook", "priceToSales", "pfc_ratio", "evToEbitda", "evToSales", "earningsYield", "grahamNumber", "marketCap"],
     },
     {
         id: "profitability",
@@ -58,6 +58,19 @@ const indicatorSections = [
 function resolveIndicatorValue(asset: AssetData, key: string): number | null {
     const config = indicatorConfig[key];
     if (!config) return null;
+    if (
+        asset.dataSource === 'Yahoo Finance' &&
+        !['PER', 'forwardPER', 'marketCap', 'beta'].includes(key)
+    ) return null;
+    if (asset.dataSource === 'Yahoo Finance') {
+        const yahooMetrics: Record<string, number> = {
+            PER: asset.quote.pe ?? 0,
+            forwardPER: asset.quote.forwardPE ?? 0,
+            marketCap: asset.quote.marketCap,
+            beta: asset.profile.beta,
+        };
+        return yahooMetrics[key] > 0 ? yahooMetrics[key] : null;
+    }
 
     let value: number | null = null;
 
@@ -227,7 +240,9 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                         <LayoutGrid className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                         <div>
                             <CardTitle className="text-lg sm:text-xl">Indicadores Fundamentales</CardTitle>
-                            <CardDescription className="text-xs sm:text-sm">Comparativa detallada de los indicadores clave.</CardDescription>
+                            <CardDescription className="text-xs sm:text-sm">
+                                Comparativa detallada. Los activos de Yahoo Finance muestran únicamente las métricas que esa fuente devolvió.
+                            </CardDescription>
                         </div>
                     </div>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
@@ -279,7 +294,16 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                                             <TableHeader className="bg-muted/50">
                                                 <TableRow>
                                                     <TableHead className="w-[150px] sm:w-[200px] font-semibold text-xs sm:text-sm">Indicador</TableHead>
-                                                    {assets.map(asset => <TableHead key={asset.profile.symbol} className="text-center font-semibold text-xs sm:text-sm">{asset.profile.symbol}</TableHead>)}
+                                                    {assets.map(asset => (
+                                                        <TableHead key={asset.profile.symbol} className="text-center font-semibold text-xs sm:text-sm">
+                                                            <span>{asset.profile.symbol}</span>
+                                                            {asset.dataSource?.includes('Yahoo Finance') && (
+                                                                <span className="ml-1 block text-[10px] font-normal text-amber-600">
+                                                                    {asset.dataSource === 'Yahoo Finance' ? 'Yahoo Finance' : 'FMP + Yahoo'}
+                                                                </span>
+                                                            )}
+                                                        </TableHead>
+                                                    ))}
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>

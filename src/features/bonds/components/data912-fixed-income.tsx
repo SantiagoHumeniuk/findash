@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { fetchData912FixedIncome } from '@/services/api/data912-fixed-income-api';
 import type { Data912BondQuote } from '@/services/api/data912-fixed-income-api';
-import { calculateData912ZeroCouponYield } from '../lib/data912-yield';
+import { calculateData912ZeroCouponYield, getData912MaturityDate } from '../lib/data912-yield';
 
 function formatNumber(value: number, digits = 2): string {
   return new Intl.NumberFormat('es-AR', { maximumFractionDigits: digits }).format(value);
@@ -26,7 +26,7 @@ function QuotesTable({ quotes, query }: { quotes: Data912BondQuote[]; query: str
 
   return (
     <div className="max-h-[70vh] overflow-auto rounded-md border">
-      <table className="w-full min-w-[1050px] text-sm">
+      <table className="w-full min-w-[1180px] text-sm">
         <thead className="sticky top-0 z-10 bg-muted">
           <tr className="text-left">
             <th className="p-3">Ticker</th>
@@ -38,12 +38,14 @@ function QuotesTable({ quotes, query }: { quotes: Data912BondQuote[]; query: str
             <th className="p-3 text-right">Volumen</th>
             <th className="p-3 text-right">Operaciones</th>
             <th className="p-3 text-right">Var. %</th>
-            <th className="p-3 text-right">TIR anual aprox.</th>
+            <th className="p-3 text-right">Vencimiento</th>
+            <th className="p-3 text-right">TIR anual cero cupón</th>
           </tr>
         </thead>
         <tbody className="divide-y">
           {filtered.map((quote) => {
             const ytm = calculateData912ZeroCouponYield(quote);
+            const maturity = getData912MaturityDate(quote.symbol);
             return (
               <tr key={quote.symbol} className="hover:bg-muted/40">
                 <td className="p-3 font-semibold">{quote.symbol}</td>
@@ -56,6 +58,17 @@ function QuotesTable({ quotes, query }: { quotes: Data912BondQuote[]; query: str
                 <td className="p-3 text-right tabular-nums">{formatNumber(quote.q_op, 0)}</td>
                 <td className={`p-3 text-right tabular-nums ${quote.pct_change >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                   {quote.pct_change > 0 ? '+' : ''}{formatNumber(quote.pct_change)}%
+                </td>
+                <td className="p-3 text-right tabular-nums">
+                  {maturity ? (
+                    <time title="Fecha inferida por ticker o mapeo local; confirmar en la ficha oficial del instrumento">
+                      {maturity.toLocaleDateString('es-AR')}
+                    </time>
+                  ) : (
+                    <span className="text-muted-foreground" title="DATA912 no publica vencimientos; falta validar la ficha del instrumento">
+                      No informado
+                    </span>
+                  )}
                 </td>
                 <td className="p-3 text-right tabular-nums">
                   {ytm === null ? (
@@ -80,8 +93,8 @@ function QuotesTable({ quotes, query }: { quotes: Data912BondQuote[]; query: str
  * Live DATA912 tables for every sovereign and corporate ticker.
  *
  * @remarks
- * A yield is calculated only for short zero-coupon symbols whose maturity date is encoded
- * in the ticker; DATA912 quote endpoints do not include coupon schedules or cash flows.
+ * A TIR is calculated only for short zero-coupon symbols whose maturity date is encoded
+ * in the ticker. DATA912 does not provide coupon schedules or cash flows for regular bonds/ONs.
  */
 export function Data912FixedIncome() {
   const [search, setSearch] = React.useState('');
@@ -164,9 +177,10 @@ export function Data912FixedIncome() {
             </Tabs>
           )}
           <p className="text-xs text-muted-foreground">
-            bid/ask y cantidades son los datos crudos de DATA912. La TIR solo se estima para
-            letras cero cupón con vencimiento codificado en el ticker; no se inventan TIR para
-            bonos/ON cuyo cupón, amortización y flujo de fondos no están en estos endpoints.
+            DATA912 solo publica cotizaciones. El vencimiento se muestra cuando está codificado
+            en el ticker o corresponde a una serie soberana reconocida. La TIR solo se calcula
+            para letras cero cupón; no se inventa una TIR para ON/bonos cuyo prospecto y flujos
+            de fondos no están disponibles en el feed.
           </p>
         </CardContent>
       </Card>
