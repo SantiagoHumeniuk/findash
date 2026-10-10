@@ -127,7 +127,11 @@ async function fetchSheet(name: string): Promise<string[][]> {
   const url = new URL(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq`);
   url.searchParams.set("tqx", "out:csv");
   url.searchParams.set("sheet", name);
-  const response = await fetch(url, { signal: AbortSignal.timeout(12_000) });
+  url.searchParams.set("_cacheBust", String(Date.now()));
+  const response = await fetch(url, {
+    headers: { "Cache-Control": "no-cache" },
+    signal: AbortSignal.timeout(12_000),
+  });
   if (!response.ok) throw new Error(`La hoja "${name}" respondió HTTP ${response.status}`);
   return parseCsv(await response.text());
 }
@@ -247,13 +251,13 @@ serve(async (request) => {
   try {
     if (!cachedBundle || Date.now() >= cacheExpiresAt) {
       cachedBundle = await loadSheetBundle();
-      cacheExpiresAt = Date.now() + 15 * 60 * 1000;
+      cacheExpiresAt = Date.now() + 30 * 1000;
     }
     if (cachedBundle.contracts.length === 0) {
       throw new Error(cachedBundle.errors.join(" · ") || "La hoja pública no contiene instrumentos reconocibles");
     }
     return Response.json(cachedBundle, {
-      headers: { ...corsHeaders, "Cache-Control": "public, max-age=300" },
+      headers: { ...corsHeaders, "Cache-Control": "no-store" },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error desconocido";

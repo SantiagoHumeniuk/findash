@@ -370,6 +370,22 @@ async function fetchHistory(symbol: string): Promise<YahooQuote["history"]> {
   });
 }
 
+async function fetchPublicYahooData(symbol: string, error: string): Promise<YahooQuote> {
+  const [historyResult, snapshotResult] = await Promise.allSettled([
+    fetchHistory(symbol),
+    fetchMarketSnapshot(symbol),
+  ]);
+  const history = historyResult.status === "fulfilled" ? historyResult.value : [];
+  const snapshot = snapshotResult.status === "fulfilled" ? snapshotResult.value : null;
+  if (historyResult.status === "rejected") {
+    console.error(`Yahoo history request failed for ${symbol}:`, historyResult.reason);
+  }
+  if (snapshotResult.status === "rejected") {
+    console.error(`Yahoo chart quote request failed for ${symbol}:`, snapshotResult.reason);
+  }
+  return attachHistory(applyMarketSnapshot(emptyQuote(symbol, error), snapshot), history);
+}
+
 async function getYahooSession(): Promise<{ cookie: string; crumb: string }> {
   const cookieResponse = await fetch("https://fc.yahoo.com", {
     headers: { "User-Agent": yahooUserAgent },
@@ -433,7 +449,19 @@ async function fetchQuote(symbol: string, cookie: string, crumb: string): Promis
     );
   }
 
-  const payload: unknown = await response.json();
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch (error) {
+    const parseError = error instanceof Error ? error.message : "respuesta inválida";
+    return attachHistory(
+      applyMarketSnapshot(
+        emptyQuote(symbol, `Yahoo Finance devolvió una respuesta no JSON: ${parseError}`),
+        marketSnapshot,
+      ),
+      history,
+    );
+  }
   const quote = applyMarketSnapshot(normalizeQuote(symbol, payload), marketSnapshot);
   return attachHistory(quote, history);
 }
@@ -475,9 +503,9 @@ serve(async (request) => {
 
     const quotes = await Promise.all(normalizedSymbols.map(async (symbol) => {
       if (session) return fetchQuote(symbol, session.cookie, session.crumb);
-      return attachHistory(
-        emptyQuote(symbol, sessionError ?? "No se pudo iniciar una sesión de Yahoo Finance"),
-        await fetchHistory(symbol),
+      return fetchPublicYahooData(
+        symbol,
+        sessionError ?? "No se pudo iniciar una sesión de Yahoo Finance",
       );
     }));
 

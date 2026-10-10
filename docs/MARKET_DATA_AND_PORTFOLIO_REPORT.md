@@ -54,3 +54,8 @@ supabase functions deploy fixed-income-sheet-proxy
 The Google workbook must remain publicly readable for the fixed-income proxy to fetch it.
 The sheet ID is configured in the Edge Function source; do not place service-role or
 Yahoo credentials in browser code.
+
+The workbook proxy rereads the seven public tabs at most every 30 seconds per Edge
+Function instance; the fixed-income page refreshes its terms and flows once a minute
+while open. DATA912 prices continue refreshing every 30 seconds. Google Sheets itself
+may take a short time to publish edits to its CSV export.

@@ -181,7 +181,8 @@ export function Data912FixedIncome() {
   const contractsQuery = useQuery({
     queryKey: ['fixed-income-sheet'],
     queryFn: fetchFixedIncomeSheet,
-    staleTime: 15 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
     gcTime: 60 * 60 * 1000,
     retry: 1,
   });

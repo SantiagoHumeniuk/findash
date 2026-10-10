@@ -148,6 +148,14 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
     const [openSections, setOpenSections] = useState<string[]>(["valuation"]);
     const { theme } = useTheme();
     const { hasAccess: canExportPdf, upgradeMessage } = usePlanFeature('exportPdf');
+    const yahooAssets = useMemo(
+        () => assets.filter((asset) =>
+            asset.dataSource?.includes('Yahoo Finance') === true ||
+            Boolean(asset.yahooAttemptedAt) ||
+            Boolean(asset.yahooError)
+        ),
+        [assets],
+    );
 
     // Pre-calcular todos los valores para evitar trabajo en render
     const tableData = useMemo(() => {
@@ -281,6 +289,91 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                 </div>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
+                {yahooAssets.length > 0 && (
+                    <section className="mb-5 space-y-2" aria-label="Datos de Yahoo Finance">
+                        <div>
+                            <h3 className="text-sm font-semibold">Datos de Yahoo Finance</h3>
+                            <p className="text-xs text-muted-foreground">
+                                Métricas forward, resultados por acción y objetivos de analistas cuando Yahoo los informa.
+                            </p>
+                        </div>
+                        <div className="overflow-x-auto rounded-lg border">
+                            <Table>
+                                <TableHeader className="bg-muted/50">
+                                    <TableRow>
+                                        <TableHead>Activo / estado</TableHead>
+                                        <TableHead className="text-right">PER</TableHead>
+                                        <TableHead className="text-right">PER forward</TableHead>
+                                        <TableHead className="text-right">EPS TTM</TableHead>
+                                        <TableHead className="text-right">EPS forward</TableHead>
+                                        <TableHead className="text-right">Objetivo medio</TableHead>
+                                        <TableHead className="text-right">Analistas</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {yahooAssets.map((asset) => {
+                                        const metrics = asset.yahooMetrics ?? {};
+                                        const metric = (...keys: string[]) => {
+                                            const value = keys
+                                                .map((key) => metrics[key])
+                                                .find((candidate) =>
+                                                    typeof candidate === 'number' &&
+                                                    Number.isFinite(candidate) &&
+                                                    candidate > 0
+                                                );
+                                            return typeof value === 'number' ? value : null;
+                                        };
+                                        const formatMetric = (value: number | null) =>
+                                            value === null ? '—' : value.toLocaleString('es-AR', { maximumFractionDigits: 2 });
+                                        const target = metric('financialData.targetMeanPrice');
+                                        const analystCount = metric('financialData.numberOfAnalystOpinions');
+                                        const sourceStatus = asset.yahooError
+                                            ? `Yahoo parcial: ${asset.yahooError}`
+                                            : asset.dataSource?.includes('Yahoo Finance')
+                                                ? `Actualizado ${asset.yahooAttemptedAt
+                                                    ? new Date(asset.yahooAttemptedAt).toLocaleString('es-AR')
+                                                    : 'con Yahoo Finance'}`
+                                                : 'Yahoo sin datos disponibles';
+
+                                        return (
+                                            <TableRow key={`yahoo-${asset.profile.symbol}`}>
+                                                <TableCell className="min-w-40">
+                                                    <span className="font-semibold">{asset.profile.symbol}</span>
+                                                    <span
+                                                        className={`mt-0.5 block max-w-64 truncate text-[10px] ${
+                                                            asset.yahooError ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'
+                                                        }`}
+                                                        title={sourceStatus}
+                                                    >
+                                                        {sourceStatus}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="text-right tabular-nums">
+                                                    {formatMetric(metric('summaryDetail.trailingPE'))}
+                                                </TableCell>
+                                                <TableCell className="text-right tabular-nums">
+                                                    {formatMetric(metric('summaryDetail.forwardPE', 'defaultKeyStatistics.forwardPE'))}
+                                                </TableCell>
+                                                <TableCell className="text-right tabular-nums">
+                                                    {formatMetric(metric('defaultKeyStatistics.trailingEps'))}
+                                                </TableCell>
+                                                <TableCell className="text-right tabular-nums">
+                                                    {formatMetric(metric('defaultKeyStatistics.forwardEps'))}
+                                                </TableCell>
+                                                <TableCell className="text-right tabular-nums">
+                                                    {target === null ? '—' : `${asset.profile.currency} ${formatMetric(target)}`}
+                                                </TableCell>
+                                                <TableCell className="text-right tabular-nums">
+                                                    {analystCount === null ? '—' : formatMetric(analystCount)}
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </section>
+                )}
                 <Accordion type="multiple" value={openSections} onValueChange={setOpenSections}>
                     {indicatorSections.map(section => (
                         visibleKeysBySection[section.id].length > 0 && (
