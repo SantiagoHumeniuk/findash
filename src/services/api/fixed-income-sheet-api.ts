@@ -75,17 +75,17 @@ export async function fetchFixedIncomeSheet(): Promise<FixedIncomeSheetResponse>
   });
   if (error) {
     console.error('Error fetching fixed-income sheet:', error);
-    throw new Error(`No se pudieron consultar los datos del Google Sheet: ${error.message}`);
+    throw new Error('No se pudieron consultar los datos contractuales de renta fija.');
   }
   if (typeof data !== 'object' || data === null || !('fetchedAt' in data) ||
     typeof data.fetchedAt !== 'string' || !('contracts' in data) ||
     !Array.isArray(data.contracts) || !data.contracts.every(isContract) ||
     !('errors' in data) || !Array.isArray(data.errors) ||
     !data.errors.every((item) => typeof item === 'string')) {
-    throw new Error('El proxy del Google Sheet devolvió una respuesta inválida');
+    throw new Error('La respuesta de datos contractuales no es válida.');
   }
   if (data.contracts.length === 0) {
-    throw new Error('El Google Sheet no contiene instrumentos reconocibles');
+    throw new Error('No se encontraron instrumentos de renta fija reconocibles.');
   }
   return data as FixedIncomeSheetResponse;
 }

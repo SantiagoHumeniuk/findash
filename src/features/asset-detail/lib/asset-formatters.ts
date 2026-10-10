@@ -3,11 +3,11 @@
 /**
  * Formatea números grandes usando notación K, M, B, T.
  * * @param num - Número a formatear
- * @returns String formateado con sufijo o "N/A" si es inválido
+ * @returns String formateado con sufijo, o vacío si el dato no es válido
  */
 export function formatLargeNumber(num: number | string | null | undefined): string {
   const n = Number(num);
-  if (num === null || num === undefined || isNaN(n)) return 'N/A';
+  if (num === null || num === undefined || (typeof num === 'string' && num.trim() === '') || !Number.isFinite(n)) return '';
 
   if (Math.abs(n) >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
   if (Math.abs(n) >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
@@ -21,7 +21,7 @@ export function formatLargeNumber(num: number | string | null | undefined): stri
  * Formatea un precio en dólares con 2 decimales.
  */
 export function formatPrice(price: number | null | undefined): string {
-  if (price === null || price === undefined || isNaN(price)) return 'N/A';
+  if (price === null || price === undefined || !Number.isFinite(price) || price <= 0) return '';
   return `$${price.toFixed(2)}`;
 }
 
@@ -29,7 +29,7 @@ export function formatPrice(price: number | null | undefined): string {
  * Formatea un porcentaje con 2 decimales.
  */
 export function formatPercentage(value: number | null | undefined): string {
-  if (value === null || value === undefined || isNaN(value)) return 'N/A';
+  if (value === null || value === undefined || !Number.isFinite(value)) return '';
   return `${value.toFixed(2)}%`;
 }
 

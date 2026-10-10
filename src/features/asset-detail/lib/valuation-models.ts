@@ -597,7 +597,7 @@ export function calculateBlendedFairValue(
   const fairEvEbitBenchmark = peerEvEbit.value ?? adjustedFairEvEbit;
   const fairEvSalesBenchmark = (peerEvSales.value ?? adjustedFairEvSales) * salesMarginAdjustment;
   const benchmarkSource = (peer: PeerMedian) => peer.value !== null
-    ? `mediana FMP de ${peer.count} pares`
+    ? `mediana de ${peer.count} pares`
     : 'benchmark de sector';
   const context: ValuationContext = {
     sector: sectorName || 'General',
@@ -797,7 +797,7 @@ export function calculateBlendedFairValue(
       );
       if (isSane(evEbitdaFairValue)) {
         models.push({
-          name: peerEvEbitda.value !== null ? 'EV/EBITDA por Pares FMP' : 'EV/EBITDA por Sector',
+          name: peerEvEbitda.value !== null ? 'EV/EBITDA por Pares' : 'EV/EBITDA por Sector',
           value: evEbitdaFairValue,
           weight: 1.3,
           category: 'relative',
@@ -812,7 +812,7 @@ export function calculateBlendedFairValue(
     const psFairValue = currentPrice * (fairPsBenchmark / actualPs);
     if (isSane(psFairValue)) {
       models.push({
-        name: peerPs.value !== null ? 'Precio/Ventas por Pares FMP' : 'Precio/Ventas por Sector',
+        name: peerPs.value !== null ? 'Precio/Ventas por Pares' : 'Precio/Ventas por Sector',
         value: psFairValue,
         weight: 0.65,
         category: 'relative',
@@ -833,7 +833,7 @@ export function calculateBlendedFairValue(
     );
     if (isSane(evSalesFairValue)) {
       models.push({
-        name: peerEvSales.value !== null ? 'EV/Ventas por Pares FMP' : 'EV/Ventas por Sector',
+        name: peerEvSales.value !== null ? 'EV/Ventas por Pares' : 'EV/Ventas por Sector',
         value: evSalesFairValue,
         weight: 0.65,
         category: 'relative',
@@ -854,7 +854,7 @@ export function calculateBlendedFairValue(
     );
     if (isSane(evEbitFairValue)) {
       models.push({
-        name: peerEvEbit.value !== null ? 'EV/EBIT por Pares FMP' : 'EV/EBIT por Sector',
+        name: peerEvEbit.value !== null ? 'EV/EBIT por Pares' : 'EV/EBIT por Sector',
         value: evEbitFairValue,
         weight: 0.65,
         category: 'relative',
@@ -976,7 +976,7 @@ export function calculateBlendedFairValue(
     const pbFairValue = currentPrice * (targetPb / actualPb);
     if (isSane(pbFairValue)) {
       models.push({
-        name: peerPb.value !== null ? 'Precio/Valor Contable por Pares FMP' : 'Precio/Valor Contable por Sector',
+        name: peerPb.value !== null ? 'Precio/Valor Contable por Pares' : 'Precio/Valor Contable por Sector',
         value: pbFairValue,
         weight: 0.65,
         category: 'relative',
@@ -1065,11 +1065,11 @@ export function calculateBlendedFairValue(
     .sort((left, right) => Number(right.year) - Number(left.year))[0];
   if (advancedDcf && !isAdr && isSane(advancedDcf.equityValuePerShare)) {
     models.push({
-      name: 'DCF Avanzado FMP',
+      name: 'DCF Avanzado',
       value: advancedDcf.equityValuePerShare,
       weight: 1.1,
       category: 'intrinsic',
-      description: `DCF avanzado de FMP hasta ${advancedDcf.year}, con proyección explícita, WACC y valor terminal`
+      description: `DCF avanzado hasta ${advancedDcf.year}, con proyección explícita, WACC y valor terminal`
     });
   }
 
@@ -1166,7 +1166,7 @@ export function calculateContextualRatingScores(
   const valuation = calculateBlendedFairValue(asset, riskPremiumData);
   const currentPrice = asset.quote?.price ?? 0;
   const models = valuation.modelsUsed;
-  const dcfModel = models.find((model) => model.name === 'DCF Avanzado FMP')
+  const dcfModel = models.find((model) => model.name === 'DCF Avanzado')
     ?? models.find((model) => model.name === 'DCF Apalancado');
   const peModel = models.find((model) => model.name === 'P/E por EPS estimado');
   const pbModel = models.find((model) => model.name.startsWith('Precio/Valor Contable'))

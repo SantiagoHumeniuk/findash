@@ -12,7 +12,7 @@ import { supabase } from "../../../lib/supabase";
 
 import { Card, CardHeader } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
-import { Briefcase, ChartCandlestick, RefreshCw, Layers, HelpCircle, Search } from "lucide-react";
+import { Briefcase, ChartCandlestick, RefreshCw, Layers, HelpCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { PageHeader } from "../../../components/ui/page-header";
 import { TickerAddForm } from "../components/ticker-input/ticker-add-form";

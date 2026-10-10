@@ -22,15 +22,14 @@ interface PreparedAssetRow {
     symbol: string;
     companyName: string;
     image: string;
-    currentPrice: number;
-    dayChange: number;
-    monthChange: number | 'N/A';
-    yearChange: number | 'N/A';
-    stdDev: number | 'N/A';
-    sharpeRatio: number | 'N/A';
-    lastMonthAvgPriceTarget: number;
+    currentPrice: number | null;
+    dayChange: number | null;
+    monthChange: number | null;
+    yearChange: number | null;
+    stdDev: number | null;
+    sharpeRatio: number | null;
+    lastMonthAvgPriceTarget: number | null;
     targetConsensus: number | null;
-    dataSource: AssetData['dataSource'];
     original: AssetData;
 }
 
@@ -39,10 +38,10 @@ interface PriceAnalysisTableProps {
 }
 
 // --- Helpers de Formato ---
-const formatCurrency = (v: number | 'N/A') => (typeof v === "number" && v !== 0 ? `$${v.toFixed(2)}` : "-");
-const formatNumber = (v: number | 'N/A') => (typeof v === "number" && v !== 0 ? v.toFixed(2) : "-");
-const pctNode = (v: number | 'N/A') => {
-    if (typeof v !== "number") return <span className="text-muted-foreground">-</span>;
+const formatCurrency = (v: number | null) => (typeof v === "number" && Number.isFinite(v) ? `$${v.toFixed(2)}` : "");
+const formatNumber = (v: number | null) => (typeof v === "number" && Number.isFinite(v) ? v.toFixed(2) : "");
+const pctNode = (v: number | null) => {
+    if (typeof v !== "number" || !Number.isFinite(v)) return null;
     const color = v >= 0 ? "text-green-500" : "text-red-500";
     const Icon = v >= 0 ? ArrowUp : ArrowDown;
     return (
@@ -93,7 +92,7 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
     const preparedAssets = useMemo((): PreparedAssetRow[] => {
         return assets.map(asset => {
             const history = asset.historicalReturns || [];
-            const latestPrice = asset.quote?.price || 0;
+            const latestPrice = asset.quote?.price ?? null;
 
             // 1. Calcular Retornos Diarios (Index 0 = Antiguo -> Index N = Nuevo)
             const returns: number[] = [];
@@ -104,22 +103,21 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
             }
 
             // 2. Calcular Métricas de Riesgo
-            const sharpeRatio = computeSharpe(returns) ?? 'N/A';
-            const stdDev = computeStdDevPct(returns.slice(-30)) ?? 'N/A';
+            const sharpeRatio = computeSharpe(returns) ?? null;
+            const stdDev = computeStdDevPct(returns.slice(-30)) ?? null;
 
             return {
                 symbol: asset.profile.symbol,
                 companyName: asset.profile.companyName,
                 image: asset.profile.image,
                 currentPrice: latestPrice,
-                dayChange: asset.quote?.changePercentage || 0,
-                monthChange: asset.dataSource === 'Yahoo Finance' ? 'N/A' : asset.stockPriceChange["1M"] || 0,
-                yearChange: asset.dataSource === 'Yahoo Finance' ? 'N/A' : asset.stockPriceChange["1Y"] || 0,
+                dayChange: asset.quote?.changePercentage ?? null,
+                monthChange: asset.dataSource === 'Yahoo Finance' ? null : asset.stockPriceChange["1M"] ?? null,
+                yearChange: asset.dataSource === 'Yahoo Finance' ? null : asset.stockPriceChange["1Y"] ?? null,
                 stdDev,
                 sharpeRatio,
-                lastMonthAvgPriceTarget: asset.priceTarget?.lastMonthAvgPriceTarget || 0,
-                targetConsensus: asset.priceTargetConsensus?.targetConsensus || null,
-                dataSource: asset.dataSource,
+                lastMonthAvgPriceTarget: asset.priceTarget?.lastMonthAvgPriceTarget ?? null,
+                targetConsensus: asset.priceTargetConsensus?.targetConsensus ?? null,
                 original: asset
             };
         });
@@ -154,12 +152,12 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
         const body = sortedAssets.map(asset => [
             asset.symbol,
             formatCurrency(asset.currentPrice),
-            typeof asset.dayChange === 'number' ? `${asset.dayChange.toFixed(2)}%` : 'N/A',
-            typeof asset.monthChange === 'number' ? `${asset.monthChange.toFixed(2)}%` : 'N/A',
-            typeof asset.yearChange === 'number' ? `${asset.yearChange.toFixed(2)}%` : 'N/A',
-            typeof asset.stdDev === 'number' ? `${asset.stdDev.toFixed(2)}%` : 'N/A',
+            typeof asset.dayChange === 'number' ? `${asset.dayChange.toFixed(2)}%` : '',
+            typeof asset.monthChange === 'number' ? `${asset.monthChange.toFixed(2)}%` : '',
+            typeof asset.yearChange === 'number' ? `${asset.yearChange.toFixed(2)}%` : '',
+            typeof asset.stdDev === 'number' ? `${asset.stdDev.toFixed(2)}%` : '',
             formatNumber(asset.sharpeRatio),
-            formatCurrency(asset.targetConsensus!)
+            formatCurrency(asset.targetConsensus)
         ]);
 
         const assetsForExport = sortedAssets.map(p => ({
@@ -249,9 +247,6 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                                                         <div className="flex items-center justify-between gap-2">
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="font-bold group-hover:text-primary transition-colors">{asset.symbol}</div>
-                                                                {asset.dataSource === 'Yahoo Finance' && (
-                                                                    <div className="text-[10px] font-normal text-amber-600">Yahoo Finance · fallback</div>
-                                                                )}
                                                                 <div className="caption text-muted-foreground truncate max-w-[180px]">{asset.companyName}</div>
                                                             </div>
                                                         </div>
@@ -265,9 +260,9 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                                             <TableCell className="text-center">{pctNode(asset.stdDev)}</TableCell>
                                             <TableCell className="text-center font-semibold">{formatNumber(asset.sharpeRatio)}</TableCell>
                                             <TableCell className="text-center font-semibold">
-                                                {typeof asset.targetConsensus === 'number' && asset.targetConsensus > 0
+                                                {typeof asset.targetConsensus === 'number' && Number.isFinite(asset.targetConsensus) && asset.targetConsensus > 0
                                                     ? formatCurrency(asset.targetConsensus)
-                                                    : <span className="text-muted-foreground text-xs font-normal">N/A</span>}
+                                                    : ''}
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <Button variant="ghost" size="icon" onClick={() => setBuyModalInfo({ isOpen: true, ticker: asset.symbol, price: asset.currentPrice })}>
@@ -297,9 +292,6 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                                             <div className="text-sm flex items-center gap-1.5">
                                                 {asset.symbol}
                                             </div>
-                                            {asset.dataSource === 'Yahoo Finance' && (
-                                                <div className="text-[10px] font-normal text-amber-600">Yahoo Finance · fallback</div>
-                                            )}
                                             <div className="text-xs text-muted-foreground font-normal truncate">{asset.companyName}</div>
                                         </div>
                                     </Link>
@@ -313,9 +305,9 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Precio Objetivo</span>
                                         <span className="font-semibold">
-                                            {typeof asset.targetConsensus === 'number' && asset.targetConsensus > 0
+                                            {typeof asset.targetConsensus === 'number' && Number.isFinite(asset.targetConsensus) && asset.targetConsensus > 0
                                                 ? formatCurrency(asset.targetConsensus)
-                                                : <span className="text-muted-foreground text-xs font-normal">N/A</span>}
+                                                : ''}
                                         </span>
                                     </div>
                                 </div>

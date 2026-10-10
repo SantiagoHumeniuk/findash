@@ -12,7 +12,6 @@ import {
 import { AppSidebar } from "./components/ui/app-sidebar";
 import { Toaster } from "sonner";
 import { ModeToggle } from "./components/ui/mode-toggle";
-import GenericBreadcrumb from "./components/ui/breadcrumb-demo";
 import ActivesBar from "./components/ui/actives-bar";
 import { AnimatedBackground } from "./components/ui/animated-background";
 import { CommandMenu } from "./components/search/command-menu";
@@ -22,10 +21,6 @@ import { SubscriptionStatusModal } from "./components/shared/subscription-status
 
 export default function App() {
   const location = useLocation();
-  const isHomePage = location.pathname === '/' || location.pathname === '/inicio';
-  const headerClass = isHomePage 
-    ? "flex h-16 shrink-0 items-center justify-between gap-2 border-b border-white/[0.02] bg-transparent px-4 relative z-20"
-    : "flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border/40 bg-background/80 backdrop-blur-xl px-4 relative z-20 transition-all duration-300";
 
   return (
     <ErrorBoundary level="root">

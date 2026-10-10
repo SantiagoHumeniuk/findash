@@ -289,7 +289,7 @@ export function CsvImportButton() {
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">
                           {row.amount === null
-                            ? '—'
+                            ? ''
                             : isArsCurrency(row.currency)
                               ? cclQuote
                                 ? (row.amount / cclQuote.rate).toLocaleString('es-AR', { maximumFractionDigits: 2 })

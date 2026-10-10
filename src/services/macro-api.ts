@@ -23,11 +23,11 @@ export interface PlazoFijoDato {
   tnaClientes: number;
   tnaNoClientes: number;
   enlace?: string;
-  tasas?: Array<{
+  tasas?: {
     plazoMinDias?: number;
     plazoMaxDias?: number;
     tna: number;
-  }>;
+  }[];
 }
 
 export interface UvaDato {
@@ -68,9 +68,9 @@ async function fetchMacroResource(resource: MacroResource): Promise<unknown> {
   const { data, error } = await supabase.functions.invoke('argentina-macro-proxy', {
     body: { resource },
   });
-  if (error) throw new Error(`No se pudo consultar ${resource}: ${error.message}`);
+  if (error) throw new Error(`No se pudieron cargar los datos de ${resource}.`);
   if (data === null || data === undefined) {
-    throw new Error(`ArgentinaDatos no devolvió datos para ${resource}`);
+    throw new Error(`No se encontraron datos para ${resource}.`);
   }
   if (
     typeof data === 'object' &&
@@ -102,7 +102,7 @@ export async function fetchDolaresArgentinaDatos(): Promise<DolarCotizacion[]> {
       typeof item.fecha === 'string'
     )
   ) {
-    throw new Error('ArgentinaDatos devolvió cotizaciones de dólares con formato inválido');
+    throw new Error('Las cotizaciones de dólares tienen un formato inválido.');
   }
   const records = data as { casa: string; compra: number; venta: number; fecha: string }[];
 
@@ -146,7 +146,7 @@ export async function fetchDolaresDolarazo(): Promise<DolarCotizacion[]> {
     !('data' in payload) ||
     !Array.isArray(payload.data)
   ) {
-    throw new Error('Dolarazo devolvió cotizaciones con formato inválido');
+    throw new Error('Las cotizaciones de dólares tienen un formato inválido.');
   }
 
   const list: DolarCotizacion[] = [];
@@ -161,7 +161,7 @@ export async function fetchDolaresDolarazo(): Promise<DolarCotizacion[]> {
       !('venta' in item) ||
       typeof item.venta !== 'number'
     ) {
-      throw new Error('Dolarazo devolvió una cotización con formato inválido');
+      throw new Error('Una cotización de dólares tiene un formato inválido.');
     }
     const casa = item.casa.toLowerCase();
     list.push({
@@ -238,7 +238,7 @@ export async function fetchInflacion(): Promise<InflacionDato[]> {
       Number.isFinite(item.valor)
     )
   ) {
-    throw new Error('ArgentinaDatos devolvió datos de inflación con formato inválido');
+    throw new Error('Los datos de inflación tienen un formato inválido.');
   }
   return data as InflacionDato[];
 }
@@ -259,7 +259,7 @@ export async function fetchPlazosFijos(): Promise<PlazoFijoDato[]> {
       typeof item.tnaClientes === 'number'
     )
   ) {
-    throw new Error('ArgentinaDatos devolvió tasas de plazo fijo con formato inválido');
+    throw new Error('Las tasas de plazo fijo tienen un formato inválido.');
   }
   const deposits = data as PlazoFijoDato[];
   // Ordenar por mejor TNA clientes descendente
@@ -291,7 +291,7 @@ export async function fetchUva(): Promise<UvaDato[]> {
 /**
  * Catálogo e instrumental de la Curva LECAP y Curva Tasa Fija (BONCAPs y Letras del Tesoro)
  */
-const INSTRUMENTOS_BASE: Array<{
+const INSTRUMENTOS_BASE: {
   ticker: string;
   nombre: string;
   tipo: 'LECAP' | 'BONCAP' | 'TASA_FIJA';
@@ -299,7 +299,7 @@ const INSTRUMENTOS_BASE: Array<{
   tasaNominalMensualBase: number; // TEM % aproximada de mercado
   precioBase: number;
   liquidez: 'Alta' | 'Media' | 'Baja';
-}> = [
+}[] = [
   {
     ticker: 'S30S6',
     nombre: 'LECAP 30 Sep 2026',

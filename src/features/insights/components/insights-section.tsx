@@ -10,17 +10,15 @@ import { HelpCircle } from 'lucide-react';
 
 // --- Formateadores robustos ---
 const formatCurrency = (value?: number | null): string => {
-  // Retorna '-' si el valor no es un número válido y finito
   if (typeof value !== 'number' || !isFinite(value)) {
-    return '-';
+    return '';
   }
   return `$${value.toFixed(2)}`;
 };
 
 const formatPercentage = (value?: number | null, decimals?: number): string => {
-  // Retorna '-' si el valor no es un número válido y finito
   if (typeof value !== 'number' || !isFinite(value)) {
-    return '-';
+    return '';
   }
   return `${value.toFixed(decimals)}%`;
 };
@@ -157,7 +155,7 @@ export const InsightsSection: React.FC<InsightsSectionProps> = ({ title, subtitl
 function renderAnalystMetric(kind: InsightsSectionProps['kind'], it: InsightItem) {
   if (kind === 'undervalued' || kind === 'overvalued') {
     const value = it.mispricingPct;
-    // Ya usamos un formateador robusto que devuelve '-', no necesitamos verificar aquí
+    // Ya usamos un formateador robusto, no necesitamos verificar aquí
     const color = typeof value === 'number' && value >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
     // Llama al formateador robusto
     return <span className={color}>{formatPercentage(value, 1)}</span>;
@@ -177,9 +175,9 @@ function renderAnalystMetric(kind: InsightsSectionProps['kind'], it: InsightItem
           </span>
         );
       }
-      return '-';
+      return '';
   }
 
   // Si no es ninguno de los anteriores
-  return '-';
+  return '';
 }

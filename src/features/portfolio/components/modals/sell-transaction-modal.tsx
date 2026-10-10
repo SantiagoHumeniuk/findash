@@ -33,6 +33,7 @@ export function SellTransactionModal({ isOpen, onClose, holding }: SellTransacti
     date, setDate,
     handleTypeChange,
     ratio, isCedears,
+    cclRate,
     portfolioId, setPortfolioId
   } = useTransactionForm({
     isOpen,
@@ -113,6 +114,14 @@ export function SellTransactionModal({ isOpen, onClose, holding }: SellTransacti
         return;
       }
 
+      if (isCedears && !cclRate) {
+        toast.error('No se pudo obtener el dólar CCL', {
+          description: 'Espera a que se actualice la cotización para registrar la venta de CEDEARs.',
+        });
+        setLoading(false);
+        return;
+      }
+
       const finalQuantityInShares = calculateFinalQuantity(enteredQuantity, isCedears, ratio);
 
       // ✅ Validación: No puede vender más de lo que posee en ese portfolio
@@ -135,7 +144,7 @@ export function SellTransactionModal({ isOpen, onClose, holding }: SellTransacti
         return;
       }
 
-      const finalPricePerShare = calculateFinalPrice(enteredPrice, isCedears, ratio);
+      const finalPricePerShare = calculateFinalPrice(enteredPrice, isCedears, ratio) / (isCedears ? cclRate! : 1);
 
       await addTransaction({
         symbol: holding.symbol,
@@ -198,6 +207,11 @@ export function SellTransactionModal({ isOpen, onClose, holding }: SellTransacti
                 <Button type="button" onClick={() => handleTypeChange('cedears')} variant={isCedears ? 'default' : 'outline'} className="flex-1">CEDEARs</Button>
                 <Button type="button" onClick={() => handleTypeChange('shares')} variant={!isCedears ? 'default' : 'outline'} className="flex-1">Acciones</Button>
               </div>
+              {isCedears && cclRate && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  CCL venta: ${cclRate.toLocaleString('es-AR', { maximumFractionDigits: 2 })} ARS/USD.
+                </p>
+              )}
             </div>
           )}
           <div className="grid grid-cols-2 gap-4">
@@ -218,7 +232,7 @@ export function SellTransactionModal({ isOpen, onClose, holding }: SellTransacti
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="price-sell">Precio de Venta (USD)</Label>
+              <Label htmlFor="price-sell">{isCedears ? 'Precio por CEDEAR (ARS)' : 'Precio por Acción (USD)'}</Label>
               <Input
                 id="price-sell"
                 type="number"

@@ -67,7 +67,7 @@ export function CalculateDividendModal({ dividend }: { dividend: Dividend }) {
                             <Calendar className="inline w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 text-chart-3" /> Fecha de Pago
                         </span>
                         <span className="font-semibold text-sm sm:text-base">
-                            {dividend?.paymentDate ? new Date(dividend.paymentDate).toLocaleDateString("es-ES") : '-'}
+                            {dividend?.paymentDate ? new Date(dividend.paymentDate).toLocaleDateString("es-ES") : ''}
                         </span>
                     </div>
                 </div>

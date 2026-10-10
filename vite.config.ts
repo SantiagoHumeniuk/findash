@@ -28,7 +28,7 @@ export default defineConfig({
         },
         configure: (proxy) => {
           proxy.on('proxyRes', (proxyRes) => {
-            let cookies = proxyRes.headers['set-cookie'];
+            const cookies = proxyRes.headers['set-cookie'];
             if (cookies) {
               proxyRes.headers['set-cookie'] = cookies.map(c => 
                 c.replace(/;\s*Secure/gi, '')

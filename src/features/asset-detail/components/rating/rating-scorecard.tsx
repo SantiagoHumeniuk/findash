@@ -53,7 +53,7 @@ export function RatingScorecard({ asset }: RatingScorecardProps) {
     {
       label: 'Deuda / Equity',
       score: contextualScores.debtToEquity,
-      description: 'Puntaje relativo a la mediana deuda/equity de pares FMP cuando hay al menos tres comparables.'
+      description: 'Puntaje relativo a la mediana deuda/equity de empresas comparables cuando hay al menos tres.'
     },
     {
       label: 'P/E (Precio/Ganancia)',
@@ -101,7 +101,7 @@ export function RatingScorecard({ asset }: RatingScorecardProps) {
         {/* Rating General Destacado */}
         <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg border border-border/50">
           <div className="space-y-0.5">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Rating General FMP</span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Rating General</span>
             <div className="flex items-baseline gap-2">
               <span className={`text-3xl font-bold ${getScoreColor(rating.overallScore)}`}>
                 {rating.rating}
@@ -146,7 +146,7 @@ export function RatingScorecard({ asset }: RatingScorecardProps) {
         </div>
 
         <div className="text-[10px] text-muted-foreground pt-2 border-t text-center italic">
-          Estrellas individuales ajustadas por valoración y pares; el rating general es el de FMP.
+          Estrellas individuales ajustadas por valoración y empresas comparables.
         </div>
       </CardContent>
     </Card>

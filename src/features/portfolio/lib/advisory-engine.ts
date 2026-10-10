@@ -152,7 +152,7 @@ export function generateAdvisory(
       reasons.push({ text: `PER forward ${forwardPE.toFixed(1)}x, según ganancias estimadas y no realizadas.`, type: 'neutral' });
     }
   } else {
-    reasons.push({ text: 'Yahoo/FMP no entregó PER forward válido; no se usa una proyección faltante como señal positiva.', type: 'neutral' });
+    reasons.push({ text: 'No se recibió un PER forward válido; no se usa una proyección faltante como señal positiva.', type: 'neutral' });
   }
 
   if (yahooTargetUpside !== null && yahooAnalystCount >= 3) {
@@ -160,25 +160,25 @@ export function generateAdvisory(
       score += 8;
       positiveDomains.add('consenso de analistas');
       reasons.push({
-        text: `El precio objetivo medio de Yahoo Finance sugiere ${yahooTargetUpside.toFixed(1)}% de potencial, con ${Math.round(yahooAnalystCount)} analistas; se usa como confirmación, no como garantía.`,
+        text: `El precio objetivo medio sugiere ${yahooTargetUpside.toFixed(1)}% de potencial, con ${Math.round(yahooAnalystCount)} analistas; se usa como confirmación, no como garantía.`,
         type: 'positive',
       });
     } else if (yahooTargetUpside <= -20) {
       score -= 8;
       negativeDomains.add('consenso de analistas');
       reasons.push({
-        text: `El precio objetivo medio de Yahoo Finance queda ${Math.abs(yahooTargetUpside).toFixed(1)}% bajo la cotización, con ${Math.round(yahooAnalystCount)} analistas; es una alerta de valoración.`,
+        text: `El precio objetivo medio queda ${Math.abs(yahooTargetUpside).toFixed(1)}% bajo la cotización, con ${Math.round(yahooAnalystCount)} analistas; es una alerta de valoración.`,
         type: 'negative',
       });
     } else {
       reasons.push({
-        text: `El precio objetivo de Yahoo Finance implica ${yahooTargetUpside.toFixed(1)}% de potencial con ${Math.round(yahooAnalystCount)} analistas; no confirma una señal direccional.`,
+        text: `El precio objetivo implica ${yahooTargetUpside.toFixed(1)}% de potencial con ${Math.round(yahooAnalystCount)} analistas; no confirma una señal direccional.`,
         type: 'neutral',
       });
     }
   } else if (yahooTargetUpside !== null) {
     reasons.push({
-      text: `Yahoo Finance informa un objetivo medio con cobertura insuficiente (${Math.round(yahooAnalystCount)} analistas); no se puntúa como consenso.`,
+      text: `El objetivo medio tiene cobertura insuficiente (${Math.round(yahooAnalystCount)} analistas); no se puntúa como consenso.`,
       type: 'neutral',
     });
   }

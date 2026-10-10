@@ -399,7 +399,7 @@ export function AdminContactMessagesSection() {
                   <div>
                     <label className="text-sm font-medium">Rol</label>
                     <Badge variant="outline" className="mt-1">
-                      {selectedMessage.user_role ?? 'N/A'}
+                      {selectedMessage.user_role ?? ''}
                     </Badge>
                   </div>
                 </div>

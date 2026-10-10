@@ -18,10 +18,16 @@ function formatNumber(value: number, digits = 2): string {
 }
 
 interface FixedIncomeTableRow {
+  groupKey: string;
   symbol: string;
   name: string;
   quote: Data912BondQuote | null;
+  variants: Data912BondQuote[];
   contract: FixedIncomeContract | null;
+}
+
+function getVariantBaseTicker(symbol: string): string {
+  return symbol.toUpperCase().replace(/[DCO]$/, '');
 }
 
 function QuotesTable({
@@ -35,35 +41,80 @@ function QuotesTable({
   query: string;
   includeUnmatchedQuotes?: boolean;
 }) {
+  const [selectedTickers, setSelectedTickers] = React.useState<Record<string, string>>({});
   const rows = React.useMemo(() => {
-    const quotedBySymbol = new Map(quotes.map((quote) => [quote.symbol.toUpperCase(), quote]));
+    const quoteGroups = new Map<string, Set<string>>();
+    for (const quote of quotes) {
+      const baseTicker = getVariantBaseTicker(quote.symbol);
+      const symbols = quoteGroups.get(baseTicker) ?? new Set<string>();
+      symbols.add(quote.symbol.toUpperCase());
+      quoteGroups.set(baseTicker, symbols);
+    }
+    const variantBases = new Set(
+      [...quoteGroups.entries()]
+        .filter(([, symbols]) => symbols.size > 1)
+        .map(([baseTicker]) => baseTicker),
+    );
+    const getGroupKey = (symbol: string) => {
+      const normalizedSymbol = symbol.toUpperCase();
+      const baseTicker = getVariantBaseTicker(normalizedSymbol);
+      return variantBases.has(baseTicker) ? baseTicker : normalizedSymbol;
+    };
+
+    const rowsByTicker = new Map<string, FixedIncomeTableRow>();
     const linkedSymbols = new Set<string>();
-    const contractRows = contracts.map((contract): FixedIncomeTableRow => {
-      const quote = quotedBySymbol.get(contract.priceTicker.toUpperCase()) ?? null;
-      if (quote) linkedSymbols.add(quote.symbol.toUpperCase());
-      return {
-        symbol: contract.priceTicker,
-        name: contract.name,
-        quote,
-        contract,
-      };
-    });
-    const unlinkedQuoteRows = includeUnmatchedQuotes ? quotes
-      .filter((quote) => !linkedSymbols.has(quote.symbol.toUpperCase()))
-      .map((quote): FixedIncomeTableRow => ({
-        symbol: quote.symbol,
-        name: quote.symbol,
-        quote,
-        contract: null,
-      })) : [];
+    for (const contract of contracts) {
+      const groupKey = getGroupKey(contract.priceTicker);
+      const variants = quotes.filter((quote) =>
+        getGroupKey(quote.symbol) === groupKey
+      );
+      variants.forEach((quote) => linkedSymbols.add(quote.symbol.toUpperCase()));
+      const current = rowsByTicker.get(groupKey);
+      if (current) {
+        current.variants = [...new Map(
+          [...current.variants, ...variants].map((quote) => [quote.symbol.toUpperCase(), quote]),
+        ).values()];
+      } else {
+        rowsByTicker.set(groupKey, {
+          groupKey,
+          symbol: contract.priceTicker,
+          name: contract.name,
+          quote: variants.find((quote) => quote.symbol.toUpperCase() === contract.priceTicker.toUpperCase()) ?? variants[0] ?? null,
+          variants,
+          contract,
+        });
+      }
+    }
+    if (includeUnmatchedQuotes) {
+      for (const quote of quotes) {
+        if (linkedSymbols.has(quote.symbol.toUpperCase())) continue;
+        const groupKey = getGroupKey(quote.symbol);
+        const current = rowsByTicker.get(groupKey);
+        if (current) {
+          if (!current.variants.some((variant) => variant.symbol.toUpperCase() === quote.symbol.toUpperCase())) {
+            current.variants.push(quote);
+          }
+        } else {
+          rowsByTicker.set(groupKey, {
+            groupKey,
+            symbol: quote.symbol,
+            name: quote.symbol,
+            quote,
+            variants: [quote],
+            contract: null,
+          });
+        }
+      }
+    }
     const normalizedQuery = query.trim().toLowerCase();
-    return [...contractRows, ...unlinkedQuoteRows]
+    return [...rowsByTicker.values()]
       .filter((row) =>
         row.symbol.toLowerCase().includes(normalizedQuery) ||
         row.name.toLowerCase().includes(normalizedQuery) ||
-        Boolean(row.contract?.symbol.toLowerCase().includes(normalizedQuery))
+        Boolean(row.contract?.symbol.toLowerCase().includes(normalizedQuery)) ||
+        row.variants.some((quote) => quote.symbol.toLowerCase().includes(normalizedQuery))
       )
-      .sort((left, right) => left.symbol.localeCompare(right.symbol));
+      .sort((left, right) => left.groupKey.localeCompare(right.groupKey));
   }, [quotes, contracts, query, includeUnmatchedQuotes]);
 
   if (rows.length === 0) {
@@ -76,72 +127,76 @@ function QuotesTable({
 
   return (
     <div className="max-h-[70vh] overflow-auto rounded-md border">
-      <table className="w-full min-w-[1600px] text-sm">
+      <table className="w-full min-w-[980px] text-sm">
         <thead className="sticky top-0 z-10 bg-muted">
           <tr className="text-left">
             <th className="p-3">Instrumento</th>
-            <th className="p-3">Ticker DATA912</th>
+            <th className="p-3">Ticker</th>
             <th className="p-3 text-right">Último</th>
-            <th className="p-3 text-right">Compra</th>
-            <th className="p-3 text-right">Cant. compra</th>
-            <th className="p-3 text-right">Venta</th>
-            <th className="p-3 text-right">Cant. venta</th>
-            <th className="p-3 text-right">Volumen</th>
-            <th className="p-3 text-right">Operaciones</th>
             <th className="p-3 text-right">Var. %</th>
             <th className="p-3 text-right">Vencimiento</th>
             <th className="p-3 text-right">TIR anual</th>
-            <th className="p-3">Próximo pago / ficha</th>
+            <th className="p-3">Próximo pago</th>
           </tr>
         </thead>
         <tbody className="divide-y">
-          {rows.map(({ symbol, name, quote, contract }) => {
+          {rows.map(({ groupKey, symbol, name, quote: defaultQuote, variants, contract }) => {
+            const quote = variants.find((variant) =>
+              variant.symbol.toUpperCase() === selectedTickers[groupKey]?.toUpperCase()
+            ) ?? variants.find((variant) =>
+              variant.symbol.toUpperCase() === contract?.priceTicker.toUpperCase()
+            ) ?? defaultQuote;
             const ytm = contract
-              ? calculateCashFlowYield(quote, contract.cashFlows)
+              ? calculateCashFlowYield(
+                contract.currency === 'USD' && quote?.symbol.endsWith('O') ? null : quote,
+                contract.cashFlows,
+              )
               : quote ? calculateData912ZeroCouponYield(quote) : null;
             const maturity = contract?.maturityDate
               ? new Date(`${contract.maturityDate}T12:00:00`)
-              : getData912MaturityDate(symbol);
+              : getData912MaturityDate(quote?.symbol ?? symbol);
             const yieldLabel = contract?.category === 'cer'
               ? 'TIR real'
               : contract?.flowsProjected
                 ? 'TEA estimada'
                 : 'TEA';
             return (
-              <tr key={`${contract?.symbol ?? symbol}-${symbol}`} className="hover:bg-muted/40">
+              <tr key={groupKey} className="hover:bg-muted/40">
                 <td className="p-3 font-semibold">
                   <span>{name}</span>
                   {contract?.rating && <Badge variant="outline" className="ml-2">{contract.rating}</Badge>}
                 </td>
-                <td className="p-3">{quote?.symbol ?? symbol}</td>
-                <td className="p-3 text-right tabular-nums">{quote ? formatNumber(quote.c) : 'No disponible'}</td>
-                <td className="p-3 text-right tabular-nums">{quote ? formatNumber(quote.px_bid) : '—'}</td>
-                <td className="p-3 text-right tabular-nums">{quote ? formatNumber(quote.q_bid, 0) : '—'}</td>
-                <td className="p-3 text-right tabular-nums">{quote ? formatNumber(quote.px_ask) : '—'}</td>
-                <td className="p-3 text-right tabular-nums">{quote ? formatNumber(quote.q_ask, 0) : '—'}</td>
-                <td className="p-3 text-right tabular-nums">{quote ? formatNumber(quote.v, 0) : '—'}</td>
-                <td className="p-3 text-right tabular-nums">{quote ? formatNumber(quote.q_op, 0) : '—'}</td>
+                <td className="p-3">
+                  {variants.length > 1 ? (
+                    <select
+                      aria-label={`Ticker de ${name}`}
+                      className="max-w-32 rounded-md border bg-background px-2 py-1 text-sm"
+                      value={quote?.symbol ?? symbol}
+                      onChange={(event) => setSelectedTickers((current) => ({
+                        ...current,
+                        [groupKey]: event.currentTarget.value,
+                      }))}
+                    >
+                      {variants.map((variant) => (
+                        <option key={variant.symbol} value={variant.symbol}>{variant.symbol}</option>
+                      ))}
+                    </select>
+                  ) : quote?.symbol ?? symbol}
+                </td>
+                <td className="p-3 text-right tabular-nums">{quote ? formatNumber(quote.c) : ''}</td>
                 <td className={`p-3 text-right tabular-nums ${quote && quote.pct_change >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {quote ? `${quote.pct_change > 0 ? '+' : ''}${formatNumber(quote.pct_change)}%` : '—'}
+                  {quote ? `${quote.pct_change > 0 ? '+' : ''}${formatNumber(quote.pct_change)}%` : ''}
                 </td>
                 <td className="p-3 text-right tabular-nums">
                   {maturity ? (
-                    <time title={contract ? 'Vencimiento según la ficha técnica del Google Sheet' : 'Vencimiento inferido por ticker'}>
+                    <time>
                       {maturity.toLocaleDateString('es-AR')}
                     </time>
-                  ) : (
-                    <span className="text-muted-foreground" title="No hay fecha de vencimiento validada para este símbolo">
-                      No informado
-                    </span>
-                  )}
+                  ) : ''}
                 </td>
                 <td className="p-3 text-right tabular-nums">
-                  {ytm === null ? (
-                    <span className="text-muted-foreground" title="Faltan precio en vivo o flujos de pago futuros comparables">
-                      No disponible
-                    </span>
-                  ) : (
-                    <span title={contract?.sourceNote ?? undefined}>
+                  {ytm !== null && (
+                    <span>
                       {formatNumber(ytm)}% <span className="text-muted-foreground">{yieldLabel}</span>
                     </span>
                   )}
@@ -153,9 +208,7 @@ function QuotesTable({
                       {' · '}{formatNumber(contract.nextPaymentAmount)} {contract.currency} / 100 VN
                     </span>
                   )}
-                  <span title={contract?.sourceNote ?? undefined}>
-                    {contract?.sourceNote ?? (contract?.sector ? `Sector: ${contract.sector}` : '—')}
-                  </span>
+                  {contract?.sector && <span className="block">Sector: {contract.sector}</span>}
                 </td>
               </tr>
             );
@@ -198,14 +251,16 @@ export function Data912FixedIncome() {
       <Card>
         <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle>Renta fija argentina en vivo · DATA912</CardTitle>
+            <CardTitle>Renta fija argentina en vivo</CardTitle>
             <CardDescription>
-              Cotizaciones de mercado en vivo, con vencimientos y flujos contractuales de la hoja compartida.
+              Cotizaciones de mercado con vencimientos y flujos contractuales.
             </CardDescription>
             {query.data && (
               <p className="mt-2 text-xs text-muted-foreground">
-                DATA912: {new Date(query.data.fetchedAt).toLocaleString('es-AR')}
-                {contractsQuery.data && ` · Términos: ${new Date(contractsQuery.data.fetchedAt).toLocaleString('es-AR')}`}
+                Actualizado: {new Date(Math.max(
+                  query.data.fetchedAt,
+                  contractsQuery.data?.fetchedAt ?? query.data.fetchedAt,
+                )).toLocaleString('es-AR')}
               </p>
             )}
           </div>
@@ -245,20 +300,20 @@ export function Data912FixedIncome() {
           {query.isError && (
             <div role="alert" className="flex items-center gap-2 rounded-md border border-destructive/40 p-3 text-sm text-destructive">
               <AlertCircle className="size-4 shrink-0" />
-              {query.error.message}
+              No se pudieron cargar las cotizaciones. Intenta actualizar.
             </div>
           )}
           {contractsQuery.isError && (
             <div role="alert" className="flex items-center gap-2 rounded-md border border-destructive/40 p-3 text-sm text-destructive">
               <AlertCircle className="size-4 shrink-0" />
-              {contractsQuery.error.message}
+              No se pudieron cargar los datos contractuales. Intenta actualizar.
             </div>
           )}
           {query.data && (query.data.errors.sovereign !== null || query.data.errors.corporate !== null) && (
             <div role="alert" className="flex items-center gap-2 rounded-md border border-destructive/40 p-3 text-sm text-destructive">
               <AlertCircle className="size-4 shrink-0" />
-              {[query.data.errors.sovereign && `Soberanos: ${query.data.errors.sovereign}`,
-                query.data.errors.corporate && `Corporativos: ${query.data.errors.corporate}`]
+              {[query.data.errors.sovereign && 'No se pudieron cargar los títulos soberanos.',
+                query.data.errors.corporate && 'No se pudieron cargar las obligaciones negociables.']
                 .filter(Boolean)
                 .join(' · ')}
             </div>
@@ -320,9 +375,8 @@ export function Data912FixedIncome() {
             </Tabs>
           )}
           <p className="text-xs text-muted-foreground">
-            La TIR se resuelve con el precio medio vivo de DATA912 y los flujos futuros publicados
-            en el Google Sheet; no se muestra si precio, moneda o flujos no pueden compararse.
-            Las tasas TAMAR se identifican como estimadas y los bonos CER como TIR real.
+            La TIR se calcula con el precio de mercado y los flujos futuros; queda vacía si
+            precio, moneda o flujos no pueden compararse. Las tasas TAMAR se identifican como estimadas y los bonos CER como TIR real.
             Los títulos sin ficha contractual conservan el cálculo aproximado solo para letras cero cupón.
           </p>
         </CardContent>

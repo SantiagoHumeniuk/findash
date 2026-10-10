@@ -17,6 +17,8 @@ interface KeyMetricItemProps {
 }
 
 export function KeyMetricItem({ label, value, tooltip, className }: KeyMetricItemProps) {
+  if (value === null || value === undefined || value === '') return null;
+
   return (
     <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
       <div className="flex items-center gap-1.5 mb-1">

@@ -238,9 +238,9 @@ export function ScreenerTab() {
                             </TableRow>
                         ) : (
                             filteredAssets.slice(0, 50).map(asset => {
-                                const pe = typeof asset.PER === 'number' ? asset.PER.toFixed(2) : '-';
-                                const peg = typeof asset.pegRatio === 'number' ? asset.pegRatio.toFixed(2) : '-';
-                                const div = typeof asset.dividendYield === 'number' ? (asset.dividendYield * 100).toFixed(2) + '%' : '-';
+                                const pe = typeof asset.PER === 'number' && Number.isFinite(asset.PER) ? asset.PER.toFixed(2) : '';
+                                const peg = typeof asset.pegRatio === 'number' && Number.isFinite(asset.pegRatio) ? asset.pegRatio.toFixed(2) : '';
+                                const div = typeof asset.dividendYield === 'number' && Number.isFinite(asset.dividendYield) ? (asset.dividendYield * 100).toFixed(2) + '%' : '';
 
                                 return (
                                     <TableRow key={asset.symbol}>

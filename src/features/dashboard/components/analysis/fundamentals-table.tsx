@@ -26,7 +26,7 @@ const indicatorSections = [
         id: "valuation",
         title: "Métricas de Valoración",
         subtitle: "Ratios para medir la valoración relativa de la empresa.",
-        keys: ["PER", "forwardPER", "pegRatio", "priceToBook", "priceToSales", "pfc_ratio", "evToEbitda", "evToSales", "earningsYield", "grahamNumber", "marketCap"],
+        keys: ["PER", "forwardPER", "epsTTM", "epsForward", "targetPrice", "pegRatio", "priceToBook", "priceToSales", "pfc_ratio", "evToEbitda", "evToSales", "earningsYield", "grahamNumber", "marketCap"],
     },
     {
         id: "profitability",
@@ -50,50 +50,83 @@ const indicatorSections = [
         id: "technical",
         title: "Indicadores Técnicos y de Mercado",
         subtitle: "Volatilidad, momentum y sentimiento del mercado.",
-        keys: ["beta", "relativeVolume", "rsi14", "sma50", "sma200", "smaSignal"],
+        keys: ["beta", "analystCount", "relativeVolume", "rsi14", "sma50", "sma200", "smaSignal"],
     },
 ];
 
 // --- Helper: Resolver valor del indicador desde la estructura compleja de AssetData ---
+const yahooMetricFields: Record<string, string[]> = {
+    PER: ['summaryDetail.trailingPE'],
+    forwardPER: ['summaryDetail.forwardPE', 'keyStatistics.forwardPE'],
+    epsTTM: ['keyStatistics.trailingEps'],
+    epsForward: ['keyStatistics.forwardEps'],
+    targetPrice: ['financialData.targetMeanPrice'],
+    analystCount: ['financialData.numberOfAnalystOpinions'],
+    pegRatio: ['keyStatistics.pegRatio'],
+    priceToBook: ['keyStatistics.priceToBook'],
+    priceToSales: ['summaryDetail.priceToSalesTrailing12Months'],
+    evToEbitda: ['keyStatistics.enterpriseToEbitda'],
+    grossMargin: ['financialData.grossMargins'],
+    operatingMargin: ['financialData.operatingMargins'],
+    roe: ['financialData.returnOnEquity'],
+    roa: ['financialData.returnOnAssets'],
+    debtToEquity: ['financialData.debtToEquity'],
+    currentRatio: ['financialData.currentRatio'],
+    dividendYield: ['summaryDetail.dividendYield'],
+    payout_ratio: ['keyStatistics.payoutRatio'],
+    beta: ['summaryDetail.beta'],
+    marketCap: ['price.marketCap'],
+};
+
 function resolveIndicatorValue(asset: AssetData, key: string): number | null {
     const config = indicatorConfig[key];
     if (!config) return null;
-    if (
-        asset.dataSource === 'Yahoo Finance' &&
-        !['PER', 'forwardPER', 'marketCap', 'beta'].includes(key)
-    ) return null;
-    if (asset.dataSource === 'Yahoo Finance') {
-        const yahooMetrics: Record<string, number> = {
-            PER: asset.quote.pe ?? 0,
-            forwardPER: asset.quote.forwardPE ?? 0,
+
+    let value: number | null = null;
+    const yahooValue = yahooMetricFields[key]
+        ?.map((field) => asset.yahooMetrics?.[field])
+        .find((candidate): candidate is number =>
+            typeof candidate === 'number' && Number.isFinite(candidate)
+        );
+    if (yahooValue !== undefined) {
+        value = yahooValue;
+    } else if (asset.dataSource === 'Yahoo Finance') {
+        const yahooQuoteValues: Record<string, number | undefined> = {
+            PER: asset.quote.pe,
+            forwardPER: asset.quote.forwardPE,
+            epsTTM: asset.quote.trailingEPS,
+            epsForward: asset.quote.forwardEPS,
+            targetPrice: asset.priceTargetConsensus.targetConsensus,
+            analystCount: asset.priceTarget.lastMonthCount,
             marketCap: asset.quote.marketCap,
             beta: asset.profile.beta,
         };
-        return yahooMetrics[key] > 0 ? yahooMetrics[key] : null;
+        const quoteValue = yahooQuoteValues[key];
+        if (typeof quoteValue === 'number' && Number.isFinite(quoteValue)) value = quoteValue;
     }
-
-    let value: number | null = null;
 
     // 1. Buscar valor directo en los campos API definidos
     // Prioridad de búsqueda: KeyMetrics (TTM) -> Quote (Tiempo real) -> Profile (Estático) -> Rating
     const sources = [asset.keyMetrics, asset.quote, asset.profile, asset.rating];
 
-    for (const field of config.apiFields) {
-        for (const source of sources) {
-            if (source && typeof source === 'object' && field in source) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const val = (source as any)[field];
-                if (typeof val === 'number' && Number.isFinite(val)) {
-                    value = val;
-                    break;
+    if (value === null && asset.dataSource !== 'Yahoo Finance') {
+        for (const field of config.apiFields) {
+            for (const source of sources) {
+                if (source && typeof source === 'object' && field in source) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const val = (source as any)[field];
+                    if (typeof val === 'number' && Number.isFinite(val)) {
+                        value = val;
+                        break;
+                    }
                 }
             }
+            if (value !== null) break;
         }
-        if (value !== null) break;
     }
 
     // 2. Si no se encuentra y hay función de cálculo (compute), intentar calcular
-    if (value === null && config.compute) {
+    if (value === null && config.compute && asset.dataSource !== 'Yahoo Finance') {
         // Construimos un objeto 'raw' plano combinando las fuentes principales
         // Esto permite que las fórmulas como (yearHigh - price) / yearHigh funcionen
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -117,8 +150,13 @@ function resolveIndicatorValue(asset: AssetData, key: string): number | null {
 }
 
 // --- Funciones de Formato y Estilo ---
-const formatValue = (config: Indicator, value: number | null) => {
-    if (value === null || value === undefined) return "N/A";
+const formatValue = (config: Indicator, value: number | null, currency?: string) => {
+    if (value === null || value === undefined) return "";
+    if (config.unit === 'currency') {
+        const amount = value.toLocaleString('es-AR', { maximumFractionDigits: 2 });
+        return currency ? `${currency} ${amount}` : amount;
+    }
+    if (config.unit === 'count') return Math.round(value).toLocaleString('es-AR');
     if (config.isLargeNumber) {
         if (Math.abs(value) >= 1e12) return `${(value / 1e12).toFixed(2)}T`;
         if (Math.abs(value) >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
@@ -130,6 +168,7 @@ const formatValue = (config: Indicator, value: number | null) => {
 
 const getTrafficLightClass = (config: Indicator, value: number | null): string => {
     if (value === null || value === undefined) return "text-muted-foreground";
+    if (config.displayOnly) return "text-foreground";
     const { green, yellow, lowerIsBetter } = config;
     if (lowerIsBetter) {
         if (value <= green) return 'text-green-600 dark:text-green-400';
@@ -148,15 +187,6 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
     const [openSections, setOpenSections] = useState<string[]>(["valuation"]);
     const { theme } = useTheme();
     const { hasAccess: canExportPdf, upgradeMessage } = usePlanFeature('exportPdf');
-    const yahooAssets = useMemo(
-        () => assets.filter((asset) =>
-            asset.dataSource?.includes('Yahoo Finance') === true ||
-            Boolean(asset.yahooAttemptedAt) ||
-            Boolean(asset.yahooError)
-        ),
-        [assets],
-    );
-
     // Pre-calcular todos los valores para evitar trabajo en render
     const tableData = useMemo(() => {
         return assets.map(asset => {
@@ -168,6 +198,7 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
             });
             return {
                 symbol: asset.profile.symbol,
+                currency: asset.profile.currency,
                 values
             };
         });
@@ -205,11 +236,10 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                             config.label,
                             ...tableData.map(item => {
                                 const rawValue = item.values[key];
-                                const formattedValue = formatValue(config, rawValue);
                                 // Estructura para el exportador PDF
                                 return {
-                                    content: formattedValue,
-                                    rawValue: rawValue ?? 0 // Fallback numérico para ordenamiento si fuera necesario
+                                    content: formatValue(config, rawValue, item.currency),
+                                    rawValue: rawValue ?? 'N/A'
                                 };
                             })
                         ];
@@ -249,14 +279,14 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                         <div>
                             <CardTitle className="text-lg sm:text-xl">Indicadores Fundamentales</CardTitle>
                             <CardDescription className="text-xs sm:text-sm">
-                                Comparativa detallada. Los activos de Yahoo Finance muestran únicamente las métricas que esa fuente devolvió.
+                                Comparativa detallada de las métricas disponibles.
                             </CardDescription>
                         </div>
                     </div>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
                         <div className="flex items-center space-x-2">
                             <Checkbox id="hideNA" checked={hideNA} onCheckedChange={(checked: boolean) => setHideNA(!!checked)} className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            <label htmlFor="hideNA" className="text-xs sm:text-sm font-medium leading-none">Ocultar N/A</label>
+                            <label htmlFor="hideNA" className="text-xs sm:text-sm font-medium leading-none">Ocultar métricas sin valor</label>
                         </div>
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -289,93 +319,6 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                 </div>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
-                {yahooAssets.length > 0 && (
-                    <section className="mb-5 space-y-2" aria-label="Datos de Yahoo Finance">
-                        <div>
-                            <h3 className="text-sm font-semibold">Datos de Yahoo Finance</h3>
-                            <p className="text-xs text-muted-foreground">
-                                Métricas forward, resultados por acción y objetivos de analistas cuando Yahoo los informa.
-                            </p>
-                        </div>
-                        <div className="overflow-x-auto rounded-lg border">
-                            <Table>
-                                <TableHeader className="bg-muted/50">
-                                    <TableRow>
-                                        <TableHead>Activo / estado</TableHead>
-                                        <TableHead className="text-right">PER</TableHead>
-                                        <TableHead className="text-right">PER forward</TableHead>
-                                        <TableHead className="text-right">EPS TTM</TableHead>
-                                        <TableHead className="text-right">EPS forward</TableHead>
-                                        <TableHead className="text-right">Objetivo medio</TableHead>
-                                        <TableHead className="text-right">Analistas</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {yahooAssets.map((asset) => {
-                                        const metrics = asset.yahooMetrics ?? {};
-                                        const metric = (...keys: string[]) => {
-                                            const value = keys
-                                                .map((key) => metrics[key])
-                                                .find((candidate) =>
-                                                    typeof candidate === 'number' &&
-                                                    Number.isFinite(candidate) &&
-                                                    candidate > 0
-                                                );
-                                            return typeof value === 'number' ? value : null;
-                                        };
-                                        const formatMetric = (value: number | null) =>
-                                            value === null ? '—' : value.toLocaleString('es-AR', { maximumFractionDigits: 2 });
-                                        const formatEps = (value: number | null) =>
-                                            value === null ? '—' : `${formatMetric(value)} ${asset.profile.currency}`;
-                                        const target = metric('financialData.targetMeanPrice');
-                                        const analystCount = metric('financialData.numberOfAnalystOpinions');
-                                        const sourceStatus = asset.yahooError
-                                            ? `Yahoo parcial: ${asset.yahooError}`
-                                            : asset.dataSource?.includes('Yahoo Finance')
-                                                ? `Actualizado ${asset.yahooAttemptedAt
-                                                    ? new Date(asset.yahooAttemptedAt).toLocaleString('es-AR')
-                                                    : 'con Yahoo Finance'}`
-                                                : 'Yahoo sin datos disponibles';
-
-                                        return (
-                                            <TableRow key={`yahoo-${asset.profile.symbol}`}>
-                                                <TableCell className="min-w-40">
-                                                    <span className="font-semibold">{asset.profile.symbol}</span>
-                                                    <span
-                                                        className={`mt-0.5 block max-w-64 truncate text-[10px] ${
-                                                            asset.yahooError ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'
-                                                        }`}
-                                                        title={sourceStatus}
-                                                    >
-                                                        {sourceStatus}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell className="text-right tabular-nums">
-                                                    {formatMetric(metric('summaryDetail.trailingPE'))}
-                                                </TableCell>
-                                                <TableCell className="text-right tabular-nums">
-                                                    {formatMetric(metric('summaryDetail.forwardPE', 'defaultKeyStatistics.forwardPE'))}
-                                                </TableCell>
-                                                <TableCell className="text-right tabular-nums">
-                                                    {formatEps(metric('defaultKeyStatistics.trailingEps'))}
-                                                </TableCell>
-                                                <TableCell className="text-right tabular-nums">
-                                                    {formatEps(metric('defaultKeyStatistics.forwardEps'))}
-                                                </TableCell>
-                                                <TableCell className="text-right tabular-nums">
-                                                    {target === null ? '—' : `${asset.profile.currency} ${formatMetric(target)}`}
-                                                </TableCell>
-                                                <TableCell className="text-right tabular-nums">
-                                                    {analystCount === null ? '—' : formatMetric(analystCount)}
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </section>
-                )}
                 <Accordion type="multiple" value={openSections} onValueChange={setOpenSections}>
                     {indicatorSections.map(section => (
                         visibleKeysBySection[section.id].length > 0 && (
@@ -392,11 +335,6 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                                                     {assets.map(asset => (
                                                         <TableHead key={asset.profile.symbol} className="text-center font-semibold text-xs sm:text-sm">
                                                             <span>{asset.profile.symbol}</span>
-                                                            {asset.dataSource?.includes('Yahoo Finance') && (
-                                                                <span className="ml-1 block text-[10px] font-normal text-amber-600">
-                                                                    {asset.dataSource === 'Yahoo Finance' ? 'Yahoo Finance' : 'FMP + Yahoo'}
-                                                                </span>
-                                                            )}
                                                         </TableHead>
                                                     ))}
                                                 </TableRow>
@@ -425,7 +363,7 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                                                             </TableCell>
                                                             {tableData.map((item) => (
                                                                 <TableCell key={item.symbol} className={`text-center font-semibold text-xs sm:text-sm ${getTrafficLightClass(config, item.values[key])}`}>
-                                                                    {formatValue(config, item.values[key])}
+                                                                    {formatValue(config, item.values[key], item.currency)}
                                                                 </TableCell>
                                                             ))}
                                                         </TableRow>

@@ -19,7 +19,7 @@ interface CompanyInfoItemProps {
  * Incluye un icono, etiqueta y valor con diseño consistente.
  */
 export function CompanyInfoItem({ icon, label, value }: CompanyInfoItemProps) {
-  if (!value || value === 'N/A' || value === 'Unknown') return null;
+  if (value === null || value === undefined || value === '' || value === 'N/A' || value === 'Unknown') return null;
 
   return (
     <div className="flex items-start gap-2 sm:gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">

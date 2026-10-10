@@ -9,6 +9,8 @@ export interface Indicator {
   yellow: number;
   asPercent?: boolean;
   isLargeNumber?: boolean;
+  unit?: 'currency' | 'count';
+  displayOnly?: boolean;
   explanation: string;
 }
 
@@ -30,6 +32,44 @@ export const indicatorConfig: IndicatorConfig = {
     },
     lowerIsBetter: true, green: 15, yellow: 25,
     explanation: 'Mide cuántos años de beneficios se necesitarían para recuperar el precio de la acción. Un valor bajo sugiere que puede estar barata, pero depende mucho del sector: en tecnología un PER de 40 puede ser normal, mientras que en un banco un PER de 15 ya podría considerarse caro. Lo clave es compararlo con competidores directos.',
+  },
+  forwardPER: {
+    label: 'PER forward',
+    apiFields: ['forwardPE'],
+    lowerIsBetter: true, green: 15, yellow: 25,
+    explanation: 'PER estimado usando las ganancias esperadas para los próximos 12 meses. Es una proyección, no una ganancia ya reportada.',
+  },
+  epsTTM: {
+    label: 'EPS TTM',
+    apiFields: ['trailingEPS', 'trailingEps'],
+    lowerIsBetter: false, green: 0, yellow: 0,
+    unit: 'currency',
+    displayOnly: true,
+    explanation: 'Ganancia por acción de los últimos doce meses.',
+  },
+  epsForward: {
+    label: 'EPS forward',
+    apiFields: ['forwardEPS', 'forwardEps'],
+    lowerIsBetter: false, green: 0, yellow: 0,
+    unit: 'currency',
+    displayOnly: true,
+    explanation: 'Ganancia por acción estimada para los próximos doce meses.',
+  },
+  targetPrice: {
+    label: 'Precio objetivo medio',
+    apiFields: ['targetConsensus', 'targetMeanPrice'],
+    lowerIsBetter: false, green: 0, yellow: 0,
+    unit: 'currency',
+    displayOnly: true,
+    explanation: 'Precio objetivo medio estimado por los analistas.',
+  },
+  analystCount: {
+    label: 'Analistas',
+    apiFields: ['lastMonthCount', 'numberOfAnalystOpinions'],
+    lowerIsBetter: false, green: 0, yellow: 0,
+    unit: 'count',
+    displayOnly: true,
+    explanation: 'Cantidad de analistas que participan de la estimación.',
   },
   pegRatio: {
     label: 'PEG Ratio',

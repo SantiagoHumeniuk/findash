@@ -1,6 +1,6 @@
 // src/components/shared/subscription-status-modal.tsx
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,18 +18,56 @@ import {
   XCircle, 
   Sparkles, 
   ArrowRight,
-  ShieldCheck,
-  HelpCircle
+  HelpCircle,
+  Clock3,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/use-auth';
 import { paymentService, type SubscriptionRequest } from '../../services/payment-service';
 import { useNavigate } from 'react-router-dom';
 
 export function SubscriptionStatusModal() {
-  const { user, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [request, setRequest] = useState<SubscriptionRequest | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [expiryRequest, setExpiryRequest] = useState<SubscriptionRequest | null>(null);
+  const [expiryNotice, setExpiryNotice] = useState<'expiring' | 'expired' | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const expiryCheckRequestRef = useRef<string | null>(null);
+
+  const currentRole = profile?.role;
+  const isPaidPlan = currentRole === 'plus' || currentRole === 'premium';
+
+  useEffect(() => {
+    let active = true;
+
+    if (!user?.id) {
+      setExpiryRequest(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    void paymentService.getUserRequests().then((requests) => {
+      if (!active) return;
+      const latestApproval = requests
+        .filter((item) => item.status === 'approved' && item.reviewed_at && (!isPaidPlan || item.plan === currentRole))
+        .sort((left, right) => new Date(right.reviewed_at!).getTime() - new Date(left.reviewed_at!).getTime())[0] ?? null;
+      setExpiryRequest(latestApproval);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id, currentRole, isPaidPlan]);
+
+  useEffect(() => {
+    if (!expiryRequest?.reviewed_at) return;
+
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [expiryRequest]);
 
   useEffect(() => {
     if (!user) return;
@@ -71,17 +109,15 @@ export function SubscriptionStatusModal() {
     await handleClose();
 
     if (request.status === 'approved') {
-      navigate('/dashboard');
+      void navigate('/dashboard');
     } else {
-      navigate('/plans');
+      void navigate('/plans');
     }
   };
 
-  if (!request) return null;
-
-  const isApproved = request.status === 'approved';
-  const planName = request.plan === 'plus' ? 'Plus' : 'Premium';
-  const PlanIcon = request.plan === 'plus' ? Crown : Rocket;
+  const isApproved = request?.status === 'approved';
+  const planName = request?.plan === 'plus' ? 'Plus' : 'Premium';
+  const PlanIcon = request?.plan === 'premium' ? Rocket : Crown;
 
   const plusPerks = [
     'Acceso ilimitado a más de 8.000 símbolos y activos',
@@ -99,10 +135,38 @@ export function SubscriptionStatusModal() {
     'Soporte prioritario y acceso anticipado a novedades',
   ];
 
-  const perks = request.plan === 'plus' ? plusPerks : premiumPerks;
+  const perks = request?.plan === 'premium' ? premiumPerks : plusPerks;
+  const expiration = expiryRequest?.reviewed_at
+    ? new Date(new Date(expiryRequest.reviewed_at).getTime() + 30 * 24 * 60 * 60 * 1000)
+    : null;
+  const remainingMs = expiration ? expiration.getTime() - now : null;
+
+  useEffect(() => {
+    if (!user || !expiryRequest || remainingMs === null || !Number.isFinite(remainingMs)) return;
+
+    const type = remainingMs <= 0 ? 'expired' : remainingMs <= 24 * 60 * 60 * 1000 ? 'expiring' : null;
+    if (!type) return;
+
+    const noticeKey = `subscription_notice_${user.id}_${expiryRequest.id}_${type}`;
+    try {
+      if (localStorage.getItem(noticeKey)) return;
+      localStorage.setItem(noticeKey, 'shown');
+    } catch {
+      // The notice can still be shown when local storage is unavailable.
+    }
+    setExpiryNotice(type);
+
+    if (type === 'expired' && expiryCheckRequestRef.current !== expiryRequest.id) {
+      expiryCheckRequestRef.current = expiryRequest.id;
+      void paymentService.expireCurrentUserPlanIfDue().then(async (downgraded) => {
+        if (downgraded) await refreshProfile();
+      });
+    }
+  }, [user, expiryRequest, remainingMs, refreshProfile]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && void handleClose()}>
+    <>
+    {request && <Dialog open={isOpen} onOpenChange={(open) => !open && void handleClose()}>
       <DialogContent className="sm:max-w-[540px] p-0 overflow-hidden border-border/80 shadow-2xl">
         {isApproved ? (
           <div>
@@ -228,6 +292,31 @@ export function SubscriptionStatusModal() {
           </div>
         )}
       </DialogContent>
-    </Dialog>
+    </Dialog>}
+
+      <Dialog open={expiryNotice !== null} onOpenChange={(open) => !open && setExpiryNotice(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock3 className="h-5 w-5 text-amber-500" />
+              {expiryNotice === 'expired' ? 'Tu plan pago venció' : 'Tu plan está por vencer'}
+            </DialogTitle>
+            <DialogDescription>
+              {expiryNotice === 'expired'
+                ? 'Finalizó el período de 30 días y tu cuenta volvió al plan Básico.'
+                : `Tu suscripción ${expiryRequest?.plan} vence el ${expiration?.toLocaleString('es-AR', { dateStyle: 'long', timeStyle: 'short' })}.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            {expiryNotice === 'expired' && (
+              <Button type="button" variant="outline" onClick={() => { setExpiryNotice(null); void navigate('/plans'); }}>
+                Ver planes
+              </Button>
+            )}
+            <Button type="button" onClick={() => setExpiryNotice(null)}>Entendido</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

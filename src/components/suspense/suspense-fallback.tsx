@@ -18,7 +18,7 @@ const fadeInVariants = {
     scale: 1,
     transition: {
       duration: 0.4,
-      ease: [0.22, 1, 0.36, 1],
+      ease: [0.22, 1, 0.36, 1] as const,
     },
   },
 };
@@ -69,6 +69,7 @@ export function SuspenseFallback({
           animate="visible"
         >
           <TechLoader />
+          <p className="text-sm text-muted-foreground">{message}</p>
         </motion.div>
       );
 
@@ -105,6 +106,7 @@ export function SuspenseFallback({
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
           <TechLoader />
+          <p className="text-sm text-muted-foreground">{message}</p>
         </motion.div>
       );
 

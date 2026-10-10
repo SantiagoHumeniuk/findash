@@ -29,7 +29,7 @@ function useDebounce<T>(value: T, delay: number): T {
 const CATEGORIES: { id: NewsCategory | 'all'; label: string }[] = [
     { id: 'general', label: 'General' },
     { id: 'stock', label: 'Mercado de Valores' },
-    { id: 'fmp-articles', label: 'Artículos FMP' },
+    { id: 'fmp-articles', label: 'Artículos' },
     { id: 'crypto', label: 'Criptomonedas' },
     { id: 'forex', label: 'Divisas' },
     { id: 'press-releases', label: 'Comunicados' },

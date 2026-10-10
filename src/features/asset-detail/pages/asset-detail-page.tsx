@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Button } from '../../../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent } from '../../../components/ui/card';
-import { CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
+import { CardHeader, CardTitle } from '../../../components/ui/card';
 import {
   AssetDetailSkeleton,
   AssetHeader,
@@ -135,13 +135,7 @@ export default function AssetDetailPage() {
         <motion.div variants={itemVariants}>
           <Card className="border-blue-500/20">
             <CardHeader>
-              <CardTitle className="text-lg">Métricas complementarias de Yahoo Finance</CardTitle>
-              <CardDescription>
-                {yahooMetrics.length} campos disponibles de Yahoo. Cotización reportada:
-                {' '}{asset.quote.timestamp
-                  ? new Date(asset.quote.timestamp * 1000).toLocaleString('es-AR')
-                  : 'fecha no informada'}
-              </CardDescription>
+              <CardTitle className="text-lg">Métricas complementarias</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -151,7 +145,7 @@ export default function AssetDetailPage() {
                       {key.replaceAll('.', ' · ').replace(/([a-z])([A-Z])/g, '$1 $2')}
                     </p>
                     <p className="break-all font-medium tabular-nums">
-                      {new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 }).format(value ?? 0)}
+                      {new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 }).format(value)}
                     </p>
                   </div>
                 ))}
@@ -162,22 +156,7 @@ export default function AssetDetailPage() {
       )}
 
       {/* Valuation & Rating Cards */}
-      {asset.dataSource === 'Yahoo Finance' ? (
-        <motion.div variants={itemVariants}>
-          <Card className="border-amber-500/30">
-            <CardContent className="p-4 text-sm text-muted-foreground">
-              FMP no respondió para este símbolo. Se muestra la cotización y las métricas de
-              valoración disponibles en Yahoo Finance; los modelos DCF, calificaciones,
-              estimaciones y datos históricos de FMP no están disponibles.
-              {asset.dataFetchedAt && (
-                <span className="mt-1 block">
-                  Consulta Yahoo: {new Date(asset.dataFetchedAt).toLocaleString('es-AR')}
-                </span>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-      ) : (
+      {asset.dataSource !== 'Yahoo Finance' && (
         <div className="grid-cards-2">
           <motion.div variants={itemVariants}>
             <DCFValuationCard asset={asset} />

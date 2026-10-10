@@ -132,21 +132,21 @@ describe('formatters', () => {
       expect(formatNumber(0)).toBe('0.00');
     });
 
-    it('should return "N/A" for non-finite numbers', () => {
-      expect(formatNumber(Infinity)).toBe('N/A');
-      expect(formatNumber(-Infinity)).toBe('N/A');
-      expect(formatNumber(NaN)).toBe('N/A');
+    it('should return an empty string for non-finite numbers', () => {
+      expect(formatNumber(Infinity)).toBe('');
+      expect(formatNumber(-Infinity)).toBe('');
+      expect(formatNumber(NaN)).toBe('');
     });
 
-    it('should return "N/A" for string inputs', () => {
-      expect(formatNumber('hello')).toBe('N/A');
-      expect(formatNumber('123')).toBe('N/A');
-      expect(formatNumber('')).toBe('N/A');
+    it('should return an empty string for string inputs', () => {
+      expect(formatNumber('hello')).toBe('');
+      expect(formatNumber('123')).toBe('');
+      expect(formatNumber('')).toBe('');
     });
 
-    it('should return "N/A" for null/undefined', () => {
-      expect(formatNumber(null as unknown as number)).toBe('N/A');
-      expect(formatNumber(undefined as unknown as number)).toBe('N/A');
+    it('should return an empty string for null/undefined', () => {
+      expect(formatNumber(null as unknown as number)).toBe('');
+      expect(formatNumber(undefined as unknown as number)).toBe('');
     });
 
     it('should handle very large numbers', () => {

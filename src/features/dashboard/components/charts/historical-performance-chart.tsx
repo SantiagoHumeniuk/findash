@@ -58,13 +58,13 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
         if (history.length >= 2) {
           histories[symbol] = history.map(({ date, close }) => ({ date, close }));
         } else {
-          errors[symbol] = quote?.error ?? 'Yahoo no devolvió historial suficiente';
+          errors[symbol] = 'No se recibió historial suficiente';
         }
       }
 
       if (!histories.SPY && !histories.QQQ) {
         throw new Error(Object.entries(errors).map(([symbol, message]) => `${symbol}: ${message}`).join('. ') ||
-          'Yahoo Finance no devolvió historial de los índices.');
+          'No se recibió historial de los índices.');
       }
       await incrementApiCallCounter(user.id);
       return { histories, errors };
@@ -397,7 +397,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
                             <span className="font-bold text-xs">
                               {value !== null
                                 ? selectedBenchmark === 'none' ? `$${value.toFixed(2)}` : `${value.toFixed(2)}%`
-                                : 'N/A'}
+                                : ''}
                             </span>
                           </div>
                         );

@@ -152,27 +152,31 @@ const InsightsPage: React.FC = () => {
                 <div className="flex items-center justify-between gap-4 px-4 py-3">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Infravalorados mostrados</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Upside medio</p>
+                    {averageUpside !== null && <p className="mt-1 text-xs text-muted-foreground">Upside medio</p>}
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-semibold tabular-nums">{undervalued.length}</p>
-                    <p className="flex items-center justify-end gap-1 text-sm font-semibold text-green-600 dark:text-green-400">
-                      <ArrowUpRight className="h-4 w-4" />
-                      {averageUpside === null ? 'N/D' : `+${averageUpside.toFixed(1)}%`}
-                    </p>
+                    {averageUpside !== null && (
+                      <p className="flex items-center justify-end gap-1 text-sm font-semibold text-green-600 dark:text-green-400">
+                        <ArrowUpRight className="h-4 w-4" />
+                        +{averageUpside.toFixed(1)}%
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center justify-between gap-4 px-4 py-3">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Sobrevalorados mostrados</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Sobreprecio medio</p>
+                    {averageOverpricing !== null && <p className="mt-1 text-xs text-muted-foreground">Sobreprecio medio</p>}
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-semibold tabular-nums">{overvalued.length}</p>
-                    <p className="flex items-center justify-end gap-1 text-sm font-semibold text-red-600 dark:text-red-400">
-                      <ArrowDownRight className="h-4 w-4" />
-                      {averageOverpricing === null ? 'N/D' : `${averageOverpricing.toFixed(1)}%`}
-                    </p>
+                    {averageOverpricing !== null && (
+                      <p className="flex items-center justify-end gap-1 text-sm font-semibold text-red-600 dark:text-red-400">
+                        <ArrowDownRight className="h-4 w-4" />
+                        {averageOverpricing.toFixed(1)}%
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center justify-between gap-4 px-4 py-3">

@@ -138,7 +138,7 @@ export const PortfolioCharts = React.memo(function PortfolioCharts({ holdings, p
         cik: '',
         isin: '',
         cusip: '',
-        exchange: 'N/A'
+        exchange: ''
       },
       quote: {
         symbol: 'PORTFOLIO',
@@ -154,7 +154,7 @@ export const PortfolioCharts = React.memo(function PortfolioCharts({ holdings, p
         marketCap: lastPoint.close,
         priceAvg50: 0,
         priceAvg200: 0,
-        exchange: 'N/A',
+        exchange: '',
         open: lastPoint.open,
         previousClose: lastPoint.close,
         timestamp: new Date(lastPoint.date).getTime()
@@ -220,7 +220,7 @@ export const PortfolioCharts = React.memo(function PortfolioCharts({ holdings, p
       dcf: [],
       rating: {
         symbol: 'PORTFOLIO',
-        rating: 'N/A',
+        rating: '',
         overallScore: 0,
         discountedCashFlowScore: 0,
         returnOnEquityScore: 0,
@@ -282,7 +282,7 @@ export const PortfolioCharts = React.memo(function PortfolioCharts({ holdings, p
         hold: 0,
         sell: 0,
         strongSell: 0,
-        consensus: 'N/A'
+        consensus: ''
       }
     };
   }, [portfolioHistory]);

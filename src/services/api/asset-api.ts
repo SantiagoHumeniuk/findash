@@ -85,7 +85,7 @@ export function createYahooAssetData(
         lastDividend: yahooValue(yahoo.lastDividend),
         range: yahoo.yearLow.value !== null && yahoo.yearHigh.value !== null
             ? `${yahooQuote.yearLow} - ${yahooQuote.yearHigh}`
-            : 'N/A',
+            : '',
         change: yahooQuote.change,
         changePercentage: yahooQuote.changePercentage,
         volume: yahooQuote.volume,
@@ -99,7 +99,7 @@ export function createYahooAssetData(
         exchange: yahoo.exchange ?? '',
         industry: yahoo.companyProfile.industry ?? '',
         website: yahoo.companyProfile.website ?? '',
-        description: yahoo.companyProfile.description ?? 'Datos limitados obtenidos de Yahoo Finance; FMP no está disponible.',
+        description: yahoo.companyProfile.description ?? 'Datos limitados disponibles para este activo.',
         ceo: '',
         sector: yahoo.companyProfile.sector ?? '',
         country: yahoo.companyProfile.country ?? '',
@@ -503,22 +503,22 @@ async function fallbackToYahooOrCache(
     try {
         const yahooResult = await yahooSupplement;
         if (yahooResult.error) throw yahooResult.error;
-        if (!yahooResult.response) throw new Error('Yahoo Finance no devolvió una respuesta');
+        if (!yahooResult.response) throw new Error('No se recibieron datos del activo.');
         const symbol = ticker.trim().toUpperCase();
         const yahooQuote = yahooResult.response.quotes.find((item) => item.symbol === symbol);
-        if (!yahooQuote) throw new Error(`Yahoo Finance no devolvió resultados para ${symbol}`);
+        if (!yahooQuote) throw new Error(`No se recibieron datos para ${symbol}.`);
         if (
             yahooQuote.price.value === null ||
             !Number.isFinite(yahooQuote.price.value) ||
             yahooQuote.price.value <= 0
         ) {
-            throw new Error(yahooQuote.error ?? `Yahoo Finance no devolvió un precio válido para ${symbol}`);
+            throw new Error(`No se recibió un precio válido para ${symbol}.`);
         }
         const yahooData = createYahooAssetData(symbol, yahooQuote, yahooResult.response.fetchedAt);
-        toast.warning(`FMP no respondió para ${ticker}. Se muestran datos de Yahoo Finance.`, {
+        toast.warning(`Se muestran los datos disponibles para ${ticker}.`, {
             description: yahooQuote.error
-                ? `${yahooQuote.error}. Se usa el último cierre histórico disponible.`
-                : 'La información disponible es limitada y puede tener demora de mercado.',
+                ? 'La cotización más reciente no está disponible.'
+                : 'Algunas métricas pueden no estar disponibles o tener demora.',
         });
         if (userId) {
             await incrementApiCallCounter(userId);
@@ -545,11 +545,11 @@ async function fallbackToYahooOrCache(
         if (cached?.data) {
             const cacheDate = new Date(cached.last_updated_at as string);
             const hoursOld = Math.floor((Date.now() - cacheDate.getTime()) / (1000 * 60 * 60));
-            toast.warning(`Fallaron FMP y Yahoo para ${ticker}. Se usan datos guardados de hace ${hoursOld}h.`);
+            toast.warning(`No se pudieron actualizar los datos de ${ticker}. Se muestran datos guardados de hace ${hoursOld} h.`);
             return cached.data as AssetData;
         }
 
-        const message = `FMP falló (${fmpMessage}) y Yahoo Finance también falló (${yahooMessage}).`;
+        const message = `No se pudieron cargar los datos de ${ticker}.`;
         if (!suppressFailureToast) {
             toast.error(`Error al cargar ${ticker}`, { description: message });
         }
@@ -658,7 +658,7 @@ export async function fetchTickerData({
         if (!fromPortfolio) {
             toast.error('Límite de API de tu plan alcanzado y sin datos en caché.');
         }
-        throw new Error('Límite de API de FMP alcanzado para tu plan; el fallback no se ejecuta por límites de cuenta.');
+        throw new Error('Se alcanzó el límite diario de consultas del plan.');
     }
 
     // 3. Preparar endpoints
@@ -778,7 +778,7 @@ export async function fetchTickerData({
             !Number.isFinite(processedAsset.quote.price) ||
             processedAsset.quote.price <= 0
         ) {
-            throw new Error(`FMP devolvió datos incompletos para ${ticker}`);
+            throw new Error(`Los datos recibidos para ${ticker} están incompletos.`);
         }
     } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Error al consultar datos del activo.';

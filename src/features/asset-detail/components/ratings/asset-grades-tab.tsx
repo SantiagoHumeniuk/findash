@@ -56,7 +56,7 @@ export function AssetGradesTab({ asset, onRefreshAssetData, isRefreshing }: Asse
   const sellPercent = totalRatings > 0 ? (sellCount / totalRatings) * 100 : 0;
 
   // Interpretación del Consenso
-  let consensusLabel = totalRatings > 0 ? gradesConsensus?.consensus || 'Neutral' : 'Sin datos';
+  let consensusLabel = totalRatings > 0 ? gradesConsensus?.consensus || 'Neutral' : '';
   let consensusTextColor = totalRatings > 0 ? 'text-yellow-600' : 'text-muted-foreground';
 
   if (totalRatings > 0 && consensusLabel.toLowerCase().includes('buy')) {
@@ -189,7 +189,7 @@ export function AssetGradesTab({ asset, onRefreshAssetData, isRefreshing }: Asse
             <div className="flex flex-col items-center px-4 flex-1">
               <div className={`flex items-center gap-1 text-sm font-bold px-3 py-1 rounded-full ${potential !== null && potential >= 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
                 {potential !== null && potential >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                {potential === null ? 'N/D' : `${potential > 0 ? '+' : ''}${potential.toFixed(1)}%`}
+                {potential === null ? '' : `${potential > 0 ? '+' : ''}${potential.toFixed(1)}%`}
               </div>
               <div className="h-px w-full bg-border mt-2 relative">
                 <div className="absolute right-0 -top-1 w-2 h-2 rounded-full bg-border" />
@@ -198,7 +198,7 @@ export function AssetGradesTab({ asset, onRefreshAssetData, isRefreshing }: Asse
 
             <div className="text-right">
               <p className="text-sm text-muted-foreground mb-1">Target Promedio</p>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{targetPrice > 0 ? formatPrice(targetPrice) : 'N/D'}</p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{targetPrice > 0 ? formatPrice(targetPrice) : ''}</p>
               <p className="mt-1 text-[11px] text-muted-foreground">{targetWindow}</p>
             </div>
           </div>

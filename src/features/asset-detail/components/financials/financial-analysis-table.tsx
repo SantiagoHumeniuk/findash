@@ -153,7 +153,7 @@ export function FinancialAnalysisTable({
                                             }
 
                                             // Formateo del valor principal
-                                            let displayValue = '—';
+                                            let displayValue = '';
                                             if (value !== undefined && value !== null) {
                                                 const numVal = Number(value);
                                                 if (!isNaN(numVal)) {

@@ -18,7 +18,6 @@ import {
   Layers,
   Sparkles,
   Calculator,
-  ShieldCheck,
   Zap,
 } from 'lucide-react';
 import {
@@ -52,8 +51,6 @@ export default function BondsPage() {
   const [activeTab, setActiveTab] = useState<'macro' | 'live' | 'lecaps'>('macro');
 
   // Estados de Dólares y Macro
-  const [provider, setProvider] = useState<'argentinadatos' | 'dolarazo'>('argentinadatos');
-  const [activeSourceUsed, setActiveSourceUsed] = useState<string>('argentinadatos');
   const [dolares, setDolares] = useState<DolarCotizacion[]>([]);
   const [inflacion, setInflacion] = useState<InflacionDato[]>([]);
   const [plazosFijos, setPlazosFijos] = useState<PlazoFijoDato[]>([]);
@@ -105,7 +102,6 @@ export default function BondsPage() {
 
     if (dolaresRes.status === 'fulfilled') {
       setDolares(dolaresRes.value.dolares);
-      setActiveSourceUsed(dolaresRes.value.sourceUsed);
     } else {
       console.error('Error cargando dólares:', dolaresRes.reason);
     }
@@ -129,11 +125,6 @@ export default function BondsPage() {
     const instList = getCurvaLecapYTasaFija();
     setInstrumentos(instList);
   }, []);
-
-  const handleProviderChange = (newProvider: 'argentinadatos' | 'dolarazo') => {
-    setProvider(newProvider);
-    void loadMacroData(newProvider);
-  };
 
   // Filtrado de Plazos Fijos
   const filteredPlazosFijos = useMemo(() => {
@@ -293,7 +284,7 @@ export default function BondsPage() {
             size="sm"
             variant="outline"
             className="h-9 px-3 gap-1.5 border-white/15 hover:bg-white/10"
-            onClick={() => { void loadMacroData(provider); }}
+            onClick={() => { void loadMacroData('argentinadatos'); }}
             disabled={loadingMacro}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loadingMacro ? 'animate-spin' : ''}`} />
@@ -331,7 +322,7 @@ export default function BondsPage() {
         </TabsList>
 
         {/* ========================================================================= */}
-        {/* PESTAÑA 1: DÓLARES & VARIABLES MACRO (ArgentinaDatos y Dolarazo) */}
+        {/* PESTAÑA 1: DÓLARES & VARIABLES MACRO */}
         {/* ========================================================================= */}
         <TabsContent value="macro" className="space-y-6 mt-6">
           {macroErrors.length > 0 && (
@@ -339,45 +330,6 @@ export default function BondsPage() {
               No se pudieron cargar algunas variables: {macroErrors.join(' · ')}
             </div>
           )}
-          {/* Barra de control de fuente de datos */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-card/60 backdrop-blur-md border border-white/10">
-            <div className="flex items-center gap-2 text-xs">
-              <ShieldCheck className="h-4 w-4 text-emerald-400" />
-              <span className="text-muted-foreground">
-                Datos provistos por APIs abiertas de código abierto:
-              </span>
-              <span className="font-semibold text-foreground">
-                {activeSourceUsed === 'argentinadatos' ? 'ArgentinaDatos.com' : 'Dolarazo.com.ar'}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Fuente preferida:</span>
-              <div className="inline-flex rounded-lg border border-border p-0.5 bg-background/50">
-                <button
-                  onClick={() => handleProviderChange('argentinadatos')}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                    provider === 'argentinadatos'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  ArgentinaDatos
-                </button>
-                <button
-                  onClick={() => handleProviderChange('dolarazo')}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                    provider === 'dolarazo'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Dolarazo
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* Grid de Cotizaciones de Dólares */}
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -447,7 +399,7 @@ export default function BondsPage() {
                           <div>
                             <span className="text-[11px] text-muted-foreground uppercase font-medium">Compra</span>
                             <p className="text-xl font-extrabold text-foreground">
-                              ${dolar.compra > 0 ? Number(dolar.compra).toFixed(2) : '-'}
+                              ${dolar.compra > 0 ? Number(dolar.compra).toFixed(2) : ''}
                             </p>
                           </div>
                           <div className="text-right">
@@ -566,7 +518,7 @@ export default function BondsPage() {
                       Inflación Mensual IPC (Últimos 12 Meses)
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Datos oficiales extraídos mediante ArgentinaDatos API
+                      Datos oficiales actualizados
                     </CardDescription>
                   </div>
                   {ultimaInflacion && (
@@ -717,10 +669,10 @@ export default function BondsPage() {
                             <span className="truncate max-w-xs">{banco.entidad}</span>
                           </td>
                           <td className="p-3 text-right font-bold text-emerald-400">
-                            {tnaPercent > 0 ? `${tnaPercent.toFixed(2)}%` : '-'}
+                            {tnaPercent > 0 ? `${tnaPercent.toFixed(2)}%` : ''}
                           </td>
                           <td className="p-3 text-right text-muted-foreground">
-                            {banco.tnaNoClientes ? `${(banco.tnaNoClientes * 100).toFixed(2)}%` : '-'}
+                            {banco.tnaNoClientes ? `${(banco.tnaNoClientes * 100).toFixed(2)}%` : ''}
                           </td>
                           <td className="p-3 text-right text-foreground font-medium">
                             ~{temEstimada}%
@@ -735,9 +687,7 @@ export default function BondsPage() {
                               >
                                 Ver <ExternalLink className="h-3 w-3" />
                               </a>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
+                            ) : null}
                           </td>
                         </tr>
                       );

@@ -21,7 +21,7 @@ export function AssetKeyMetrics({ asset }: AssetKeyMetricsProps) {
   }, [historicalReturns]);
 
   const formatYearMetric = (m: { year: number; return: number } | null) => {
-    if (!m) return 'N/A';
+    if (!m) return '';
     return `${m.year} (${(m.return * 100).toFixed(2)}%)`;
   };
 
@@ -31,27 +31,27 @@ export function AssetKeyMetrics({ asset }: AssetKeyMetricsProps) {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
           <KeyMetricItem
             label="Market Cap"
-            value={formatLargeNumber(profile?.marketCap ?? 0)}
+            value={formatLargeNumber(profile?.marketCap)}
             tooltip="Valor total de mercado de las acciones en circulación de la empresa."
           />
           <KeyMetricItem
             label="Volumen"
-            value={formatLargeNumber(profile?.volume ?? 0)}
+            value={formatLargeNumber(profile?.volume)}
             tooltip="Cantidad de acciones negociadas durante el último día de mercado."
           />
           <KeyMetricItem
             label="Vol. Promedio"
-            value={formatLargeNumber(profile?.averageVolume ?? 0)}
+            value={formatLargeNumber(profile?.averageVolume)}
             tooltip="Promedio de acciones negociadas diariamente en los últimos 3 meses."
           />
           <KeyMetricItem
             label="Beta"
-            value={typeof profile?.beta === 'number' ? profile.beta.toFixed(2) : 'N/A'}
+            value={typeof profile?.beta === 'number' && Number.isFinite(profile.beta) ? profile.beta.toFixed(2) : ''}
             tooltip="Mide la volatilidad de la acción respecto al mercado. Beta > 1 es más volátil."
           />
           <KeyMetricItem
             label="Rango 52 Semanas"
-            value={profile?.range || 'N/A'}
+            value={profile?.range && profile.range !== 'N/A' ? profile.range : ''}
             tooltip="El precio más bajo y más alto registrado en el último año."
           />
 
@@ -72,7 +72,7 @@ export function AssetKeyMetrics({ asset }: AssetKeyMetricsProps) {
           />
           <KeyMetricItem
             label="Max Drawdown"
-            value={metrics.maxDrawdown ? `${(metrics.maxDrawdown * 100).toFixed(2)}%` : 'N/A'}
+            value={metrics.maxDrawdown !== null ? `${(metrics.maxDrawdown * 100).toFixed(2)}%` : ''}
             className="text-red-500"
             tooltip="La mayor caída porcentual desde un pico histórico hasta el fondo siguiente."
           />

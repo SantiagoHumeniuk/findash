@@ -118,13 +118,13 @@ function PortfolioPageContent() {
           label: 'Beta ponderado',
           value: typeof portfolioMetrics.portfolioBeta === 'number'
             ? portfolioMetrics.portfolioBeta.toFixed(2)
-            : 'N/A',
+            : '',
         },
         {
           label: 'Máx. drawdown',
-          value: historicalMetrics?.maxDrawdown
+          value: historicalMetrics?.maxDrawdown != null
             ? `${(historicalMetrics.maxDrawdown * 100).toFixed(2)}%`
-            : 'N/A',
+            : '',
         },
         {
           label: 'Mejor activo por G/P',
@@ -146,15 +146,15 @@ function PortfolioPageContent() {
           label: 'Mejor año simulado',
           value: historicalMetrics?.bestYear
             ? `${historicalMetrics.bestYear.year} (${(historicalMetrics.bestYear.return * 100).toFixed(2)}%)`
-            : 'N/A',
+            : '',
         },
         {
           label: 'Peor año simulado',
           value: historicalMetrics?.worstYear
             ? `${historicalMetrics.worstYear.year} (${(historicalMetrics.worstYear.return * 100).toFixed(2)}%)`
-            : 'N/A',
+            : '',
         },
-      ];
+      ].filter(({ value }) => value !== '');
       const pdfCharts = [
         ...(portfolioHistory.length > 1 ? [{
           title: 'Evolución histórica simulada del portafolio',

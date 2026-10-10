@@ -33,6 +33,7 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
     date, setDate,
     handleTypeChange,
     ratio, isCedears,
+    cclRate, loadingCcl,
     portfolioId, setPortfolioId
   } = useTransactionForm({ isOpen, ticker, currentPrice });
 
@@ -114,8 +115,16 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
         return;
       }
 
+      if (isCedears && !cclRate) {
+        toast.error('No se pudo obtener el dólar CCL', {
+          description: 'Espera a que se actualice la cotización para registrar la compra de CEDEARs.',
+        });
+        setLoading(false);
+        return;
+      }
+
       const finalQuantityInShares = calculateFinalQuantity(enteredQuantity, isCedears, ratio);
-      const finalPricePerShare = calculateFinalPrice(enteredPrice, isCedears, ratio);
+      const finalPricePerShare = calculateFinalPrice(enteredPrice, isCedears, ratio) / (isCedears ? cclRate! : 1);
 
       await addTransaction({
         symbol: ticker,
@@ -174,7 +183,21 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
                 <Button type="button" size="sm" onClick={() => handleTypeChange('cedears')} variant={isCedears ? 'default' : 'outline'} className="flex-1 text-xs sm:text-sm">CEDEARs</Button>
                 <Button type="button" size="sm" onClick={() => handleTypeChange('shares')} variant={!isCedears ? 'default' : 'outline'} className="flex-1 text-xs sm:text-sm">Acciones</Button>
               </div>
-              {isCedears && <p className="text-xs text-muted-foreground mt-2">Ratio: {ratio} CEDEARs = 1 Acción.</p>}
+              {isCedears && (
+                <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                  <p>Ratio: {ratio} CEDEARs = 1 Acción.</p>
+                  {loadingCcl ? (
+                    <p>Actualizando dólar CCL...</p>
+                  ) : cclRate ? (
+                    <p>
+                      CCL venta: ${cclRate.toLocaleString('es-AR', { maximumFractionDigits: 2 })} ARS/USD ·
+                      {' '}Costo estimado: USD ${(parseFloat(price || '0') * ratio / cclRate).toLocaleString('es-AR', { maximumFractionDigits: 4 })} por acción equivalente
+                    </p>
+                  ) : (
+                    <p className="text-destructive">CCL no disponible; no se podrá confirmar la compra.</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -195,7 +218,9 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
               />
             </div>
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="price" className="text-xs sm:text-sm">Precio por Unidad (USD)</Label>
+              <Label htmlFor="price" className="text-xs sm:text-sm">
+                {isCedears ? 'Precio por CEDEAR (ARS)' : 'Precio por Acción (USD)'}
+              </Label>
               <Input
                 id="price"
                 type="number"
@@ -204,7 +229,7 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
                 max="1000000"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                placeholder={isCedears ? 'Ej: 17.50' : 'Ej: 175.00'}
+                placeholder={isCedears ? 'Ej: 18.500' : 'Ej: 175.00'}
                 required
                 className="text-sm"
               />

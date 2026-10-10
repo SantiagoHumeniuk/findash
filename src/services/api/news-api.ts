@@ -108,7 +108,7 @@ function mapToUnifiedItem(raw: Record<string, unknown>, category: NewsCategory):
         date: dateStr,
         url: ((raw.url as string | undefined) ?? (raw.link as string | undefined)) ?? '',
         image: image,
-        source: (raw.site as string | undefined) ?? (raw.publisher as string | undefined) ?? 'FMP',
+        source: (raw.site as string | undefined) ?? (raw.publisher as string | undefined) ?? '',
         summary: (raw.text as string | undefined) ?? (raw.content as string | undefined) ?? '',
         symbol: ((raw.symbol as string | undefined) ?? ((raw.tickers as string | undefined)?.split(':')[1])) ?? undefined,
         category,

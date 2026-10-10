@@ -31,9 +31,9 @@ export const formatQuantity = (value: number): string =>
   });
 
 /**
- * Formatea un número o devuelve 'N/A' si no es un número válido.
+ * Formatea un número o devuelve una cadena vacía si no es un número válido.
  * @param value - El valor a formatear.
- * @returns Una cadena con el número formateado o 'N/A'.
+ * @returns Una cadena con el número formateado o vacía.
  */
 export const formatNumber = (value: number | string): string => 
-  (typeof value === 'number' && isFinite(value)) ? value.toFixed(2) : 'N/A';
+  (typeof value === 'number' && isFinite(value)) ? value.toFixed(2) : '';

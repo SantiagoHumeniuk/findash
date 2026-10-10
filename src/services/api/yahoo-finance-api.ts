@@ -199,7 +199,7 @@ export async function fetchYahooFinanceQuotes(
 
   if (error) {
     console.error('Error fetching Yahoo Finance quotes:', error);
-    throw new Error(`No se pudieron consultar los datos de Yahoo Finance: ${error.message}`);
+    throw new Error('No se pudieron consultar los datos del activo.');
   }
   if (
     typeof data === 'object' &&
@@ -210,7 +210,7 @@ export async function fetchYahooFinanceQuotes(
     throw new Error(data.error);
   }
   if (!isYahooFinanceResponse(data)) {
-    throw new Error('Yahoo Finance devolvió datos incompletos');
+    throw new Error('La respuesta de cotizaciones está incompleta.');
   }
   return data;
 }

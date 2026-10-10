@@ -131,7 +131,7 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
                 metricData[symbol] = normalizeForRadar(rawValue, key);
 
                 // Valor original formateado para el tooltip
-                let originalFormatted = 'N/A';
+                let originalFormatted = '';
                 if (rawValue !== null) {
                     const isPercent = indicatorConfig[key]?.asPercent;
                     // Si es porcentaje en la config pero el rango radar está en decimales (ej ROIC),
@@ -166,11 +166,11 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
             <Card className="flex items-center justify-center h-64 sm:h-96">
                 <div className="text-center text-muted-foreground px-4">
                     <p className="font-semibold text-sm sm:text-base">
-                        {fallbackAssets.length > 0 ? 'Radar no disponible para datos de Yahoo' : 'Sin activos para comparar'}
+                        {fallbackAssets.length > 0 ? 'No hay métricas suficientes para generar el radar' : 'Sin activos para comparar'}
                     </p>
                     <p className="text-xs sm:text-sm">
                         {fallbackAssets.length > 0
-                            ? 'Yahoo Finance no devolvió todas las métricas necesarias. El activo sigue disponible en precios y PER.'
+                            ? 'Añade activos con métricas comparables para ver el gráfico.'
                             : 'Añade al menos un activo para ver el gráfico radar.'}
                     </p>
                 </div>

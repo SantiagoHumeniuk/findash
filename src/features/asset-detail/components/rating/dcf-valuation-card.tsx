@@ -72,7 +72,7 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
                   </p>
                   <div className="space-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
                     <p>{modelsUsed.length} modelos válidos participan del valor ponderado.</p>
-                    <p>La mediana FMP se usa cuando hay tres o más pares con múltiplos comparables.</p>
+                    <p>La mediana de empresas comparables se usa cuando hay tres o más pares con múltiplos comparables.</p>
                     <p>El precio objetivo de analistas tiene un peso secundario.</p>
                   </div>
                 </TooltipContent>

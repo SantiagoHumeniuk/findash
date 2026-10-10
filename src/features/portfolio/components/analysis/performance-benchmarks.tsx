@@ -44,9 +44,11 @@ export function PerformanceBenchmarks({
                                 </h3>
                                 <p className="text-sm text-muted-foreground">Rendimiento porcentual en {periodLabel}</p>
                             </div>
-                            <Badge variant={alpha === null ? "outline" : isBeating ? "default" : "secondary"} className={isBeating ? "bg-green-500 hover:bg-green-600" : ""}>
-                                {alpha === null ? "Datos no disponibles" : isBeating ? "Batiendo al Mercado" : "Debajo del Mercado"}
-                            </Badge>
+                            {alpha !== null && (
+                                <Badge variant={isBeating ? "default" : "secondary"} className={isBeating ? "bg-green-500 hover:bg-green-600" : ""}>
+                                    {isBeating ? "Batiendo al Mercado" : "Debajo del Mercado"}
+                                </Badge>
+                            )}
                         </div>
                     </AccordionTrigger>
                     
@@ -67,10 +69,10 @@ export function PerformanceBenchmarks({
                                 </div>
 
                                 {/* S&P 500 (SPY) */}
-                                <div className="p-4 rounded-xl bg-muted/30 border space-y-2">
+                                {spyReturn !== null && <div className="p-4 rounded-xl bg-muted/30 border space-y-2">
                                     <span className="text-xs font-semibold text-muted-foreground uppercase">S&P 500 (SPY)</span>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-2xl font-bold">{spyReturn === null ? 'N/D' : formatPercent(spyReturn)}</span>
+                                        <span className="text-2xl font-bold">{formatPercent(spyReturn)}</span>
                                         {spyReturn !== null && (
                                             <span className={`text-xs flex items-center gap-0.5 ${portfolioReturn >= spyReturn ? 'text-green-500' : 'text-red-500'}`}>
                                                 {portfolioReturn >= spyReturn ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -78,13 +80,13 @@ export function PerformanceBenchmarks({
                                             </span>
                                         )}
                                     </div>
-                                </div>
+                                </div>}
 
                                 {/* Nasdaq 100 (QQQ) */}
-                                <div className="p-4 rounded-xl bg-muted/30 border space-y-2">
+                                {qqqReturn !== null && <div className="p-4 rounded-xl bg-muted/30 border space-y-2">
                                     <span className="text-xs font-semibold text-muted-foreground uppercase">Nasdaq 100 (QQQ)</span>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-2xl font-bold">{qqqReturn === null ? 'N/D' : formatPercent(qqqReturn)}</span>
+                                        <span className="text-2xl font-bold">{formatPercent(qqqReturn)}</span>
                                         {qqqReturn !== null && (
                                             <span className={`text-xs flex items-center gap-0.5 ${portfolioReturn >= qqqReturn ? 'text-green-500' : 'text-red-500'}`}>
                                                 {portfolioReturn >= qqqReturn ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -92,20 +94,20 @@ export function PerformanceBenchmarks({
                                             </span>
                                         )}
                                     </div>
-                                </div>
+                                </div>}
                             </div>
 
-                            <div className={`p-4 rounded-lg flex items-center gap-3 ${alpha === null ? 'bg-muted/30 text-muted-foreground' : isBeating ? 'bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-400' : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-700 dark:text-yellow-400'}`}>
-                                {alpha === null ? <Info className="w-5 h-5" /> : isBeating ? <TrendingUp className="w-5 h-5" /> : <Info className="w-5 h-5" />}
-                                <p className="text-sm font-medium">
-                                    {alpha === null
-                                        ? 'No hay un retorno del S&P 500 disponible para el período seleccionado.'
-                                        : isBeating
-                                        ? `¡Felicidades! Estás generando un Alpha de ${alpha.toFixed(2)}% sobre el S&P 500.`
-                                        : `Tu portafolio está rindiendo un ${Math.abs(alpha).toFixed(2)}% menos que el S&P 500.`
-                                    }
-                                </p>
-                            </div>
+                            {alpha !== null && (
+                                <div className={`p-4 rounded-lg flex items-center gap-3 ${isBeating ? 'bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-400' : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-700 dark:text-yellow-400'}`}>
+                                    {isBeating ? <TrendingUp className="w-5 h-5" /> : <Info className="w-5 h-5" />}
+                                    <p className="text-sm font-medium">
+                                        {isBeating
+                                            ? `¡Felicidades! Estás generando un Alpha de ${alpha.toFixed(2)}% sobre el S&P 500.`
+                                            : `Tu portafolio está rindiendo un ${Math.abs(alpha).toFixed(2)}% menos que el S&P 500.`
+                                        }
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </AccordionContent>
                 </AccordionItem>
