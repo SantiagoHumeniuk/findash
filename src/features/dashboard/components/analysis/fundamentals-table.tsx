@@ -325,6 +325,8 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                                         };
                                         const formatMetric = (value: number | null) =>
                                             value === null ? '—' : value.toLocaleString('es-AR', { maximumFractionDigits: 2 });
+                                        const formatEps = (value: number | null) =>
+                                            value === null ? '—' : `${formatMetric(value)} ${asset.profile.currency}`;
                                         const target = metric('financialData.targetMeanPrice');
                                         const analystCount = metric('financialData.numberOfAnalystOpinions');
                                         const sourceStatus = asset.yahooError
@@ -355,10 +357,10 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                                                     {formatMetric(metric('summaryDetail.forwardPE', 'defaultKeyStatistics.forwardPE'))}
                                                 </TableCell>
                                                 <TableCell className="text-right tabular-nums">
-                                                    {formatMetric(metric('defaultKeyStatistics.trailingEps'))}
+                                                    {formatEps(metric('defaultKeyStatistics.trailingEps'))}
                                                 </TableCell>
                                                 <TableCell className="text-right tabular-nums">
-                                                    {formatMetric(metric('defaultKeyStatistics.forwardEps'))}
+                                                    {formatEps(metric('defaultKeyStatistics.forwardEps'))}
                                                 </TableCell>
                                                 <TableCell className="text-right tabular-nums">
                                                     {target === null ? '—' : `${asset.profile.currency} ${formatMetric(target)}`}
