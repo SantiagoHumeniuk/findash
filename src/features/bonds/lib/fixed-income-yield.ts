@@ -1,7 +1,7 @@
 import type { Data912BondQuote } from '@/services/api/data912-fixed-income-api';
 import type { FixedIncomeCashFlow } from '@/services/api/fixed-income-sheet-api';
 
-function getMarketPrice(quote: Data912BondQuote): number | null {
+export function getMarketPrice(quote: Data912BondQuote): number | null {
   const bid = Number.isFinite(quote.px_bid) && quote.px_bid > 0 ? quote.px_bid : null;
   const ask = Number.isFinite(quote.px_ask) && quote.px_ask > 0 ? quote.px_ask : null;
   const price = bid !== null && ask !== null
@@ -11,17 +11,18 @@ function getMarketPrice(quote: Data912BondQuote): number | null {
 }
 
 /**
- * Solves annual effective yield from future contractual payments and a live market price.
- * Cash flows and the quote must use the same nominal denomination and currency.
+ * Solves annual effective yield from future contractual payments and a market
+ * or user-entered price. Cash flows and the price must share denomination/currency.
  */
 export function calculateCashFlowYield(
   quote: Data912BondQuote | null,
   cashFlows: FixedIncomeCashFlow[],
   asOf = new Date(),
+  purchasePrice?: number,
 ): number | null {
-  if (!quote || cashFlows.length === 0) return null;
-  const price = getMarketPrice(quote);
-  if (price === null) return null;
+  if ((!quote && purchasePrice === undefined) || cashFlows.length === 0) return null;
+  const price = purchasePrice ?? (quote ? getMarketPrice(quote) : null);
+  if (price === null || !Number.isFinite(price) || price <= 0) return null;
   const asOfDay = Date.UTC(asOf.getFullYear(), asOf.getMonth(), asOf.getDate());
   const futureFlows = cashFlows.flatMap(({ date, amount }) => {
     const flowDay = Date.parse(`${date.slice(0, 10)}T00:00:00Z`);

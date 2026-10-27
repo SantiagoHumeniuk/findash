@@ -41,6 +41,30 @@ describe('calculateCashFlowYield', () => {
     expect(yieldPercent).toBeLessThan(11);
   });
 
+  it('recalculates yield from a user-entered purchase price', () => {
+    const asOf = new Date('2026-01-01T12:00:00Z');
+    const yieldPercent = calculateCashFlowYield(
+      quote,
+      [{ date: '2027-01-01', amount: 110 }],
+      asOf,
+      105,
+    );
+
+    expect(yieldPercent).toBeCloseTo(4.76, 1);
+  });
+
+  it('calculates workbook-backed instruments without a DATA912 quote', () => {
+    const asOf = new Date('2026-01-01T12:00:00Z');
+    const yieldPercent = calculateCashFlowYield(
+      null,
+      [{ date: '2027-01-01', amount: 110 }],
+      asOf,
+      100,
+    );
+
+    expect(yieldPercent).toBeCloseTo(10, 1);
+  });
+
   it('does not calculate a yield when price or future cash flows are missing', () => {
     const asOf = new Date('2026-01-01T12:00:00Z');
     expect(calculateCashFlowYield(null, [{ date: '2027-01-01', amount: 100 }], asOf)).toBeNull();

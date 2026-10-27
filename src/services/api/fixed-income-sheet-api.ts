@@ -20,6 +20,9 @@ export interface FixedIncomeContract {
   maturityDate: string | null;
   nextPaymentDate: string | null;
   nextPaymentAmount: number | null;
+  workbookPrice?: number | null;
+  workbookChangePercent?: number | null;
+  workbookYieldPercent?: number | null;
   law: string | null;
   sector: string | null;
   rating: string | null;
@@ -58,6 +61,9 @@ function isContract(value: unknown): value is FixedIncomeContract {
     'nextPaymentDate' in value && (value.nextPaymentDate === null || typeof value.nextPaymentDate === 'string') &&
     'nextPaymentAmount' in value &&
     (value.nextPaymentAmount === null || (typeof value.nextPaymentAmount === 'number' && Number.isFinite(value.nextPaymentAmount))) &&
+    (!('workbookPrice' in value) || value.workbookPrice === null || (typeof value.workbookPrice === 'number' && Number.isFinite(value.workbookPrice))) &&
+    (!('workbookChangePercent' in value) || value.workbookChangePercent === null || (typeof value.workbookChangePercent === 'number' && Number.isFinite(value.workbookChangePercent))) &&
+    (!('workbookYieldPercent' in value) || value.workbookYieldPercent === null || (typeof value.workbookYieldPercent === 'number' && Number.isFinite(value.workbookYieldPercent))) &&
     'law' in value && (value.law === null || typeof value.law === 'string') &&
     'sector' in value && (value.sector === null || typeof value.sector === 'string') &&
     'rating' in value && (value.rating === null || typeof value.rating === 'string') &&

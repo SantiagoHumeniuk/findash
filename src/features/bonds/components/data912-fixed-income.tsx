@@ -1,17 +1,28 @@
 import React from 'react';
-import { AlertCircle, RefreshCw, Search } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronUp, RefreshCw, Search, TrendingUp } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from '@/components/charts/lazy-recharts';
 import { fetchData912FixedIncome } from '@/services/api/data912-fixed-income-api';
 import type { Data912BondQuote } from '@/services/api/data912-fixed-income-api';
 import { fetchFixedIncomeSheet } from '@/services/api/fixed-income-sheet-api';
 import type { FixedIncomeCategory, FixedIncomeContract } from '@/services/api/fixed-income-sheet-api';
-import { calculateCashFlowYield } from '../lib/fixed-income-yield';
+import type { PlazoFijoDato } from '@/services/macro-api';
+import { calculateCashFlowYield, getMarketPrice } from '../lib/fixed-income-yield';
 import { calculateData912ZeroCouponYield, getData912MaturityDate } from '../lib/data912-yield';
+import { normalizeFixedIncomeTicker } from '../lib/fixed-income-ticker';
 
 function formatNumber(value: number, digits = 2): string {
   return new Intl.NumberFormat('es-AR', { maximumFractionDigits: digits }).format(value);
@@ -26,9 +37,18 @@ interface FixedIncomeTableRow {
   contract: FixedIncomeContract | null;
 }
 
-function getVariantBaseTicker(symbol: string): string {
-  return symbol.toUpperCase().replace(/[DCO]$/, '');
-}
+type FixedIncomeColumn = 'instrument' | 'last' | 'change' | 'maturity' | 'yield' | 'rating' | 'payment';
+type SortDirection = 'asc' | 'desc';
+
+const FIXED_INCOME_COLUMNS: { key: FixedIncomeColumn; label: string; align?: 'right' }[] = [
+  { key: 'instrument', label: 'Instrumento' },
+  { key: 'last', label: 'Último', align: 'right' },
+  { key: 'change', label: 'Var. %', align: 'right' },
+  { key: 'maturity', label: 'Vencimiento', align: 'right' },
+  { key: 'yield', label: 'TIR anual', align: 'right' },
+  { key: 'rating', label: 'Calificación crediticia' },
+  { key: 'payment', label: 'Próximo pago' },
+];
 
 function QuotesTable({
   quotes,
@@ -41,188 +61,401 @@ function QuotesTable({
   query: string;
   includeUnmatchedQuotes?: boolean;
 }) {
-  const [selectedTickers, setSelectedTickers] = React.useState<Record<string, string>>({});
+  const [sort, setSort] = React.useState<{ column: FixedIncomeColumn; direction: SortDirection }>({
+    column: 'instrument',
+    direction: 'asc',
+  });
   const rows = React.useMemo(() => {
-    const quoteGroups = new Map<string, Set<string>>();
-    for (const quote of quotes) {
-      const baseTicker = getVariantBaseTicker(quote.symbol);
-      const symbols = quoteGroups.get(baseTicker) ?? new Set<string>();
-      symbols.add(quote.symbol.toUpperCase());
-      quoteGroups.set(baseTicker, symbols);
-    }
-    const variantBases = new Set(
-      [...quoteGroups.entries()]
-        .filter(([, symbols]) => symbols.size > 1)
-        .map(([baseTicker]) => baseTicker),
-    );
-    const getGroupKey = (symbol: string) => {
-      const normalizedSymbol = symbol.toUpperCase();
-      const baseTicker = getVariantBaseTicker(normalizedSymbol);
-      return variantBases.has(baseTicker) ? baseTicker : normalizedSymbol;
-    };
-
     const rowsByTicker = new Map<string, FixedIncomeTableRow>();
     const linkedSymbols = new Set<string>();
     for (const contract of contracts) {
-      const groupKey = getGroupKey(contract.priceTicker);
-      const variants = quotes.filter((quote) =>
-        getGroupKey(quote.symbol) === groupKey
+      const symbol = normalizeFixedIncomeTicker(contract.priceTicker, contract.currency);
+      const groupKey = contract.currency === 'USD' ? symbol.slice(0, -1) : symbol;
+      const quote = quotes.find((item) => item.symbol.toUpperCase() === symbol) ?? null;
+      if (quote) linkedSymbols.add(quote.symbol.toUpperCase());
+      rowsByTicker.set(groupKey, {
+        groupKey,
+        symbol,
+        name: contract.name,
+        quote,
+        variants: quote ? [quote] : [],
+        contract,
+      });
+    }
+    if (includeUnmatchedQuotes) {
+      const availableDollarD = new Set(
+        quotes
+          .filter((quote) => quote.symbol.toUpperCase().endsWith('D'))
+          .map((quote) => quote.symbol.toUpperCase().slice(0, -1)),
       );
-      variants.forEach((quote) => linkedSymbols.add(quote.symbol.toUpperCase()));
-      const current = rowsByTicker.get(groupKey);
-      if (current) {
-        current.variants = [...new Map(
-          [...current.variants, ...variants].map((quote) => [quote.symbol.toUpperCase(), quote]),
-        ).values()];
-      } else {
+      for (const quote of quotes) {
+        if (linkedSymbols.has(quote.symbol.toUpperCase())) continue;
+        const normalizedSymbol = quote.symbol.toUpperCase();
+        if (/[CO]$/.test(normalizedSymbol)) continue;
+        const isDollarTicker = normalizedSymbol.endsWith('D');
+        const groupKey = isDollarTicker ? normalizedSymbol.slice(0, -1) : normalizedSymbol;
+        if (!isDollarTicker && availableDollarD.has(groupKey)) continue;
+        if (rowsByTicker.has(groupKey)) continue;
         rowsByTicker.set(groupKey, {
           groupKey,
-          symbol: contract.priceTicker,
-          name: contract.name,
-          quote: variants.find((quote) => quote.symbol.toUpperCase() === contract.priceTicker.toUpperCase()) ?? variants[0] ?? null,
-          variants,
-          contract,
+          symbol: normalizedSymbol,
+          name: normalizedSymbol,
+          quote,
+          variants: [quote],
+          contract: null,
         });
       }
     }
-    if (includeUnmatchedQuotes) {
-      for (const quote of quotes) {
-        if (linkedSymbols.has(quote.symbol.toUpperCase())) continue;
-        const groupKey = getGroupKey(quote.symbol);
-        const current = rowsByTicker.get(groupKey);
-        if (current) {
-          if (!current.variants.some((variant) => variant.symbol.toUpperCase() === quote.symbol.toUpperCase())) {
-            current.variants.push(quote);
-          }
-        } else {
-          rowsByTicker.set(groupKey, {
-            groupKey,
-            symbol: quote.symbol,
-            name: quote.symbol,
-            quote,
-            variants: [quote],
-            contract: null,
-          });
-        }
-      }
-    }
-    const normalizedQuery = query.trim().toLowerCase();
     return [...rowsByTicker.values()]
-      .filter((row) =>
-        row.symbol.toLowerCase().includes(normalizedQuery) ||
-        row.name.toLowerCase().includes(normalizedQuery) ||
-        Boolean(row.contract?.symbol.toLowerCase().includes(normalizedQuery)) ||
-        row.variants.some((quote) => quote.symbol.toLowerCase().includes(normalizedQuery))
-      )
       .sort((left, right) => left.groupKey.localeCompare(right.groupKey));
-  }, [quotes, contracts, query, includeUnmatchedQuotes]);
+  }, [quotes, contracts, includeUnmatchedQuotes]);
+  const displayRows = React.useMemo(() => rows.flatMap((row) => {
+    const { symbol, quote, contract } = row;
+    const quotePrice = quote ? getMarketPrice(quote) : null;
+    const usableQuote = quotePrice !== null ? quote : null;
+    const currentPrice = quotePrice ?? contract?.workbookPrice ?? null;
+    const calculatedYtm = contract
+      ? calculateCashFlowYield(
+        usableQuote,
+        contract.cashFlows,
+        undefined,
+        usableQuote ? undefined : contract.workbookPrice ?? undefined,
+      )
+      : usableQuote ? calculateData912ZeroCouponYield(usableQuote) : null;
+    const ytm = calculatedYtm ?? contract?.workbookYieldPercent ?? null;
+    const dailyChange = usableQuote?.pct_change ?? contract?.workbookChangePercent ?? null;
+    const maturity = contract?.maturityDate
+      ? new Date(`${contract.maturityDate}T12:00:00`)
+      : getData912MaturityDate(quote?.symbol ?? symbol);
+    const maturityLabel = maturity ? maturity.toLocaleDateString('es-AR') : '';
+    const paymentLabel = contract?.nextPaymentDate
+      ? new Date(`${contract.nextPaymentDate}T12:00:00`).toLocaleDateString('es-AR')
+      : '';
+    const rating = contract?.rating ?? '';
+    const matchesQuery = [symbol, row.name, contract?.symbol ?? '']
+      .some((value) => value.toLocaleLowerCase('es-AR').includes(query.trim().toLocaleLowerCase('es-AR')));
+    if (!matchesQuery) return [];
+    return [{
+      ...row,
+      currentPrice,
+      dailyChange,
+      maturityLabel,
+      maturitySort: maturity?.getTime() ?? null,
+      ytm,
+      yieldLabel: contract?.category === 'cer' ? 'TIR real' : 'TIR',
+      rating,
+      paymentLabel,
+      paymentSort: contract?.nextPaymentDate ? Date.parse(`${contract.nextPaymentDate}T12:00:00`) : null,
+    }];
+  }).sort((left, right) => {
+    const leftValue = {
+      instrument: left.symbol,
+      last: left.currentPrice,
+      change: left.dailyChange,
+      maturity: left.maturitySort,
+      yield: left.ytm,
+      rating: left.rating,
+      payment: left.paymentSort,
+    }[sort.column];
+    const rightValue = {
+      instrument: right.symbol,
+      last: right.currentPrice,
+      change: right.dailyChange,
+      maturity: right.maturitySort,
+      yield: right.ytm,
+      rating: right.rating,
+      payment: right.paymentSort,
+    }[sort.column];
+    if (leftValue === null || leftValue === '') return rightValue === null || rightValue === '' ? 0 : 1;
+    if (rightValue === null || rightValue === '') return -1;
+    const comparison = typeof leftValue === 'number' && typeof rightValue === 'number'
+      ? leftValue - rightValue
+      : String(leftValue).localeCompare(String(rightValue), 'es-AR', { numeric: true, sensitivity: 'base' });
+    return sort.direction === 'asc' ? comparison : -comparison;
+  }), [rows, query, sort]);
 
-  if (rows.length === 0) {
-    return (
-      <p className="py-10 text-center text-sm text-muted-foreground">
-        No hay instrumentos que coincidan con la búsqueda.
-      </p>
-    );
-  }
+  const handleSort = (column: FixedIncomeColumn) => {
+    setSort((current) => ({
+      column,
+      direction: current.column === column && current.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
 
   return (
     <div className="max-h-[70vh] overflow-auto rounded-md border">
-      <table className="w-full min-w-[980px] text-sm">
+      <table className="w-full min-w-[1080px] text-sm">
         <thead className="sticky top-0 z-10 bg-muted">
           <tr className="text-left">
-            <th className="p-3">Instrumento</th>
-            <th className="p-3">Ticker</th>
-            <th className="p-3 text-right">Último</th>
-            <th className="p-3 text-right">Var. %</th>
-            <th className="p-3 text-right">Vencimiento</th>
-            <th className="p-3 text-right">TIR anual</th>
-            <th className="p-3">Próximo pago</th>
+            {FIXED_INCOME_COLUMNS.map(({ key, label, align }) => (
+              <th
+                key={key}
+                className={`p-3 ${align === 'right' ? 'text-right' : ''}`}
+                aria-sort={sort.column === key ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleSort(key)}
+                  className={`inline-flex items-center gap-1 hover:text-foreground ${align === 'right' ? 'ml-auto' : ''}`}
+                  aria-label={`Ordenar por ${label}, ${sort.column === key && sort.direction === 'asc' ? 'descendente' : 'ascendente'}`}
+                >
+                  {label}
+                  {sort.column === key
+                    ? sort.direction === 'asc'
+                      ? <ChevronUp className="size-4" aria-hidden="true" />
+                      : <ChevronDown className="size-4" aria-hidden="true" />
+                    : null}
+                </button>
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody className="divide-y">
-          {rows.map(({ groupKey, symbol, name, quote: defaultQuote, variants, contract }) => {
-            const quote = variants.find((variant) =>
-              variant.symbol.toUpperCase() === selectedTickers[groupKey]?.toUpperCase()
-            ) ?? variants.find((variant) =>
-              variant.symbol.toUpperCase() === contract?.priceTicker.toUpperCase()
-            ) ?? defaultQuote;
-            const ytm = contract
-              ? calculateCashFlowYield(
-                contract.currency === 'USD' && quote?.symbol.endsWith('O') ? null : quote,
-                contract.cashFlows,
-              )
-              : quote ? calculateData912ZeroCouponYield(quote) : null;
-            const maturity = contract?.maturityDate
-              ? new Date(`${contract.maturityDate}T12:00:00`)
-              : getData912MaturityDate(quote?.symbol ?? symbol);
-            const yieldLabel = contract?.category === 'cer'
-              ? 'TIR real'
-              : contract?.flowsProjected
-                ? 'TEA estimada'
-                : 'TEA';
-            return (
-              <tr key={groupKey} className="hover:bg-muted/40">
-                <td className="p-3 font-semibold">
-                  <span>{name}</span>
-                  {contract?.rating && <Badge variant="outline" className="ml-2">{contract.rating}</Badge>}
-                </td>
-                <td className="p-3">
-                  {variants.length > 1 ? (
-                    <select
-                      aria-label={`Ticker de ${name}`}
-                      className="max-w-32 rounded-md border bg-background px-2 py-1 text-sm"
-                      value={quote?.symbol ?? symbol}
-                      onChange={(event) => setSelectedTickers((current) => ({
-                        ...current,
-                        [groupKey]: event.currentTarget.value,
-                      }))}
-                    >
-                      {variants.map((variant) => (
-                        <option key={variant.symbol} value={variant.symbol}>{variant.symbol}</option>
-                      ))}
-                    </select>
-                  ) : quote?.symbol ?? symbol}
-                </td>
-                <td className="p-3 text-right tabular-nums">{quote ? formatNumber(quote.c) : ''}</td>
-                <td className={`p-3 text-right tabular-nums ${quote && quote.pct_change >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {quote ? `${quote.pct_change > 0 ? '+' : ''}${formatNumber(quote.pct_change)}%` : ''}
-                </td>
-                <td className="p-3 text-right tabular-nums">
-                  {maturity ? (
-                    <time>
-                      {maturity.toLocaleDateString('es-AR')}
-                    </time>
-                  ) : ''}
-                </td>
-                <td className="p-3 text-right tabular-nums">
-                  {ytm !== null && (
-                    <span>
-                      {formatNumber(ytm)}% <span className="text-muted-foreground">{yieldLabel}</span>
-                    </span>
-                  )}
-                </td>
-                <td className="max-w-[320px] p-3 text-xs text-muted-foreground">
-                  {contract?.nextPaymentDate && contract.nextPaymentAmount !== null && (
-                    <span className="block">
-                      Próx. pago: {new Date(`${contract.nextPaymentDate}T12:00:00`).toLocaleDateString('es-AR')}
-                      {' · '}{formatNumber(contract.nextPaymentAmount)} {contract.currency} / 100 VN
-                    </span>
-                  )}
-                  {contract?.sector && <span className="block">Sector: {contract.sector}</span>}
-                </td>
-              </tr>
-            );
-          })}
+          {displayRows.map(({ groupKey, symbol, currentPrice, dailyChange, maturityLabel, ytm, yieldLabel, rating, paymentLabel }) => (
+            <tr key={groupKey} className="hover:bg-muted/40">
+              <td className="p-3 font-semibold">{symbol}</td>
+              <td className="p-3 text-right tabular-nums">{currentPrice !== null ? formatNumber(currentPrice) : ''}</td>
+              <td className={`p-3 text-right tabular-nums ${dailyChange === null ? 'text-muted-foreground' : dailyChange >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                {dailyChange !== null ? `${dailyChange > 0 ? '+' : ''}${formatNumber(dailyChange)}%` : ''}
+              </td>
+              <td className="p-3 text-right tabular-nums">{maturityLabel}</td>
+              <td className="p-3 text-right tabular-nums">
+                {ytm !== null && <span>{formatNumber(ytm)}% <span className="text-muted-foreground">{yieldLabel}</span></span>}
+              </td>
+              <td className="p-3">
+                {rating ? <Badge variant="outline">{rating}</Badge> : <span className="text-muted-foreground">—</span>}
+              </td>
+              <td className="p-3 text-xs text-muted-foreground">{paymentLabel}</td>
+            </tr>
+          ))}
+          {displayRows.length === 0 && (
+            <tr>
+              <td colSpan={FIXED_INCOME_COLUMNS.length} className="py-10 text-center text-sm text-muted-foreground">
+                No hay instrumentos que coincidan con los filtros.
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
   );
 }
 
+function LecapCurveAndCalculator({
+  contracts,
+  quotes,
+  plazosFijos,
+}: {
+  contracts: FixedIncomeContract[];
+  quotes: Data912BondQuote[];
+  plazosFijos: PlazoFijoDato[];
+}) {
+  const [selectedSymbol, setSelectedSymbol] = React.useState('');
+  const [investment, setInvestment] = React.useState('1000000');
+  const [purchasePrice, setPurchasePrice] = React.useState<string | null>(null);
+  const [selectedBank, setSelectedBank] = React.useState('');
+  const [today] = React.useState(() => new Date());
+  const options = React.useMemo(() => contracts.flatMap((contract) => {
+    const ticker = normalizeFixedIncomeTicker(contract.priceTicker, contract.currency);
+    const quote = quotes.find((item) => item.symbol.toUpperCase() === ticker);
+    const quotePrice = quote ? getMarketPrice(quote) : null;
+    const usableQuote = quotePrice !== null ? quote : null;
+    const marketPrice = quotePrice ?? contract.workbookPrice;
+    if (marketPrice === null || contract.cashFlows.length === 0) return [];
+    const marketYield = calculateCashFlowYield(usableQuote, contract.cashFlows, today, marketPrice) ??
+      contract.workbookYieldPercent;
+    const lastFlow = contract.cashFlows
+      .filter((flow) => Date.parse(`${flow.date.slice(0, 10)}T00:00:00Z`) > Date.now())
+      .sort((left, right) => right.date.localeCompare(left.date))[0];
+    const contractMaturity = contract.maturityDate
+      ? Date.parse(`${contract.maturityDate.slice(0, 10)}T00:00:00Z`)
+      : Number.NaN;
+    const maturity = contractMaturity > Date.now() ? contract.maturityDate : lastFlow?.date;
+    const maturityTime = maturity ? Date.parse(`${maturity.slice(0, 10)}T00:00:00Z`) : Number.NaN;
+    if (marketYield === null || !Number.isFinite(maturityTime)) return [];
+    const maturityDays = Math.ceil((maturityTime - Date.now()) / 86_400_000);
+    if (maturityDays <= 0) return [];
+    return [{ contract, quote: usableQuote, marketPrice, maturityDays, marketYield }];
+  }).sort((left, right) => left.maturityDays - right.maturityDays), [contracts, quotes, today]);
+  const selected = options.find((option) => option.contract.symbol === selectedSymbol) ?? options[0];
+
+  const bank = plazosFijos.find((item) => item.entidad === selectedBank) ?? plazosFijos[0];
+  const principal = Number(investment);
+  const price = Number(purchasePrice ?? (selected ? String(selected.marketPrice) : ''));
+  const flows = selected?.contract.cashFlows.filter((flow) => {
+    const flowTime = Date.parse(`${flow.date.slice(0, 10)}T00:00:00Z`);
+    return flowTime > Date.now() && Number.isFinite(flow.amount) && flow.amount > 0;
+  }) ?? [];
+  const remainingDays = selected?.maturityDays ?? 0;
+  const projectedValue = selected && price > 0 && principal > 0
+    ? flows.reduce((total, flow) => total + flow.amount, 0) * principal / price
+    : null;
+  const depositTna = bank?.tnaClientes ?? null;
+  const depositGain = depositTna !== null && principal > 0
+    ? principal * depositTna * remainingDays / 365
+    : null;
+  const purchaseYield = selected
+    ? calculateCashFlowYield(selected.quote, selected.contract.cashFlows, today, price) ??
+      (price === selected.marketPrice ? selected.contract.workbookYieldPercent : null)
+    : null;
+  const curveData = options.map(({ contract, maturityDays, marketYield }) => ({
+    ticker: contract.priceTicker,
+    vencimiento: maturityDays,
+    tir: marketYield,
+  }));
+
+  return (
+    <Card className="mt-4">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="size-5 text-primary" />
+          Curva y calculadora de LECAPs
+        </CardTitle>
+        <CardDescription>
+          Curva calculada con precios DATA912 cuando están disponibles y, como respaldo, precios y flujos de la planilla.
+          Solo se incluyen instrumentos con precio, vencimiento y TIR disponibles.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {curveData.length > 0 ? (
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={curveData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis dataKey="vencimiento" type="number" domain={['dataMin', 'dataMax']} tickFormatter={(days: number) => `${days}d`} />
+                <YAxis unit="%" width={58} />
+                <Tooltip
+                  formatter={(value: number, name: string) => [`${formatNumber(value)}%`, name === 'tir' ? 'TIR efectiva anual' : name]}
+                  labelFormatter={(days: number) => {
+                    const point = curveData.find((item) => item.vencimiento === Number(days));
+                    return `${point?.ticker ?? 'LECAP'} · vencimiento en ${days} días`;
+                  }}
+                />
+                <Line type="monotone" dataKey="tir" name="TIR efectiva anual" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+            No hay LECAPs con precio y flujos futuros suficientes para construir una curva confiable.
+          </p>
+        )}
+
+        {selected && (
+          <div className="grid gap-5 border-t pt-5 lg:grid-cols-2">
+            <div className="grid content-start gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">LECAP</span>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3"
+                  value={selected.contract.symbol}
+                  onChange={(event) => {
+                    setSelectedSymbol(event.target.value);
+                    setPurchasePrice(null);
+                  }}
+                >
+                  {options.map(({ contract }) => (
+                    <option key={contract.symbol} value={contract.symbol}>
+                      {contract.name} ({contract.priceTicker})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Inversión (ARS)</span>
+                <Input type="number" min="0" value={investment} onChange={(event) => setInvestment(event.target.value)} />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Precio de compra por VN 100</span>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={purchasePrice ?? (selected ? String(selected.marketPrice) : '')}
+                  onChange={(event) => setPurchasePrice(event.target.value)}
+                />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium">Banco para plazo fijo</span>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3"
+                  value={bank?.entidad ?? ''}
+                  onChange={(event) => setSelectedBank(event.target.value)}
+                  disabled={plazosFijos.length === 0}
+                >
+                  {plazosFijos.map((item) => (
+                    <option key={item.entidad} value={item.entidad}>{item.entidad}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="grid content-start gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">TIR efectiva anual al precio de compra</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums">{purchaseYield !== null ? `${formatNumber(purchaseYield)}%` : 'No disponible'}</p>
+                <p className="mt-1 text-xs text-muted-foreground">TIR de mercado: {formatNumber(selected.marketYield)}%</p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Flujos estimados hasta vencimiento</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums">{projectedValue !== null ? `$${formatNumber(projectedValue)}` : 'Ingresá monto y precio válidos'}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{remainingDays} días · {selected.contract.flowsProjected ? 'incluye flujos proyectados' : 'flujos de planilla'}</p>
+              </div>
+              <div className="rounded-lg border p-3 sm:col-span-2">
+                <p className="text-sm font-medium">Comparación con {bank?.entidad ?? 'plazo fijo'}</p>
+                {depositGain !== null ? (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Plazo fijo a {formatNumber(depositTna * 100)}% TNA: ganancia simple estimada de ${formatNumber(depositGain)} en {remainingDays} días.
+                    {projectedValue !== null && ` Diferencia estimada de la LECAP: $${formatNumber(projectedValue - principal - depositGain)}.`}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">No hay tasas de plazo fijo disponibles para comparar.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Simulación antes de impuestos, comisiones y reinversión de cupones. Los flujos proyectados son estimaciones; el resultado no está garantizado. La comparación de plazo fijo usa TNA y cálculo simple por días.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+const DEFAULT_CATEGORIES: FixedIncomeCategory[] = [
+  'corporate',
+  'sovereign',
+  'provincial',
+  'fixed-peso',
+  'cer',
+];
+
+const CATEGORY_LABELS: Record<FixedIncomeCategory, string> = {
+  corporate: 'ONs USD',
+  sovereign: 'Soberanos USD',
+  provincial: 'Provinciales',
+  'fixed-peso': 'Pesos / tasa fija',
+  cer: 'CER',
+};
+
+interface Data912FixedIncomeProps {
+  categories?: FixedIncomeCategory[];
+  title?: string;
+  description?: string;
+  plazosFijos?: PlazoFijoDato[];
+}
+
 /**
- * Live DATA912 market prices joined with the published terms and future cash flows.
+ * Displays DATA912 market prices joined with workbook terms and payment flows.
+ *
+ * @param props - Optional category selection and heading overrides
  */
-export function Data912FixedIncome() {
+export function Data912FixedIncome({
+  categories = DEFAULT_CATEGORIES,
+  title = 'Renta fija argentina en vivo',
+  description = 'Cotizaciones de mercado con vencimientos y flujos contractuales.',
+  plazosFijos = [],
+}: Data912FixedIncomeProps) {
   const [search, setSearch] = React.useState('');
   const query = useQuery({
     queryKey: ['data912-fixed-income'],
@@ -245,21 +478,41 @@ export function Data912FixedIncome() {
   const contractsFor = React.useCallback((category: FixedIncomeCategory) =>
     contractsQuery.data?.contracts.filter((contract) => contract.category === category) ?? [],
   [contractsQuery.data]);
+  const quoteUniverse = React.useMemo(
+    () => [...(query.data?.sovereign ?? []), ...(query.data?.corporate ?? [])],
+    [query.data],
+  );
+
+  const renderCategory = (category: FixedIncomeCategory) => (
+    <>
+      <QuotesTable
+        quotes={quotesFor(category === 'corporate' ? 'corporate' : 'sovereign')}
+        contracts={contractsFor(category)}
+        query={search}
+        includeUnmatchedQuotes={category === 'corporate' || category === 'sovereign'}
+      />
+      {category === 'fixed-peso' && (
+        <LecapCurveAndCalculator
+          contracts={contractsFor('fixed-peso')}
+          quotes={quoteUniverse}
+          plazosFijos={plazosFijos}
+        />
+      )}
+    </>
+  );
 
   return (
     <section className="space-y-4">
       <Card>
         <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle>Renta fija argentina en vivo</CardTitle>
-            <CardDescription>
-              Cotizaciones de mercado con vencimientos y flujos contractuales.
-            </CardDescription>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
             {query.data && (
               <p className="mt-2 text-xs text-muted-foreground">
                 Actualizado: {new Date(Math.max(
-                  query.data.fetchedAt,
-                  contractsQuery.data?.fetchedAt ?? query.data.fetchedAt,
+                  Date.parse(query.data.fetchedAt),
+                  Date.parse(contractsQuery.data?.fetchedAt ?? query.data.fetchedAt),
                 )).toLocaleString('es-AR')}
               </p>
             )}
@@ -324,55 +577,26 @@ export function Data912FixedIncome() {
             </p>
           )}
           {(query.data ?? contractsQuery.data) && (
-            <Tabs defaultValue="sovereign">
-              <div className="overflow-x-auto">
-                <TabsList className="grid w-full min-w-[720px] grid-cols-5">
-                  <TabsTrigger value="sovereign">Soberanos USD</TabsTrigger>
-                  <TabsTrigger value="corporate">ONs USD</TabsTrigger>
-                  <TabsTrigger value="provincial">Provinciales</TabsTrigger>
-                  <TabsTrigger value="fixed-peso">Pesos / tasa fija</TabsTrigger>
-                  <TabsTrigger value="cer">CER</TabsTrigger>
-                </TabsList>
-              </div>
-              <TabsContent value="sovereign">
-                <QuotesTable
-                  quotes={quotesFor('sovereign')}
-                  contracts={contractsFor('sovereign')}
-                  query={search}
-                />
-              </TabsContent>
-              <TabsContent value="corporate">
-                <QuotesTable
-                  quotes={quotesFor('corporate')}
-                  contracts={contractsFor('corporate')}
-                  query={search}
-                />
-              </TabsContent>
-              <TabsContent value="provincial">
-                <QuotesTable
-                  quotes={quotesFor('sovereign')}
-                  contracts={contractsFor('provincial')}
-                  query={search}
-                  includeUnmatchedQuotes={false}
-                />
-              </TabsContent>
-              <TabsContent value="fixed-peso">
-                <QuotesTable
-                  quotes={quotesFor('sovereign')}
-                  contracts={contractsFor('fixed-peso')}
-                  query={search}
-                  includeUnmatchedQuotes={false}
-                />
-              </TabsContent>
-              <TabsContent value="cer">
-                <QuotesTable
-                  quotes={quotesFor('sovereign')}
-                  contracts={contractsFor('cer')}
-                  query={search}
-                  includeUnmatchedQuotes={false}
-                />
-              </TabsContent>
-            </Tabs>
+            categories.length === 1 ? (
+              renderCategory(categories[0])
+            ) : (
+              <Tabs defaultValue={categories[0]}>
+                <div className="overflow-x-auto">
+                  <TabsList className="grid w-full min-w-[720px] grid-cols-5">
+                    {categories.map((category) => (
+                      <TabsTrigger key={category} value={category}>
+                        {CATEGORY_LABELS[category]}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
+                {categories.map((category) => (
+                  <TabsContent key={category} value={category}>
+                    {renderCategory(category)}
+                  </TabsContent>
+                ))}
+              </Tabs>
+            )
           )}
           <p className="text-xs text-muted-foreground">
             La TIR se calcula con el precio de mercado y los flujos futuros; queda vacía si

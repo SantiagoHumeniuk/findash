@@ -29,6 +29,9 @@ type BondContract = {
   maturityDate: string | null;
   nextPaymentDate: string | null;
   nextPaymentAmount: number | null;
+  workbookPrice: number | null;
+  workbookChangePercent: number | null;
+  workbookYieldPercent: number | null;
   law: string | null;
   sector: string | null;
   rating: string | null;
@@ -185,6 +188,12 @@ function buildContracts(
       : category === "sovereign" || category === "provincial"
         ? row[2]?.trim() || symbol
         : [row[1], symbol].filter(Boolean).join(" · ");
+    const sheetPaymentDate = category === "sovereign"
+      ? row[27]
+      : category === "corporate"
+        ? row[34]
+        : undefined;
+    const hasMarketColumns = category === "sovereign" || category === "corporate";
 
     return [{
       symbol,
@@ -196,8 +205,17 @@ function buildContracts(
         ? "USD"
         : "ARS",
       maturityDate: maturityDate ?? parseDate(term?.[10]),
-      nextPaymentDate: nextFlow?.date ?? null,
+      nextPaymentDate: nextFlow?.date ?? parseDate(sheetPaymentDate) ?? null,
       nextPaymentAmount: nextFlow?.amount ?? null,
+      workbookPrice: category === "fixed-peso"
+        ? parseNumber(row[4])
+        : hasMarketColumns ? parseNumber(row[5]) : null,
+      workbookChangePercent: category === "fixed-peso"
+        ? parseNumber(row[5]?.replace("%", ""))
+        : hasMarketColumns ? parseNumber(row[6]?.replace("%", "")) : null,
+      workbookYieldPercent: category === "fixed-peso"
+        ? parseNumber(row[14])
+        : hasMarketColumns ? parseNumber(row[18]?.replace("%", "")) : null,
       law: row[3]?.trim() || term?.[4]?.trim() || null,
       sector: category === "corporate" ? row[1]?.trim() || null : null,
       rating: category === "corporate" ? row[33]?.trim() || null : null,
@@ -230,12 +248,10 @@ async function loadSheetBundle(): Promise<SheetBundle> {
     ["fixed-peso", sheetNames.fixedPesos],
     ["cer", sheetNames.cer],
   ];
-  const contracts = terms && cashFlows
-    ? categories.flatMap(([category, name]) => {
-      const rows = sheets.get(name);
-      return rows ? buildContracts(category, rows, terms, cashFlows) : [];
-    })
-    : [];
+  const contracts = categories.flatMap(([category, name]) => {
+    const rows = sheets.get(name);
+    return rows ? buildContracts(category, rows, terms ?? [], cashFlows ?? []) : [];
+  });
 
   return { fetchedAt: new Date().toISOString(), contracts, errors };
 }
