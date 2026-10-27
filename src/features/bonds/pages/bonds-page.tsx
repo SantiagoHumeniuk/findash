@@ -15,15 +15,9 @@ import {
   ExternalLink,
   Percent,
   Calendar,
-  Layers,
-  Sparkles,
-  Calculator,
-  ShieldCheck,
   Zap,
 } from 'lucide-react';
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   XAxis,
@@ -38,22 +32,17 @@ import {
   fetchInflacion,
   fetchPlazosFijos,
   fetchUva,
-  getCurvaLecapYTasaFija,
-  recalcularMetricasLecap,
   DolarCotizacion,
   InflacionDato,
   PlazoFijoDato,
   UvaDato,
-  LecapInstrumento,
 } from '@/services/macro-api';
 import { Data912FixedIncome } from '../components/data912-fixed-income';
 
 export default function BondsPage() {
-  const [activeTab, setActiveTab] = useState<'macro' | 'live' | 'lecaps'>('macro');
+  const [activeTab, setActiveTab] = useState<'macro' | 'live'>('live');
 
   // Estados de Dólares y Macro
-  const [provider, setProvider] = useState<'argentinadatos' | 'dolarazo'>('argentinadatos');
-  const [activeSourceUsed, setActiveSourceUsed] = useState<string>('argentinadatos');
   const [dolares, setDolares] = useState<DolarCotizacion[]>([]);
   const [inflacion, setInflacion] = useState<InflacionDato[]>([]);
   const [plazosFijos, setPlazosFijos] = useState<PlazoFijoDato[]>([]);
@@ -67,17 +56,6 @@ export default function BondsPage() {
 
   // Buscador de Plazos Fijos
   const [searchBanco, setSearchBanco] = useState<string>('');
-
-  // Estados de Curva LECAP y Tasa Fija
-  const [instrumentos, setInstrumentos] = useState<LecapInstrumento[]>([]);
-  const [curvaMetric, setCurvaMetric] = useState<'tem' | 'tna' | 'tea'>('tem');
-  const [filtroTipo, setFiltroTipo] = useState<'TODOS' | 'LECAP' | 'BONCAP'>('TODOS');
-  const [searchInstrumento, setSearchInstrumento] = useState<string>('');
-
-  // Estados del Simulador de Inversión
-  const [simuladorMonto, setSimuladorMonto] = useState<number>(1000000);
-  const [selectedTickerSim, setSelectedTickerSim] = useState<string>('S30S6');
-  const [precioPersonalizado, setPrecioPersonalizado] = useState<string>('');
 
   // Carga inicial de datos
   const loadMacroData = async (preferredProvider: 'argentinadatos' | 'dolarazo') => {
@@ -105,7 +83,6 @@ export default function BondsPage() {
 
     if (dolaresRes.status === 'fulfilled') {
       setDolares(dolaresRes.value.dolares);
-      setActiveSourceUsed(dolaresRes.value.sourceUsed);
     } else {
       console.error('Error cargando dólares:', dolaresRes.reason);
     }
@@ -126,14 +103,7 @@ export default function BondsPage() {
 
   useEffect(() => {
     void loadMacroData('argentinadatos');
-    const instList = getCurvaLecapYTasaFija();
-    setInstrumentos(instList);
   }, []);
-
-  const handleProviderChange = (newProvider: 'argentinadatos' | 'dolarazo') => {
-    setProvider(newProvider);
-    void loadMacroData(newProvider);
-  };
 
   // Filtrado de Plazos Fijos
   const filteredPlazosFijos = useMemo(() => {
@@ -142,37 +112,6 @@ export default function BondsPage() {
       .filter((b) => b.entidad.toLowerCase().includes(searchBanco.toLowerCase()))
       .slice(0, 15);
   }, [plazosFijos, searchBanco]);
-
-  // Filtrado de instrumentos de Curva LECAP
-  const filteredInstrumentos = useMemo(() => {
-    return instrumentos.filter((inst) => {
-      const matchesTipo =
-        filtroTipo === 'TODOS'
-          ? true
-          : filtroTipo === 'LECAP'
-          ? inst.tipo === 'LECAP'
-          : inst.tipo !== 'LECAP';
-      const matchesSearch =
-        inst.ticker.toLowerCase().includes(searchInstrumento.toLowerCase()) ||
-        inst.nombre.toLowerCase().includes(searchInstrumento.toLowerCase());
-      return matchesTipo && matchesSearch;
-    });
-  }, [instrumentos, filtroTipo, searchInstrumento]);
-
-  // Datos para el gráfico de la curva de rendimientos
-  const chartDataCurva = useMemo(() => {
-    return filteredInstrumentos.map((inst) => ({
-      ticker: inst.ticker,
-      dias: inst.diasAlVencimiento,
-      tasa: inst[curvaMetric],
-      tipo: inst.tipo,
-      fechaVencimiento: inst.fechaVencimiento,
-      precio: inst.precio,
-      tem: inst.tem,
-      tna: inst.tna,
-      tea: inst.tea,
-    }));
-  }, [filteredInstrumentos, curvaMetric]);
 
   // Inflación últimos 12 meses para el gráfico
   const inflacionReciente = useMemo(() => {
@@ -188,50 +127,6 @@ export default function BondsPage() {
       };
     });
   }, [inflacion]);
-
-  // Datos del instrumento seleccionado para el simulador
-  const selectedInstrumento = useMemo(() => {
-    return instrumentos.find((i) => i.ticker === selectedTickerSim) ?? instrumentos[0];
-  }, [instrumentos, selectedTickerSim]);
-
-  // Cálculos del simulador
-  const simuladorCalculo = useMemo(() => {
-    if (!selectedInstrumento) return null;
-
-    const precioCompra = precioPersonalizado
-      ? parseFloat(precioPersonalizado)
-      : selectedInstrumento.precio;
-    const precioFinal = selectedInstrumento.valorTecnico || 130;
-
-    const metricas = recalcularMetricasLecap(selectedInstrumento, precioCompra);
-    const gananciaDirecta = (precioFinal - precioCompra) / precioCompra;
-
-    const capitalFinalLecap = simuladorMonto * (1 + gananciaDirecta);
-    const gananciaLecap = capitalFinalLecap - simuladorMonto;
-
-    // Comparación contra Plazo Fijo promedio (~22% TNA)
-    const tnaPfEstimada = plazosFijos.length > 0 ? (plazosFijos[0].tnaClientes || 0.22) * 100 : 22;
-    const dias = selectedInstrumento.diasAlVencimiento;
-    const rendimientoPf = (tnaPfEstimada / 100) * (dias / 365);
-    const capitalFinalPf = simuladorMonto * (1 + rendimientoPf);
-    const gananciaPf = capitalFinalPf - simuladorMonto;
-
-    const diferenciaPesos = gananciaLecap - gananciaPf;
-
-    return {
-      precioCompra,
-      metricas,
-      capitalFinalLecap,
-      gananciaLecap,
-      gananciaLecapPorcentaje: Number((gananciaDirecta * 100).toFixed(2)),
-      tnaPfEstimada,
-      capitalFinalPf,
-      gananciaPf,
-      diferenciaPesos,
-      lecapConviene: diferenciaPesos >= 0,
-      dias,
-    };
-  }, [selectedInstrumento, simuladorMonto, precioPersonalizado, plazosFijos]);
 
   // Dólares clave para badges del header
   const dolarBlue = dolares.find((d) => d.casa === 'blue');
@@ -293,7 +188,7 @@ export default function BondsPage() {
             size="sm"
             variant="outline"
             className="h-9 px-3 gap-1.5 border-white/15 hover:bg-white/10"
-            onClick={() => { void loadMacroData(provider); }}
+            onClick={() => { void loadMacroData('argentinadatos'); }}
             disabled={loadingMacro}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loadingMacro ? 'animate-spin' : ''}`} />
@@ -302,36 +197,29 @@ export default function BondsPage() {
         </div>
       </div>
 
-      {/* Macro data, live DATA912 bonds, and the legacy estimated LECAP projection */}
+      {/* Market data and live fixed income */}
       <Tabs value={activeTab} onValueChange={(val) => {
-        if (val === 'macro' || val === 'live' || val === 'lecaps') setActiveTab(val);
+        if (val === 'macro' || val === 'live') setActiveTab(val);
       }} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-3xl mx-auto h-12 p-1 bg-muted/40 border border-white/10 rounded-xl">
-          <TabsTrigger
-            value="macro"
-            className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold transition-all"
-          >
-            <DollarSign className="h-4 w-4" />
-            <span>1. Dólares & Variables Macro</span>
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 max-w-3xl mx-auto h-12 p-1 bg-muted/40 border border-white/10 rounded-xl">
           <TabsTrigger
             value="live"
             className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold transition-all"
           >
             <TrendingUp className="h-4 w-4" />
-            <span>2. Renta Fija en Vivo</span>
+            <span>1. Renta Fija en Vivo</span>
           </TabsTrigger>
           <TabsTrigger
-            value="lecaps"
+            value="macro"
             className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold transition-all"
           >
-            <Calculator className="h-4 w-4" />
-            <span>Proyección LECAP (estimada)</span>
+            <DollarSign className="h-4 w-4" />
+            <span>2. Dólares & Variables Macro</span>
           </TabsTrigger>
         </TabsList>
 
         {/* ========================================================================= */}
-        {/* PESTAÑA 1: DÓLARES & VARIABLES MACRO (ArgentinaDatos y Dolarazo) */}
+        {/* PESTAÑA 1: DÓLARES & VARIABLES MACRO */}
         {/* ========================================================================= */}
         <TabsContent value="macro" className="space-y-6 mt-6">
           {macroErrors.length > 0 && (
@@ -339,45 +227,6 @@ export default function BondsPage() {
               No se pudieron cargar algunas variables: {macroErrors.join(' · ')}
             </div>
           )}
-          {/* Barra de control de fuente de datos */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-card/60 backdrop-blur-md border border-white/10">
-            <div className="flex items-center gap-2 text-xs">
-              <ShieldCheck className="h-4 w-4 text-emerald-400" />
-              <span className="text-muted-foreground">
-                Datos provistos por APIs abiertas de código abierto:
-              </span>
-              <span className="font-semibold text-foreground">
-                {activeSourceUsed === 'argentinadatos' ? 'ArgentinaDatos.com' : 'Dolarazo.com.ar'}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Fuente preferida:</span>
-              <div className="inline-flex rounded-lg border border-border p-0.5 bg-background/50">
-                <button
-                  onClick={() => handleProviderChange('argentinadatos')}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                    provider === 'argentinadatos'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  ArgentinaDatos
-                </button>
-                <button
-                  onClick={() => handleProviderChange('dolarazo')}
-                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                    provider === 'dolarazo'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Dolarazo
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* Grid de Cotizaciones de Dólares */}
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -447,7 +296,7 @@ export default function BondsPage() {
                           <div>
                             <span className="text-[11px] text-muted-foreground uppercase font-medium">Compra</span>
                             <p className="text-xl font-extrabold text-foreground">
-                              ${dolar.compra > 0 ? Number(dolar.compra).toFixed(2) : '-'}
+                              ${dolar.compra > 0 ? Number(dolar.compra).toFixed(2) : ''}
                             </p>
                           </div>
                           <div className="text-right">
@@ -566,7 +415,7 @@ export default function BondsPage() {
                       Inflación Mensual IPC (Últimos 12 Meses)
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Datos oficiales extraídos mediante ArgentinaDatos API
+                      Datos oficiales actualizados
                     </CardDescription>
                   </div>
                   {ultimaInflacion && (
@@ -717,10 +566,10 @@ export default function BondsPage() {
                             <span className="truncate max-w-xs">{banco.entidad}</span>
                           </td>
                           <td className="p-3 text-right font-bold text-emerald-400">
-                            {tnaPercent > 0 ? `${tnaPercent.toFixed(2)}%` : '-'}
+                            {tnaPercent > 0 ? `${tnaPercent.toFixed(2)}%` : ''}
                           </td>
                           <td className="p-3 text-right text-muted-foreground">
-                            {banco.tnaNoClientes ? `${(banco.tnaNoClientes * 100).toFixed(2)}%` : '-'}
+                            {banco.tnaNoClientes ? `${(banco.tnaNoClientes * 100).toFixed(2)}%` : ''}
                           </td>
                           <td className="p-3 text-right text-foreground font-medium">
                             ~{temEstimada}%
@@ -735,9 +584,7 @@ export default function BondsPage() {
                               >
                                 Ver <ExternalLink className="h-3 w-3" />
                               </a>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
+                            ) : null}
                           </td>
                         </tr>
                       );
@@ -750,432 +597,7 @@ export default function BondsPage() {
         </TabsContent>
 
         <TabsContent value="live" className="space-y-6 mt-6">
-          <Data912FixedIncome />
-        </TabsContent>
-
-        {/* ========================================================================= */}
-        {/* PESTAÑA 2: CURVA LECAP & CURVA TASA FIJA (Renta Fija Soberana en Pesos) */}
-        {/* ========================================================================= */}
-        <TabsContent value="lecaps" className="space-y-6 mt-6">
-          {/* Tarjetas resumen de tasas en la curva */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-card/40 border-white/10 backdrop-blur-md">
-              <CardContent className="p-4 space-y-1">
-                <span className="text-xs text-muted-foreground font-medium">Corto Plazo (&lt; 60 días)</span>
-                <p className="text-2xl font-bold text-emerald-400">TEM 1.85% - 2.05%</p>
-                <span className="text-xs text-muted-foreground">TNA equivalente: ~22% - 25%</span>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/40 border-white/10 backdrop-blur-md">
-              <CardContent className="p-4 space-y-1">
-                <span className="text-xs text-muted-foreground font-medium">Mediano Plazo (60 - 180 días)</span>
-                <p className="text-2xl font-bold text-blue-400">TEM 2.15% - 2.32%</p>
-                <span className="text-xs text-muted-foreground">TNA equivalente: ~26% - 28%</span>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/40 border-white/10 backdrop-blur-md">
-              <CardContent className="p-4 space-y-1">
-                <span className="text-xs text-muted-foreground font-medium">Largo Plazo (&gt; 180 días)</span>
-                <p className="text-2xl font-bold text-purple-400">TEM 2.35% - 2.45%</p>
-                <span className="text-xs text-muted-foreground">TNA equivalente: ~28% - 30%</span>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/40 border-white/10 backdrop-blur-md">
-              <CardContent className="p-4 space-y-1">
-                <span className="text-xs text-muted-foreground font-medium">Plazo Fijo vs LECAP</span>
-                <p className="text-2xl font-bold text-amber-400">+250 bps</p>
-                <span className="text-xs text-muted-foreground">Spread a favor de LECAP en TNA</span>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Gráfico Interactivo de la Curva de Rendimientos (Yield Curve) */}
-          <Card className="bg-card/40 border-white/10 backdrop-blur-md">
-            <CardHeader className="pb-3">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-emerald-400" />
-                    Curva Soberana de Rendimientos a Tasa Fija (LECAPs & BONCAPs)
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Estructura temporal de tasas en pesos según días al vencimiento
-                  </CardDescription>
-                </div>
-
-                {/* Controles de métrica y filtros */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="inline-flex rounded-lg border border-border p-0.5 bg-background/50 text-xs">
-                    <button
-                      onClick={() => setCurvaMetric('tem')}
-                      className={`px-3 py-1.5 font-medium rounded-md transition-colors ${
-                        curvaMetric === 'tem'
-                          ? 'bg-primary text-primary-foreground font-bold shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      TEM (%)
-                    </button>
-                    <button
-                      onClick={() => setCurvaMetric('tna')}
-                      className={`px-3 py-1.5 font-medium rounded-md transition-colors ${
-                        curvaMetric === 'tna'
-                          ? 'bg-primary text-primary-foreground font-bold shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      TNA (%)
-                    </button>
-                    <button
-                      onClick={() => setCurvaMetric('tea')}
-                      className={`px-3 py-1.5 font-medium rounded-md transition-colors ${
-                        curvaMetric === 'tea'
-                          ? 'bg-primary text-primary-foreground font-bold shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      TEA / TIR (%)
-                    </button>
-                  </div>
-
-                  <div className="inline-flex rounded-lg border border-border p-0.5 bg-background/50 text-xs">
-                    <button
-                      onClick={() => setFiltroTipo('TODOS')}
-                      className={`px-2.5 py-1.5 font-medium rounded-md transition-colors ${
-                        filtroTipo === 'TODOS'
-                          ? 'bg-blue-600 text-white'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      Todos
-                    </button>
-                    <button
-                      onClick={() => setFiltroTipo('LECAP')}
-                      className={`px-2.5 py-1.5 font-medium rounded-md transition-colors ${
-                        filtroTipo === 'LECAP'
-                          ? 'bg-blue-600 text-white'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      LECAPs
-                    </button>
-                    <button
-                      onClick={() => setFiltroTipo('BONCAP')}
-                      className={`px-2.5 py-1.5 font-medium rounded-md transition-colors ${
-                        filtroTipo === 'BONCAP'
-                          ? 'bg-blue-600 text-white'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      BONCAPs
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80 w-full pt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={chartDataCurva}
-                    margin={{ top: 15, right: 30, left: 0, bottom: 25 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                    <XAxis
-                      dataKey="dias"
-                      stroke="#888888"
-                      fontSize={11}
-                      tickLine={false}
-                      label={{
-                        value: 'Días al Vencimiento (Plazo Residual)',
-                        position: 'insideBottom',
-                        offset: -15,
-                        fill: '#888888',
-                        fontSize: 12,
-                      }}
-                    />
-                    <YAxis
-                      stroke="#888888"
-                      fontSize={11}
-                      tickLine={false}
-                      domain={['auto', 'auto']}
-                      unit="%"
-                      label={{
-                        value: curvaMetric.toUpperCase() + ' (%)',
-                        angle: -90,
-                        position: 'insideLeft',
-                        fill: '#888888',
-                        fontSize: 12,
-                      }}
-                    />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload?.length) {
-                          const data = payload[0].payload;
-                          return (
-                            <div className="p-3 bg-popover/95 border border-border rounded-lg shadow-xl text-xs space-y-1.5 backdrop-blur-md">
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="font-extrabold text-foreground text-sm">{data.ticker}</span>
-                                <Badge variant="secondary" className="text-[10px]">{data.tipo}</Badge>
-                              </div>
-                              <p className="text-muted-foreground">Vencimiento: {data.fechaVencimiento} ({data.dias} días)</p>
-                              <div className="pt-1 border-t border-white/10 space-y-0.5">
-                                <p className="text-emerald-400 font-bold">TEM: {data.tem}% mensual</p>
-                                <p className="text-blue-400 font-medium">TNA: {data.tna}% anual</p>
-                                <p className="text-purple-400 font-medium">TEA / TIR: {data.tea}%</p>
-                                <p className="text-muted-foreground">Precio ref: ${data.precio}</p>
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="tasa"
-                      stroke="#10b981"
-                      strokeWidth={2.5}
-                      dot={{ r: 5, fill: '#10b981', strokeWidth: 2, stroke: '#064e3b' }}
-                      activeDot={{ r: 8, fill: '#34d399', stroke: '#ffffff' }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tabla de Instrumentos y Simulador de Inversión */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Tabla de Instrumentos */}
-            <Card className="lg:col-span-8 bg-card/40 border-white/10 backdrop-blur-md">
-              <CardHeader className="pb-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Layers className="h-4 w-4 text-emerald-400" />
-                      Instrumentos en el Mercado Secundario
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Detalle de LECAPs y Bonos con tasas efectivas mensuales y nominales anuales
-                    </CardDescription>
-                  </div>
-                  <div className="relative w-full sm:w-56">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      placeholder="Filtrar por ticker..."
-                      value={searchInstrumento}
-                      onChange={(e) => setSearchInstrumento(e.target.value)}
-                      className="h-9 pl-8 text-xs bg-background/50 border-white/15"
-                    />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-lg border border-white/10 overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-muted/40 text-muted-foreground font-semibold border-b border-white/10">
-                      <tr>
-                        <th className="p-3">Ticker</th>
-                        <th className="p-3">Vencimiento</th>
-                        <th className="p-3 text-right">Días</th>
-                        <th className="p-3 text-right">Precio ($)</th>
-                        <th className="p-3 text-right">TEM (%)</th>
-                        <th className="p-3 text-right">TNA (%)</th>
-                        <th className="p-3 text-right">TEA / TIR</th>
-                        <th className="p-3 text-center">Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {filteredInstrumentos.map((inst) => {
-                        const isSelected = inst.ticker === selectedTickerSim;
-                        return (
-                          <tr
-                            key={inst.ticker}
-                            className={`transition-colors cursor-pointer ${
-                              isSelected
-                                ? 'bg-primary/10 border-l-2 border-l-primary'
-                                : 'hover:bg-white/[0.02]'
-                            }`}
-                            onClick={() => {
-                              setSelectedTickerSim(inst.ticker);
-                              setPrecioPersonalizado('');
-                            }}
-                          >
-                            <td className="p-3 font-bold text-foreground">
-                              <div className="flex items-center gap-1.5">
-                                <span>{inst.ticker}</span>
-                                <Badge
-                                  variant="secondary"
-                                  className={`text-[9px] px-1 py-0 ${
-                                    inst.tipo === 'LECAP' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-purple-500/20 text-purple-300'
-                                  }`}
-                                >
-                                  {inst.tipo}
-                                </Badge>
-                              </div>
-                            </td>
-                            <td className="p-3 text-muted-foreground">{inst.fechaVencimiento}</td>
-                            <td className="p-3 text-right font-medium">{inst.diasAlVencimiento} d</td>
-                            <td className="p-3 text-right font-semibold text-foreground">${inst.precio.toFixed(2)}</td>
-                            <td className="p-3 text-right font-bold text-emerald-400">{inst.tem.toFixed(2)}%</td>
-                            <td className="p-3 text-right font-medium text-blue-400">{inst.tna.toFixed(2)}%</td>
-                            <td className="p-3 text-right font-medium text-purple-400">{inst.tea.toFixed(2)}%</td>
-                            <td className="p-3 text-center">
-                              <Button
-                                size="sm"
-                                variant={isSelected ? 'default' : 'outline'}
-                                className="h-7 px-2 text-[11px]"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedTickerSim(inst.ticker);
-                                  setPrecioPersonalizado('');
-                                }}
-                              >
-                                {isSelected ? 'Seleccionado' : 'Simular'}
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Simulador de Rendimiento de Inversión */}
-            <Card className="lg:col-span-4 bg-card/40 border-white/10 backdrop-blur-md">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Calculator className="h-4 w-4 text-primary" />
-                  Simulador de Inversión
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Proyecta tu ganancia en {selectedInstrumento ? selectedInstrumento.ticker : 'LECAP'} vs Plazo Fijo
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Selector de Monto */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Capital a Invertir (ARS):</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
-                    <Input
-                      type="number"
-                      value={simuladorMonto}
-                      onChange={(e) => setSimuladorMonto(Math.max(1000, Number(e.target.value)))}
-                      className="pl-7 font-bold text-foreground bg-background/50"
-                    />
-                  </div>
-                </div>
-
-                {/* Instrumento Seleccionado */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Instrumento:</label>
-                  <select
-                    value={selectedTickerSim}
-                    onChange={(e) => {
-                      setSelectedTickerSim(e.target.value);
-                      setPrecioPersonalizado('');
-                    }}
-                    className="w-full h-10 px-3 rounded-md bg-background/50 border border-white/15 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  >
-                    {instrumentos.map((i) => (
-                      <option key={i.ticker} value={i.ticker}>
-                        {i.ticker} - Vto: {i.fechaVencimiento} ({i.diasAlVencimiento}d) - TEM: {i.tem}%
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Precio de compra (editable) */}
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <label className="font-semibold text-muted-foreground">Precio de Compra ($ cada 100 VN):</label>
-                    <span className="text-[11px] text-muted-foreground">
-                      Ref: ${selectedInstrumento?.precio}
-                    </span>
-                  </div>
-                  <Input
-                    type="number"
-                    step="0.05"
-                    placeholder={selectedInstrumento?.precio.toString()}
-                    value={precioPersonalizado}
-                    onChange={(e) => setPrecioPersonalizado(e.target.value)}
-                    className="text-xs bg-background/50"
-                  />
-                </div>
-
-                {/* Tarjeta de Resultados */}
-                {simuladorCalculo && (
-                  <div className="p-4 rounded-xl bg-gradient-to-b from-muted/30 to-muted/10 border border-white/10 space-y-3">
-                    <div>
-                      <span className="text-xs text-muted-foreground font-medium">Capital Final al Vencimiento:</span>
-                      <p className="text-2xl font-black text-emerald-400">
-                        ${Math.round(simuladorCalculo.capitalFinalLecap).toLocaleString('es-AR')} ARS
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-white/10">
-                      <div>
-                        <span className="text-muted-foreground">Ganancia Neta:</span>
-                        <p className="font-bold text-foreground">
-                          +${Math.round(simuladorCalculo.gananciaLecap).toLocaleString('es-AR')}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-muted-foreground">Rendimiento:</span>
-                        <p className="font-bold text-emerald-400">
-                          +{simuladorCalculo.gananciaLecapPorcentaje}%
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Comparativa vs Plazo Fijo */}
-                    <div className="pt-2 border-t border-white/10 space-y-1.5 text-xs">
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>En Plazo Fijo ganarías:</span>
-                        <span className="font-medium text-foreground">
-                          +${Math.round(simuladorCalculo.gananciaPf).toLocaleString('es-AR')}
-                        </span>
-                      </div>
-                      <div className="flex justify-between font-bold">
-                        <span className="text-muted-foreground">Ventaja de la LECAP:</span>
-                        <span
-                          className={
-                            simuladorCalculo.diferenciaPesos >= 0 ? 'text-emerald-400' : 'text-red-400'
-                          }
-                        >
-                          {simuladorCalculo.diferenciaPesos >= 0 ? '+' : ''}$
-                          {Math.round(simuladorCalculo.diferenciaPesos).toLocaleString('es-AR')} ARS
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="pt-2">
-                      <Badge
-                        variant="outline"
-                        className={`w-full justify-center py-1 text-xs gap-1.5 ${
-                          simuladorCalculo.lecapConviene
-                            ? 'border-emerald-500/30 text-emerald-300 bg-emerald-500/10'
-                            : 'border-amber-500/30 text-amber-300 bg-amber-500/10'
-                        }`}
-                      >
-                        <Sparkles className="h-3 w-3" />
-                        {simuladorCalculo.lecapConviene
-                          ? `La LECAP rinde más que el Plazo Fijo por ${simuladorCalculo.dias} días`
-                          : 'El Plazo Fijo ofrece una tasa competitiva para este plazo'}
-                      </Badge>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <Data912FixedIncome plazosFijos={plazosFijos} />
         </TabsContent>
       </Tabs>
     </div>

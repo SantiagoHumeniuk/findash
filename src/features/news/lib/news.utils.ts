@@ -19,7 +19,7 @@ export const formatNewsDate = (date: string): string => {
  * Obtiene el nombre de la compañía desde una noticia
  */
 export const getCompanyName = (news: NewsItem): string => {
-  return news.gradingCompany ?? news.analystCompany ?? 'N/A';
+  return news.gradingCompany ?? news.analystCompany ?? '';
 };
 
 /**

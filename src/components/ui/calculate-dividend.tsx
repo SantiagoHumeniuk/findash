@@ -15,7 +15,7 @@ import React from "react";
 // Definiendo un tipo para los datos del dividendo para mayor claridad
 interface Dividend {
     symbol: string;
-    dividend: number;
+    dividend: number | null;
     paymentDate: string;
 };
 
@@ -24,7 +24,7 @@ export function CalculateDividendModal({ dividend }: { dividend: Dividend }) {
     const [nominales, setNominales] = React.useState('');
 
     // Se calcula el total en una variable para mantener el JSX más legible
-    const totalEstimado = (parseFloat(nominales) || 0) * (dividend?.dividend || 0);
+    const totalEstimado = (parseFloat(nominales) || 0) * (dividend.dividend ?? 0);
 
     return (
         <DialogContent className="w-11/12 sm:max-w-[425px]">
@@ -60,14 +60,16 @@ export function CalculateDividendModal({ dividend }: { dividend: Dividend }) {
                         <span className="text-xs sm:text-sm text-muted-foreground">
                             <Banknote className="inline w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 text-chart-2" /> Dividendo por Acción
                         </span>
-                        <span className="font-semibold text-sm sm:text-base">${dividend?.dividend?.toFixed(4) || '0.00'}</span>
+                        <span className="font-semibold text-sm sm:text-base">
+                            {dividend.dividend === null ? 'No disponible' : `$${dividend.dividend.toFixed(4)}`}
+                        </span>
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-xs sm:text-sm text-muted-foreground">
                             <Calendar className="inline w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 text-chart-3" /> Fecha de Pago
                         </span>
                         <span className="font-semibold text-sm sm:text-base">
-                            {dividend?.paymentDate ? new Date(dividend.paymentDate).toLocaleDateString("es-ES") : '-'}
+                            {dividend?.paymentDate ? new Date(dividend.paymentDate).toLocaleDateString("es-ES") : ''}
                         </span>
                     </div>
                 </div>

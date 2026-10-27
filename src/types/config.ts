@@ -17,38 +17,6 @@ export interface Plans {
   freeTierSymbols: string[];
 }
 
-export interface FmpProxyEndpoints {
-  profile: string;
-  keyMetrics: string;
-  quote: string;
-  historical: string;
-  priceTarget: string;
-  priceTargetConsensus: string;
-  newsPriceTarget: string;
-  newsGrades: string;
-  stockGrades: string;
-  dividendsCalendar: string;
-  marketRiskPremium: string;
-  dcf: string;
-  rating: string;
-  revenueGeographic: string;
-  revenueProduct: string;
-  stockNews: string;
-  fmpArticles: string;
-  generalNews: string;
-  pressReleases: string;
-  forexNews: string;
-  cryptoNews: string;
-  gradesConsensus: string;
-  analystEstimates: string;
-  ratios: string;
-  ratiosTtm?: string;
-  stockPeers?: string;
-  keyMetricsYear: string;
-  leveredDiscountedCashFlow: string;
-  stockPriceChange: string;
-}
-
 export interface SidebarLink {
   to: string;
   label: string;
@@ -92,7 +60,7 @@ export interface Config {
     };
   };
   api: {
-    fmpProxyEndpoints: FmpProxyEndpoints;
+    marketDataProvider: 'yahoo-finance';
   };
   plans: Plans;
   payment?: PaymentConfig;

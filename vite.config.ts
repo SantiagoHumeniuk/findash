@@ -28,7 +28,7 @@ export default defineConfig({
         },
         configure: (proxy) => {
           proxy.on('proxyRes', (proxyRes) => {
-            let cookies = proxyRes.headers['set-cookie'];
+            const cookies = proxyRes.headers['set-cookie'];
             if (cookies) {
               proxyRes.headers['set-cookie'] = cookies.map(c => 
                 c.replace(/;\s*Secure/gi, '')
@@ -52,6 +52,13 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: './src/test/setup.ts',
+    // Edge Function tests run under Deno (`deno test`), not Vitest.
+    exclude: ['**/node_modules/**', '**/dist/**', 'supabase/functions/**'],
+    // Placeholder values so modules that build the Supabase client load without a local .env.
+    env: {
+      VITE_SUPABASE_URL: 'http://127.0.0.1:54321',
+      VITE_SUPABASE_PUBLISHABLE_KEY: 'test-publishable-key',
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

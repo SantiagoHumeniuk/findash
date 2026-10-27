@@ -1,6 +1,6 @@
 // src/features/dashboard/components/tabs/dashboard-tabs.tsx
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../../components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "../../../../components/ui/tabs";
 import { AssetData } from "../../../../types/dashboard";
 import { PriceAnalysisTable } from "../analysis/price-analysis-table";
 import { FundamentalsTable } from "../analysis/fundamentals-table";
@@ -18,7 +18,7 @@ import {
     BrainCircuit
 } from "lucide-react";
 import { Skeleton } from "../../../../components/ui/skeleton";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useState } from "react";
 
 interface DashboardTabsProps {
@@ -26,7 +26,7 @@ interface DashboardTabsProps {
     isLoading: boolean;
 }
 
-const tabContentVariants = {
+const tabContentVariants: Variants = {
     hidden: {
         opacity: 0,
         y: 8,

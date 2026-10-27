@@ -160,6 +160,7 @@ interface TickerAddFormProps {
 **Características:**
 - Validación de formato en mayúsculas
 - Indicador de carga durante fetch
+- El formulario de búsqueda permanece disponible mientras se cargan los activos del dashboard
 - Prevención de duplicados
 - Placeholder con ejemplos
 

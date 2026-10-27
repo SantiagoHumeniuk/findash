@@ -11,7 +11,6 @@ import {
   FileText
 } from 'lucide-react';
 import { CompanyInfoItem } from './company-info-item';
-import { RevenueSegmentationCharts } from './revenue-segmentation-charts';
 import { formatLargeNumber } from '../../lib/asset-formatters';
 import type { AssetData } from '../../../../types/dashboard';
 
@@ -44,17 +43,17 @@ export function AssetProfileTab({ asset }: AssetProfileTabProps) {
             <CompanyInfoItem
               icon={<Building className="w-4 h-4" />}
               label="Sector"
-              value={profile.sector ?? 'N/A'}
+              value={profile.sector ?? ''}
             />
             <CompanyInfoItem
               icon={<Briefcase className="w-4 h-4" />}
               label="Industria"
-              value={profile.industry ?? 'N/A'}
+              value={profile.industry ?? ''}
             />
             <CompanyInfoItem
               icon={<UserCircle className="w-4 h-4" />}
               label="CEO"
-              value={profile.ceo ?? 'N/A'}
+              value={profile.ceo ?? ''}
             />
             <CompanyInfoItem
               icon={<Users className="w-4 h-4" />}
@@ -67,7 +66,7 @@ export function AssetProfileTab({ asset }: AssetProfileTabProps) {
             <CompanyInfoItem
               icon={<Globe className="w-4 h-4" />}
               label="País"
-              value={profile.country ?? 'N/A'}
+              value={profile.country ?? ''}
             />
             <CompanyInfoItem
               icon={<ExternalLink className="w-4 h-4" />}
@@ -83,16 +82,13 @@ export function AssetProfileTab({ asset }: AssetProfileTabProps) {
                     {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                   </a>
                 ) : (
-                  'N/A'
+                  ''
                 )
               }
             />
           </div>
         </CardContent>
       </Card>
-
-      {/* Gráficos de Segmentación (Ingresos) */}
-      <RevenueSegmentationCharts asset={asset} />
     </div>
   );
 }

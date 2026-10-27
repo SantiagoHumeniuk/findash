@@ -17,13 +17,9 @@ asset-detail/
 │   │   └── financial-metric-card.tsx
 │   ├── header/              # Encabezado del activo
 │   │   └── asset-header.tsx
-│   ├── metrics/             # Métricas clave
-│   │   ├── asset-key-metrics.tsx
-│   │   └── key-metric-item.tsx
 │   ├── profile/             # Tab de perfil
 │   │   ├── asset-profile-tab.tsx
 │   │   ├── company-info-item.tsx
-│   │   └── revenue-segmentation-charts.tsx
 │   ├── rating/              # Componentes de calificación
 │   │   ├── dcf-card.tsx
 │   │   ├── dcf-valuation-card.tsx
@@ -34,8 +30,7 @@ asset-detail/
 │   ├── asset-detail-tabs.tsx
 │   └── index.ts             # Barrel export
 ├── lib/                     # Utilidades
-│   ├── asset-formatters.ts  # Funciones de formateo
-│   └── chart-config.tsx     # Configuración de gráficos
+│   └── asset-formatters.ts  # Funciones de formateo
 ├── pages/                   # Páginas
 │   └── asset-detail-page.tsx
 ├── types/                   # Tipos TypeScript
@@ -46,22 +41,18 @@ asset-detail/
 ## 🎯 Componentes Principales
 
 ### Página Principal
-- **AssetDetailPage**: Orquestador principal con 4 tabs (Perfil, Gráfico, Finanzas, Noticias)
+- **AssetDetailPage**: Orquestador principal de las secciones Perfil, Gráfico, Finanzas, Noticias, Ratings y Evolución
 
 ### Header y Métricas
-- **AssetHeader**: Logo, nombre, precio actual y cambio del día
-- **AssetKeyMetrics**: Grid de 6 métricas clave (Market Cap, Volumen, Beta, etc.)
+- **AssetHeader**: Logo, nombre y símbolo; las cotizaciones y métricas se muestran en Finanzas.
 
 ### Calificación y Valoración
-- **DCFValuationCard**: Comparación precio actual vs valor DCF
-- **RatingScorecard**: Calificación general y puntuaciones individuales
-- **RatingStars**: Visualización de estrellas (0-5)
+- Las tarjetas de DCF y calificaciones no se muestran en el experimento Yahoo-only porque Yahoo no ofrece esos conjuntos de datos.
 
 ### Tabs de Contenido
 - **AssetProfileTab**: Información general de la empresa
-- **AssetFinancialsTab**: Métricas financieras agrupadas por categoría
+- **AssetFinancialsTab**: Tablas históricas de estados financieros para fuentes que proveen esos datos. En el flujo Yahoo-only no se muestra la pestaña Fundamentales: los campos Yahoo se reservan para cálculos y otras vistas de la app.
 - **CompanyInfoItem**: Campo individual de información corporativa
-- **RevenueSegmentationCharts**: Gráficos de pie (geografía y producto)
 
 ### Estados de Error
 - **LoadingError**: Error al cargar datos del servidor
@@ -72,16 +63,13 @@ asset-detail/
 
 ```typescript
 // Importados de src/types/dashboard.ts
-AssetData           # Datos completos del activo
-AssetRating         # Calificación con puntuaciones
-RevenueSegment      # Segmento de ingresos
+AssetData           # Datos del activo normalizados antes de mostrarlos por sección
+AssetRating         # Tipo legado; Yahoo Finance no provee calificaciones equivalentes
 
 // Locales en types/asset-detail.types.ts
 ErrorStateProps     # Props para componentes de error
 FinancialMetric     # Métrica individual {label, value}
 FinancialSection    # Sección con múltiples métricas
-RevenueChartData    # Datos para gráficos de pie
-CustomLabelProps    # Props para labels personalizados en charts
 ```
 
 ## 🛠️ Utilidades
@@ -91,11 +79,6 @@ CustomLabelProps    # Props para labels personalizados en charts
 - `formatPrice(price)`: Formatea precios con símbolo de dólar
 - `formatPercentage(percent)`: Formatea porcentajes con %
 - `calculateDCFDifference(current, dcf)`: Calcula diferencia porcentual
-
-### chart-config.tsx
-- `CHART_COLORS`: Array de 6 colores para gráficos
-- `renderPieChartLabel(props)`: Renderiza labels en gráficos de pie
-- `formatRevenueTooltip(value)`: Formatea valores de tooltip (billones)
 
 ## 🔗 Dependencias
 
@@ -107,7 +90,7 @@ CustomLabelProps    # Props para labels personalizados en charts
 
 ### Externas
 - `react-router-dom`: Navegación y parámetros de URL
-- `recharts`: Gráficos de pie para segmentación de ingresos
+- `recharts`: Gráficos financieros
 - `framer-motion`: Animaciones de entrada
 - `lucide-react`: Iconos
 
@@ -211,7 +194,7 @@ interface Props {
 
 ## 🔄 Próximas Mejoras
 
-- [ ] Tab de noticias con API de FMP
+- [ ] Tab de noticias con noticias de Yahoo Finance
 - [ ] Gráficos adicionales (candlesticks, volumen)
 - [ ] Comparación con competidores
 - [ ] Alertas de precio

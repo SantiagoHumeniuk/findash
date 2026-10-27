@@ -2,7 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
 import { TechLoader } from '../ui/tech-loader';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 
 type FallbackType = 'spinner' | 'skeleton' | 'page' | 'minimal';
 
@@ -11,19 +11,19 @@ interface SuspenseFallbackProps {
   message?: string;
 }
 
-const fadeInVariants = {
+const fadeInVariants: Variants = {
   hidden: { opacity: 0, scale: 0.97 },
   visible: {
     opacity: 1,
     scale: 1,
     transition: {
       duration: 0.4,
-      ease: [0.22, 1, 0.36, 1],
+      ease: [0.22, 1, 0.36, 1] as const,
     },
   },
 };
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -34,7 +34,7 @@ const staggerContainer = {
   },
 };
 
-const staggerItem = {
+const staggerItem: Variants = {
   hidden: { opacity: 0, y: 12 },
   visible: {
     opacity: 1,
@@ -69,6 +69,7 @@ export function SuspenseFallback({
           animate="visible"
         >
           <TechLoader />
+          <p className="text-sm text-muted-foreground">{message}</p>
         </motion.div>
       );
 
@@ -105,6 +106,7 @@ export function SuspenseFallback({
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
           <TechLoader />
+          <p className="text-sm text-muted-foreground">{message}</p>
         </motion.div>
       );
 

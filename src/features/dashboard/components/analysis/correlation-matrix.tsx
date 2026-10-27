@@ -10,6 +10,7 @@ import { Download, GitCompareArrows } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../../components/ui/dropdown-menu";
 import { Button } from "../../../../components/ui/button";
 import { exportToPdf } from "../../../../utils/export-pdf";
+import { toast } from "sonner";
 import { indicatorConfig } from "../../../../utils/financial";
 import { useTheme } from "../../../../components/ui/theme-provider";
 import { usePlanFeature } from "../../../../hooks/use-plan-feature";
@@ -138,7 +139,7 @@ export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets 
             rowAsset.profile.symbol,
             ...assets.map((_, j) => {
                 const value = correlationMatrix[i]?.[j];
-                return typeof value === 'number' ? value.toFixed(2) : 'N/A';
+                return typeof value === 'number' ? value.toFixed(2) : '';
             })
         ]);
 
@@ -154,6 +155,9 @@ export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets 
             assets,
             theme,
             indicatorConfig,
+        }).catch((error: unknown) => {
+            console.error('Error durante la exportación a PDF:', error);
+            toast.error(`Error al exportar el PDF: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         });
     };
 
@@ -237,11 +241,11 @@ export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets 
                                                                 className="w-full h-10 flex items-center justify-center rounded-md text-sm transition-colors hover:opacity-80 cursor-default"
                                                                 style={getCellStyle(value)}
                                                             >
-                                                                {typeof value === 'number' ? value.toFixed(2) : '-'}
+                                                                {typeof value === 'number' ? value.toFixed(2) : ''}
                                                             </div>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
-                                                            <p className="font-semibold mb-1">Correlación: {value?.toFixed(3) ?? 'N/A'}</p>
+                                                            <p className="font-semibold mb-1">{value != null ? `Correlación: ${value.toFixed(3)}` : ''}</p>
                                                             <p className="text-xs text-muted-foreground">
                                                                 {rowAsset.profile.symbol} vs {colAsset.profile.symbol}
                                                             </p>

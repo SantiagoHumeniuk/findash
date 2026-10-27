@@ -1,7 +1,6 @@
 // src/features/dashboard/components/ticker-input/ticker-add-form.tsx
 
 import { useState, useEffect } from 'react';
-import { useIsFetching } from '@tanstack/react-query';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../components/ui/tabs';
@@ -32,45 +31,54 @@ export function TickerAddForm({ onAddTicker }: TickerAddFormProps) {
   const [inputValue, setInputValue] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [searchMode, setSearchMode] = useState<"ticker" | "name">("ticker");
   const [tickerInput, setTickerInput] = useState("");
 
-  const isFetching = useIsFetching(); // Estado global de React Query
   const config = useConfig();
 
   // Efecto de búsqueda con Debounce y protección contra Race Conditions - Solo para búsqueda por nombre
   useEffect(() => {
-    if (searchMode !== "name") return; // Solo buscar cuando estemos en modo "nombre"
-    
-    let isActive = true; // ✅ Bandera para saber si el componente/efecto sigue vigente
+    if (searchMode !== "name") {
+      setLoading(false);
+      return;
+    }
 
+    let isActive = true;
+    const query = inputValue.trim();
+
+    setSearchError(null);
+    if (query.length < 2) {
+      setResults([]);
+      setLoading(false);
+      return () => {
+        isActive = false;
+      };
+    }
+
+    setLoading(true);
     const delayDebounceFn = setTimeout(() => {
       void (async () => {
-        if (!inputValue || inputValue.trim().length < 1) {
-          setResults([]);
-          return;
-        }
+        try {
+          const data = await searchAssets(query, config);
 
-      setLoading(true);
-      try {
-        const data = await searchAssets(inputValue, config);
-
-        // ✅ Solo actualizamos el estado si este efecto sigue siendo el "activo"
-        if (isActive) {
-          setResults(data);
+          if (isActive) {
+            setResults(data);
+          }
+        } catch (error) {
+          console.error("Error searching assets:", error);
+          if (isActive) {
+            setResults([]);
+            setSearchError("No se pudo completar la búsqueda. Intenta nuevamente.");
+          }
+        } finally {
+          if (isActive) setLoading(false);
         }
-      } catch (error) {
-        console.error("Error searching assets:", error);
-        if (isActive) setResults([]);
-      } finally {
-        if (isActive) setLoading(false);
-      }
       })();
-    }, 300); // 300ms debounce
+    }, 300);
 
-    // Cleanup function
     return () => {
-      isActive = false; // ✅ Cancelamos la validez de la promesa pendiente al desmontar o cambiar input
+      isActive = false;
       clearTimeout(delayDebounceFn);
     };
   }, [inputValue, config, searchMode]);
@@ -109,6 +117,8 @@ export function TickerAddForm({ onAddTicker }: TickerAddFormProps) {
           setTickerInput("");
           setValue("");
           setResults([]);
+          setSearchError(null);
+          setLoading(false);
         }}
         className="w-full"
       >
@@ -123,13 +133,12 @@ export function TickerAddForm({ onAddTicker }: TickerAddFormProps) {
               placeholder="Escribe el ticker (ej. AAPL, MSFT)..."
               value={tickerInput}
               onChange={(e) => setTickerInput(e.target.value)}
-              onKeyPress={handleTickerKeyPress}
+              onKeyDown={handleTickerKeyPress}
               className="flex-1"
-              disabled={isFetching > 0}
             />
             <Button 
               onClick={handleTickerSubmit}
-              disabled={!tickerInput.trim() || isFetching > 0}
+              disabled={!tickerInput.trim()}
               size="sm"
             >
               <Plus className="h-4 w-4" />
@@ -149,7 +158,6 @@ export function TickerAddForm({ onAddTicker }: TickerAddFormProps) {
                 role="combobox"
                 aria-expanded={open}
                 className="w-full justify-between text-muted-foreground hover:text-foreground"
-                disabled={isFetching > 0}
               >
                 <span className="truncate">
                   {value ? value : "Buscar activo por nombre..."}
@@ -172,7 +180,11 @@ export function TickerAddForm({ onAddTicker }: TickerAddFormProps) {
                   )}
 
                   {!loading && results.length === 0 && inputValue.length > 0 && (
-                    <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+                    <CommandEmpty>
+                      {searchError ?? (inputValue.trim().length < 2
+                        ? "Escribe al menos 2 caracteres para buscar."
+                        : "No se encontraron resultados.")}
+                    </CommandEmpty>
                   )}
 
                   {!loading && results.map((result) => (

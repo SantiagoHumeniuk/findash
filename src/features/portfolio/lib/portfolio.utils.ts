@@ -23,7 +23,7 @@ export const formatDate = (dateString: string): string =>
   });
 
 export const formatNumber = (value: number | string): string =>
-  typeof value === "number" && isFinite(value) ? value.toFixed(2) : "N/A";
+  typeof value === "number" && isFinite(value) ? value.toFixed(2) : "";
 
 /**
  * Calcula las métricas del portfolio
@@ -38,12 +38,12 @@ export function calculatePortfolioMetrics(
     currentPL: 0,
     currentPLPercent: 0,
     dailyPL: 0,
-    bestPerformer: { symbol: "—", plPercent: 0 },
-    worstPerformer: { symbol: "—", plPercent: 0 },
-    bestPerformerUsd: { symbol: "—", plValue: 0 },
-    worstPerformerUsd: { symbol: "—", plValue: 0 },
+    bestPerformer: { symbol: "", plPercent: 0 },
+    worstPerformer: { symbol: "", plPercent: 0 },
+    bestPerformerUsd: { symbol: "", plValue: 0 },
+    worstPerformerUsd: { symbol: "", plValue: 0 },
     positionsCount: 0,
-    portfolioBeta: "N/A",
+    portfolioBeta: null,
     avgHoldingDays: 0,
   };
 
@@ -110,7 +110,7 @@ export function calculatePortfolioMetrics(
     worstPerformerUsd: performersUsd[performersUsd.length - 1] || initialStats.worstPerformerUsd,
 
     positionsCount: holdings.length,
-    portfolioBeta: currentValue > 0 ? weightedBetaSum / currentValue : "N/A",
+    portfolioBeta: currentValue > 0 ? weightedBetaSum / currentValue : null,
     avgHoldingDays: 0,
   };
 }

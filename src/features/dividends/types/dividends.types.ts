@@ -12,9 +12,9 @@ export interface Dividend {
   recordDate: string;
   paymentDate: string;
   declarationDate: string;
-  adjDividend: number;
-  dividend: number;
-  yield: number;
+  adjDividend: number | null;
+  dividend: number | null;
+  yield: number | null;
   frequency: string;
 }
 

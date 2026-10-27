@@ -1,6 +1,6 @@
 // src/features/dashboard/components/ticker-input/selected-tickers-list.tsx
 
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, type Variants } from 'framer-motion';
 import { Button } from '../../../../components/ui/button';
 import { XIcon, TrendingUp } from 'lucide-react';
 
@@ -9,7 +9,7 @@ interface SelectedTickersListProps {
   onRemoveTicker: (ticker: string) => void;
 }
 
-const tickerVariants = {
+const tickerVariants: Variants = {
   initial: {
     opacity: 0,
     scale: 0.3,

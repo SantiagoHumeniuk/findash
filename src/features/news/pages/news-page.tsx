@@ -29,10 +29,8 @@ function useDebounce<T>(value: T, delay: number): T {
 const CATEGORIES: { id: NewsCategory | 'all'; label: string }[] = [
     { id: 'general', label: 'General' },
     { id: 'stock', label: 'Mercado de Valores' },
-    { id: 'fmp-articles', label: 'Artículos FMP' },
     { id: 'crypto', label: 'Criptomonedas' },
     { id: 'forex', label: 'Divisas' },
-    { id: 'press-releases', label: 'Comunicados' },
 ];
 
 export default function NewsPage() {
@@ -175,7 +173,7 @@ export default function NewsPage() {
                     <div className="flex justify-center mt-8">
                         <PaginationDemo
                             currentPage={currentPage}
-                            totalPages={100} // FMP pagination limit
+                            totalPages={Math.ceil(50 / itemsPerPage)}
                             onPageChange={handlePageChange}
                         />
                     </div>

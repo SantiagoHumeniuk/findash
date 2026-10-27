@@ -19,8 +19,8 @@ export const EconomicCalendar = () => {
             try {
                 const data = await fetchEconomicCalendar();
                 setEvents(data);
-            } catch {
-                setError('Error al cargar el calendario económico');
+            } catch (loadError) {
+                setError(loadError instanceof Error ? loadError.message : 'Error al cargar el calendario económico');
             } finally {
                 setLoading(false);
             }
@@ -86,13 +86,13 @@ export const EconomicCalendar = () => {
                                         <Badge variant={getImpactVariant(event.impact)}>{translateImpact(event.impact)}</Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        {event.actual !== null ? `${event.actual}${event.unit ?? ''}` : '-'}
+                                        {event.actual !== null ? `${event.actual}${event.unit ?? ''}` : ''}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        {event.estimate !== null ? `${event.estimate}${event.unit ?? ''}` : '-'}
+                                        {event.estimate !== null ? `${event.estimate}${event.unit ?? ''}` : ''}
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        {event.previous !== null ? `${event.previous}${event.unit ?? ''}` : '-'}
+                                        {event.previous !== null ? `${event.previous}${event.unit ?? ''}` : ''}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -111,4 +111,3 @@ export const EconomicCalendar = () => {
         </Card>
     );
 };
-

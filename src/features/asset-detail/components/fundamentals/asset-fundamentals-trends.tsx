@@ -210,13 +210,17 @@ export function AssetFundamentalsTrends({ asset }: AssetFundamentalsTrendsProps)
                   <LabelList 
                     dataKey="value"
                     position="top" 
-                    formatter={(val: number) => isPricePerformance ? `${val > 0 ? '+' : ''}${val.toFixed(1)}%` : val.toFixed(2)}
+                    formatter={(label) => {
+                      const val = Number(label);
+                      if (!Number.isFinite(val)) return '';
+                      return isPricePerformance ? `${val > 0 ? '+' : ''}${val.toFixed(1)}%` : val.toFixed(2);
+                    }}
                     style={{ fill: 'hsl(var(--foreground))', fontSize: 12, fontWeight: 600 }}
                   />
                   {chartData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
-                      fill={entry.value < 0 ? 'url(#colorMetricNegative)' : 'url(#colorMetric)'}
+                      fill={(entry.value ?? 0) < 0 ? 'url(#colorMetricNegative)' : 'url(#colorMetric)'}
                     />
                   ))}
                 </Bar>

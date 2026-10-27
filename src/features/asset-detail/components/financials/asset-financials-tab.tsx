@@ -250,9 +250,9 @@ export function AssetFinancialsTab({ asset }: AssetFinancialsTabProps) {
     });
   }, [asset.keyMetricsYearly, asset.ratios, hasKeyMetrics, hasRatios]);
 
-
   return (
-    <Tabs defaultValue={hasEstimates ? "estimates" : "valuation"} className="w-full space-y-6">
+    <div className="space-y-6">
+      <Tabs defaultValue={hasEstimates ? "estimates" : "valuation"} className="w-full space-y-6">
 
       {/* Scroll horizontal para tabs en móvil */}
       <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -378,6 +378,7 @@ export function AssetFinancialsTab({ asset }: AssetFinancialsTabProps) {
           />
         </TabsContent>
       )}
-    </Tabs>
+      </Tabs>
+    </div>
   );
 }

@@ -2,15 +2,12 @@
 
 import { Link, useParams } from 'react-router-dom';
 import { useAssetData } from '../../dashboard/hooks/use-asset-data';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { Button } from '../../../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { Card, CardContent } from '../../../components/ui/card';
-import { CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import {
   AssetDetailSkeleton,
   AssetHeader,
-  AssetKeyMetrics,
   LoadingError,
   NotFoundError,
   DCFValuationCard,
@@ -18,7 +15,7 @@ import {
   AssetDetailTabs,
 } from '../components';
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -29,7 +26,7 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 24, scale: 0.98, filter: "blur(6px)" },
   visible: {
     opacity: 1,
@@ -44,7 +41,7 @@ const itemVariants = {
   },
 };
 
-const heroVariants = {
+const heroVariants: Variants = {
   hidden: { opacity: 0, y: 30, scale: 0.96 },
   visible: {
     opacity: 1,
@@ -93,10 +90,6 @@ export default function AssetDetailPage() {
     return <NotFoundError symbol={symbol ?? 'UNKNOWN'} />;
   }
 
-  const yahooMetrics = Object.entries(asset.yahooMetrics ?? {})
-    .filter(([, value]) => value !== null && Number.isFinite(value))
-    .sort(([left], [right]) => left.localeCompare(right));
-
   // Main content
   return (
     <motion.div
@@ -126,58 +119,8 @@ export default function AssetDetailPage() {
         <AssetHeader asset={asset} />
       </motion.div>
 
-      {/* Key Metrics */}
-      <motion.div variants={itemVariants}>
-        <AssetKeyMetrics asset={asset} />
-      </motion.div>
-
-      {yahooMetrics.length > 0 && (
-        <motion.div variants={itemVariants}>
-          <Card className="border-blue-500/20">
-            <CardHeader>
-              <CardTitle className="text-lg">Métricas complementarias de Yahoo Finance</CardTitle>
-              <CardDescription>
-                {yahooMetrics.length} campos disponibles de Yahoo. Cotización reportada:
-                {' '}{asset.quote.timestamp
-                  ? new Date(asset.quote.timestamp * 1000).toLocaleString('es-AR')
-                  : 'fecha no informada'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {yahooMetrics.map(([key, value]) => (
-                  <div key={key} className="min-w-0 rounded-md border p-3">
-                    <p className="truncate text-xs text-muted-foreground" title={key}>
-                      {key.replaceAll('.', ' · ').replace(/([a-z])([A-Z])/g, '$1 $2')}
-                    </p>
-                    <p className="break-all font-medium tabular-nums">
-                      {new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 }).format(value ?? 0)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
       {/* Valuation & Rating Cards */}
-      {asset.dataSource === 'Yahoo Finance' ? (
-        <motion.div variants={itemVariants}>
-          <Card className="border-amber-500/30">
-            <CardContent className="p-4 text-sm text-muted-foreground">
-              FMP no respondió para este símbolo. Se muestra la cotización y las métricas de
-              valoración disponibles en Yahoo Finance; los modelos DCF, calificaciones,
-              estimaciones y datos históricos de FMP no están disponibles.
-              {asset.dataFetchedAt && (
-                <span className="mt-1 block">
-                  Consulta Yahoo: {new Date(asset.dataFetchedAt).toLocaleString('es-AR')}
-                </span>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-      ) : (
+      {!asset.profile.isEtf && (
         <div className="grid-cards-2">
           <motion.div variants={itemVariants}>
             <DCFValuationCard asset={asset} />

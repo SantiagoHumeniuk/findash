@@ -32,8 +32,9 @@ function isQuote(value: unknown): value is Data912BondQuote {
   if (typeof value !== 'object' || value === null || !('symbol' in value) || typeof value.symbol !== 'string') {
     return false;
   }
+  const record = value as Record<string, unknown>;
   return ['q_bid', 'px_bid', 'px_ask', 'q_ask', 'v', 'q_op', 'c', 'pct_change'].every((key) =>
-    key in value && typeof value[key] === 'number' && Number.isFinite(value[key])
+    typeof record[key] === 'number' && Number.isFinite(record[key])
   );
 }
 
@@ -47,10 +48,10 @@ export async function fetchData912FixedIncome(): Promise<Data912FixedIncomeRespo
   const { data, error } = await supabase.functions.invoke('data912-fixed-income-proxy');
   if (error) {
     console.error('Error fetching DATA912 fixed income:', error);
-    throw new Error(`No se pudieron consultar los bonos DATA912: ${error.message}`);
+    throw new Error('No se pudieron consultar los títulos de renta fija.');
   }
   if (typeof data !== 'object' || data === null) {
-    throw new Error('DATA912 devolvió una respuesta inválida');
+    throw new Error('La respuesta de renta fija no es válida.');
   }
   if ('error' in data && typeof data.error === 'string') throw new Error(data.error);
   if (
@@ -70,7 +71,7 @@ export async function fetchData912FixedIncome(): Promise<Data912FixedIncomeRespo
     !('corporate' in data.errors) ||
     !(data.errors.corporate === null || typeof data.errors.corporate === 'string')
   ) {
-    throw new Error('DATA912 devolvió datos incompletos o con formato desconocido');
+    throw new Error('Los datos de renta fija están incompletos o tienen un formato desconocido.');
   }
   return data as Data912FixedIncomeResponse;
 }

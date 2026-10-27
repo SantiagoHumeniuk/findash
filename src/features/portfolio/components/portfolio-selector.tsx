@@ -48,6 +48,7 @@ export const PortfolioSelector = React.memo(function PortfolioSelector() {
     const [showNewPortfolioDialog, setShowNewPortfolioDialog] = useState(false);
     const [newPortfolioName, setNewPortfolioName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
     // Delete state
@@ -82,14 +83,18 @@ export const PortfolioSelector = React.memo(function PortfolioSelector() {
 
     const handleDelete = async () => {
         if (!portfolioToDelete) return;
+        setIsDeleting(true);
         try {
             await deletePortfolio(portfolioToDelete);
             toast.success('Portafolio eliminado');
         } catch (error) {
             console.error('Error deleting portfolio:', error);
-            toast.error('Error al eliminar portafolio');
+            toast.error('Error al eliminar portafolio', {
+                description: error instanceof Error ? error.message : 'Ocurrió un error inesperado.',
+            });
         } finally {
             setPortfolioToDelete(null);
+            setIsDeleting(false);
         }
     };
 
@@ -228,9 +233,9 @@ export const PortfolioSelector = React.memo(function PortfolioSelector() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => void handleDelete()} className="bg-destructive hover:bg-destructive/90">
-                            Eliminar
+                            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => void handleDelete()} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                                {isDeleting ? 'Eliminando...' : 'Eliminar'}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

@@ -54,16 +54,23 @@ interface PerformanceChartProps {
  */
 export const PerformanceChart = React.memo<PerformanceChartProps>(
   function PerformanceChart({ data, title, description }) {
-    // Reverse data to show oldest first (left to right)
+    // Sort chronologically so the chart does not depend on the provider's ordering.
     const chartData = React.useMemo(() => {
-      return [...data].reverse().map(item => ({
-        date: item.date,
-        value: item.averageChange,
-        formattedDate: formatDate(item.date)
-      }));
+      return [...data]
+        .filter((item) =>
+          Number.isFinite(Date.parse(item.date)) &&
+          typeof item.averageChange === 'number' &&
+          Number.isFinite(item.averageChange)
+        )
+        .sort((left, right) => Date.parse(left.date) - Date.parse(right.date))
+        .map((item) => ({
+          date: item.date,
+          value: item.averageChange,
+          formattedDate: formatDate(item.date),
+        }));
     }, [data]);
 
-    if (data.length === 0) {
+    if (chartData.length === 0) {
       return (
         <Card className="border-primary/20 bg-gradient-to-br from-card to-card/50">
           <CardHeader>

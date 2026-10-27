@@ -10,6 +10,7 @@ import { Card } from '../../../components/ui/card';
 import { HistoricalPerformanceChart } from '../../dashboard/components';
 import { AssetGradesTab } from './ratings/asset-grades-tab';
 import { AssetNewsTab } from './news/asset-news-tab';
+import { AssetFilingsCard } from './news/asset-filings-card';
 import { AssetFundamentalsTrends } from './fundamentals/asset-fundamentals-trends';
 
 /**
@@ -32,9 +33,11 @@ interface AssetDetailTabsProps {
  * ```
  */
 export function AssetDetailTabs({ asset, onRefreshAssetData, isRefreshing }: AssetDetailTabsProps) {
+  // ETFs and indexes have no company statements, so the tab is hidden for them.
+  const hasFinancials = asset.ratios.length > 0 || asset.keyMetricsYearly.length > 0 || asset.analystEstimates.length > 0;
   return (
     <Tabs defaultValue="profile" className="w-full">
-      <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 h-auto">
+      <TabsList className={`grid w-full grid-cols-2 ${hasFinancials ? 'md:grid-cols-6' : 'md:grid-cols-5'} h-auto`}>
         <TabsTrigger value="profile" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
           <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Perfil</span>
@@ -45,11 +48,13 @@ export function AssetDetailTabs({ asset, onRefreshAssetData, isRefreshing }: Ass
           <span className="hidden sm:inline">Gráfico</span>
           <span className="sm:hidden">📊</span>
         </TabsTrigger>
-        <TabsTrigger value="financials" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
-          <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          <span className="hidden sm:inline">Finanzas</span>
-          <span className="sm:hidden">$</span>
-        </TabsTrigger>
+        {hasFinancials && (
+          <TabsTrigger value="financials" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
+            <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Fundamentales</span>
+            <span className="sm:hidden">Fund.</span>
+          </TabsTrigger>
+        )}
         <TabsTrigger value="news" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
           <Newspaper className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Noticias</span>
@@ -83,12 +88,15 @@ export function AssetDetailTabs({ asset, onRefreshAssetData, isRefreshing }: Ass
           </Card>
         </TabsContent>
 
-        <TabsContent value="financials" className="mt-4 sm:mt-6">
-          <AssetFinancialsTab asset={asset} />
-        </TabsContent>
+        {hasFinancials && (
+          <TabsContent value="financials" className="mt-4 sm:mt-6">
+            <AssetFinancialsTab asset={asset} />
+          </TabsContent>
+        )}
 
         <TabsContent value="news" className="mt-4 sm:mt-6">
           <AssetNewsTab symbol={asset.profile.symbol} />
+          {!asset.profile.isEtf && <AssetFilingsCard symbol={asset.profile.symbol} />}
         </TabsContent>
 
         <TabsContent value="ratings" className="mt-4 sm:mt-6">

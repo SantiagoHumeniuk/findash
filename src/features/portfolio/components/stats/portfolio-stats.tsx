@@ -43,7 +43,10 @@ const StatCard = ({
     helpText?: string,
     trend?: number,
     delay?: number
-}) => (
+}) => {
+    if (value === '') return null;
+
+    return (
     <motion.div
         whileHover={{ y: -4 }}
         initial={{ opacity: 0, scale: 0.95 }}
@@ -82,7 +85,8 @@ const StatCard = ({
             </TooltipProvider>
         </Card>
     </motion.div>
-);
+    );
+};
 
 interface PortfolioStatsProps {
     holdings: Holding[];
@@ -185,14 +189,14 @@ export function PortfolioStats({ holdings, totalPerformance, portfolioData, avgH
             {/* --- Fila 3: Riesgo --- */}
             <StatCard 
                 label="Beta Ponderado" 
-                value={formatNumber(metrics.portfolioBeta)} 
+                value={metrics.portfolioBeta !== null ? formatNumber(metrics.portfolioBeta) : 'N/D'} 
                 icon={Target}
                 helpText="Volatilidad de tu portafolio vs. el mercado. <1 es menos volátil, >1 es más volátil."
                 delay={0.4}
             />
             <StatCard 
                 label="Máx. Drawdown" 
-                value={historicalMetrics?.maxDrawdown ? `${(historicalMetrics.maxDrawdown * 100).toFixed(2)}%` : 'N/A'} 
+                value={historicalMetrics?.maxDrawdown != null ? `${(historicalMetrics.maxDrawdown * 100).toFixed(2)}%` : ''}
                 colorClass="text-red-500"
                 icon={ShieldAlert}
                 helpText="La máxima caída desde un pico histórico en el valor del portafolio."
@@ -237,7 +241,7 @@ export function PortfolioStats({ holdings, totalPerformance, portfolioData, avgH
                 <>
                     <StatCard
                         label="Mejor Año (Simulado)"
-                        value={historicalMetrics.bestYear ? `${historicalMetrics.bestYear.year} (${(historicalMetrics.bestYear.return * 100).toFixed(2)}%)` : 'N/A'}
+                        value={historicalMetrics.bestYear ? `${historicalMetrics.bestYear.year} (${(historicalMetrics.bestYear.return * 100).toFixed(2)}%)` : ''}
                         colorClass={historicalMetrics.bestYear && historicalMetrics.bestYear.return > 0 ? "text-green-500" : ""}
                         icon={Calendar}
                         helpText="El mejor año calendario simulado del actual portafolio."
@@ -245,7 +249,7 @@ export function PortfolioStats({ holdings, totalPerformance, portfolioData, avgH
                     />
                     <StatCard
                         label="Peor Año (Simulado)"
-                        value={historicalMetrics.worstYear ? `${historicalMetrics.worstYear.year} (${(historicalMetrics.worstYear.return * 100).toFixed(2)}%)` : 'N/A'}
+                        value={historicalMetrics.worstYear ? `${historicalMetrics.worstYear.year} (${(historicalMetrics.worstYear.return * 100).toFixed(2)}%)` : ''}
                         colorClass={historicalMetrics.worstYear && historicalMetrics.worstYear.return < 0 ? "text-red-500" : ""}
                         icon={Calendar}
                         helpText="El peor año calendario simulado del actual portafolio."

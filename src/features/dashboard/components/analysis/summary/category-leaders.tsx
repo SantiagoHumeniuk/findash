@@ -140,14 +140,14 @@ export default function CategoryLeaders({ categoryWinners, categories, assets, i
                                     const value = resolveLocalValue(winnerAsset, metric);
                                     const displayValue = (value !== null && Number.isFinite(value))
                                         ? formatMetricValue(value, metric)
-                                        : 'N/A';
+                                        : '';
 
                                     return (
                                         <div key={metric} className="flex flex-col">
                                             <span className="text-[10px] text-muted-foreground truncate">
                                                 {getMetricLabel(metric)}
                                             </span>
-                                            <span className={`font-semibold text-xs ${displayValue === 'N/A' ? 'text-muted-foreground' : ''}`}>
+                                            <span className="font-semibold text-xs">
                                                 {displayValue}
                                             </span>
                                         </div>

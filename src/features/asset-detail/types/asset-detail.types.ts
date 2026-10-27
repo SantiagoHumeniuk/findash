@@ -30,25 +30,3 @@ export interface FinancialSection {
   title: string;
   metrics: FinancialMetric[];
 }
-
-/**
- * Datos para gráficos de pie (ingresos).
- */
-export interface RevenueChartData {
-  name: string;
-  value: number;
-  [key: string]: unknown;
-}
-
-/**
- * Props para renderizado personalizado de labels en charts.
- */
-export interface CustomLabelProps {
-  cx: number;
-  cy: number;
-  midAngle: number;
-  innerRadius: number;
-  outerRadius: number;
-  percent: number;
-  [key: string]: unknown;
-}

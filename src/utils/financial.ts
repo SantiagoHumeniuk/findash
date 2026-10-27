@@ -1,5 +1,7 @@
 // src/utils/financial.ts
 
+import type { AssetData } from '../types/dashboard';
+
 export interface Indicator {
   label: string;
   apiFields: string[];
@@ -9,10 +11,131 @@ export interface Indicator {
   yellow: number;
   asPercent?: boolean;
   isLargeNumber?: boolean;
+  unit?: 'currency' | 'count';
+  displayOnly?: boolean;
   explanation: string;
 }
 
 export type IndicatorConfig = Record<string, Indicator>;
+
+export type IndicatorStatus = 'good' | 'normal' | 'bad' | 'neutral';
+
+function getSectorThresholds(
+  key: string,
+  industry: string,
+  sector: string,
+): Pick<Indicator, 'green' | 'yellow' | 'lowerIsBetter'> | null {
+  const context = `${industry} ${sector}`.toLowerCase();
+  const isTechnology = /technology|software|semiconductor|internet|application software|electronic/.test(context);
+  const isConsumerStaples = /consumer defensive|consumer staples|beverage|food|household|tobacco|packaged food/.test(context);
+  const isFinancial = /financial|bank|insurance|capital markets|asset management/.test(context);
+  const isUtilities = /utilities|utility/.test(context);
+  const isHealthcare = /healthcare|biotech|pharma|drug manufacturer|medical device/.test(context);
+
+  if (key === 'PER' || key === 'forwardPER') {
+    if (isTechnology) return key === 'PER'
+      ? { green: 30, yellow: 45, lowerIsBetter: true }
+      : { green: 25, yellow: 40, lowerIsBetter: true };
+    if (isFinancial) return { green: 12, yellow: 18, lowerIsBetter: true };
+    if (isConsumerStaples) return { green: 16, yellow: 22, lowerIsBetter: true };
+    if (isUtilities) return { green: 18, yellow: 25, lowerIsBetter: true };
+    if (isHealthcare) return { green: 20, yellow: 30, lowerIsBetter: true };
+  }
+
+  if (key === 'priceToBook') {
+    if (isFinancial) return { green: 1.5, yellow: 2.5, lowerIsBetter: true };
+    if (isTechnology) return { green: 5, yellow: 10, lowerIsBetter: true };
+  }
+
+  if (key === 'priceToSales' || key === 'evToSales') {
+    if (isTechnology) return { green: 8, yellow: 15, lowerIsBetter: true };
+    if (isFinancial) return { green: 3, yellow: 6, lowerIsBetter: true };
+  }
+
+  if (key === 'evToEbitda') {
+    if (isTechnology) return { green: 18, yellow: 30, lowerIsBetter: true };
+    if (isConsumerStaples) return { green: 10, yellow: 16, lowerIsBetter: true };
+    if (isUtilities) return { green: 9, yellow: 14, lowerIsBetter: true };
+  }
+
+  return null;
+}
+
+/**
+ * Evaluates a financial indicator with industry-aware valuation thresholds.
+ *
+ * Thresholds are heuristic screening bands, not peer-group valuation models.
+ *
+ * @param key - Indicator key from the central configuration
+ * @param config - Formatting and default threshold configuration
+ * @param value - Normalized display value
+ * @param asset - Asset supplying sector, industry, and comparison price context
+ * @returns Semantic quality status for traffic-light display
+ */
+export function getIndicatorStatus(
+  key: string,
+  config: Indicator,
+  value: number | null,
+  asset?: AssetData,
+): IndicatorStatus {
+  if (value === null || !Number.isFinite(value)) return 'neutral';
+
+  if (asset) {
+    if (key === 'targetPrice') {
+      const price = asset.quote.price;
+      if (!Number.isFinite(price) || price <= 0) return 'neutral';
+      const upside = (value - price) / price;
+      return upside >= 0.15 ? 'good' : upside >= 0 ? 'normal' : 'bad';
+    }
+    if (key === 'epsTTM' || key === 'epsForward') {
+      return value > 0 ? 'good' : value === 0 ? 'normal' : 'bad';
+    }
+    if (key === 'dividendPerShare') {
+      return value > 0 ? 'good' : 'normal';
+    }
+    if (key === 'sma50' || key === 'sma200') {
+      const price = asset.quote.price;
+      return price > 0 ? (price >= value ? 'good' : 'bad') : 'neutral';
+    }
+    if (key === 'grahamNumber') {
+      return value > asset.quote.price ? 'good' : value === asset.quote.price ? 'normal' : 'bad';
+    }
+  }
+
+  if (config.displayOnly) return 'neutral';
+  if (key === 'marketCap' || key === 'analystCount' || key === 'rsi14') return 'neutral';
+  if (key === 'beta') {
+    return value <= 1 ? 'good' : value <= 1.5 ? 'normal' : 'bad';
+  }
+  if (key === 'smaSignal') return value >= 0 ? 'good' : 'bad';
+
+  const sectorThresholds = asset
+    ? getSectorThresholds(key, asset.profile.industry, asset.profile.sector)
+    : null;
+  const percentScale = config.asPercent ? 100 : 1;
+  const thresholds = sectorThresholds ?? {
+    green: config.green * percentScale,
+    yellow: config.yellow * percentScale,
+    lowerIsBetter: config.lowerIsBetter,
+  };
+
+  if (thresholds.lowerIsBetter) {
+    if (value <= thresholds.green) return 'good';
+    if (value <= thresholds.yellow) return 'normal';
+    return 'bad';
+  }
+  if (value >= thresholds.green) return 'good';
+  if (value >= thresholds.yellow) return 'normal';
+  return 'bad';
+}
+
+/** Returns the shared red/amber/green foreground class for an indicator. */
+export function getIndicatorStatusClass(status: IndicatorStatus): string {
+  if (status === 'good') return 'text-green-600 dark:text-green-400';
+  if (status === 'normal') return 'text-yellow-600 dark:text-yellow-500';
+  if (status === 'bad') return 'text-red-600 dark:text-red-500';
+  return 'text-foreground';
+}
 
 /**
  * Configuración central para todos los indicadores financieros de la aplicación.
@@ -30,6 +153,44 @@ export const indicatorConfig: IndicatorConfig = {
     },
     lowerIsBetter: true, green: 15, yellow: 25,
     explanation: 'Mide cuántos años de beneficios se necesitarían para recuperar el precio de la acción. Un valor bajo sugiere que puede estar barata, pero depende mucho del sector: en tecnología un PER de 40 puede ser normal, mientras que en un banco un PER de 15 ya podría considerarse caro. Lo clave es compararlo con competidores directos.',
+  },
+  forwardPER: {
+    label: 'PER forward',
+    apiFields: ['forwardPE'],
+    lowerIsBetter: true, green: 15, yellow: 25,
+    explanation: 'PER estimado usando las ganancias esperadas para los próximos 12 meses. Es una proyección, no una ganancia ya reportada.',
+  },
+  epsTTM: {
+    label: 'EPS TTM',
+    apiFields: ['trailingEPS', 'trailingEps'],
+    lowerIsBetter: false, green: 0, yellow: 0,
+    unit: 'currency',
+    displayOnly: true,
+    explanation: 'Ganancia por acción de los últimos doce meses.',
+  },
+  epsForward: {
+    label: 'EPS forward',
+    apiFields: ['forwardEPS', 'forwardEps'],
+    lowerIsBetter: false, green: 0, yellow: 0,
+    unit: 'currency',
+    displayOnly: true,
+    explanation: 'Ganancia por acción estimada para los próximos doce meses.',
+  },
+  targetPrice: {
+    label: 'Precio objetivo medio',
+    apiFields: ['targetConsensus', 'targetMeanPrice'],
+    lowerIsBetter: false, green: 0, yellow: 0,
+    unit: 'currency',
+    displayOnly: true,
+    explanation: 'Precio objetivo medio estimado por los analistas.',
+  },
+  analystCount: {
+    label: 'Analistas',
+    apiFields: ['lastMonthCount', 'numberOfAnalystOpinions'],
+    lowerIsBetter: false, green: 0, yellow: 0,
+    unit: 'count',
+    displayOnly: true,
+    explanation: 'Cantidad de analistas que participan de la estimación.',
   },
   pegRatio: {
     label: 'PEG Ratio',
@@ -77,7 +238,7 @@ export const indicatorConfig: IndicatorConfig = {
   earningsYield: {
     label: 'Rdto. Ganancias (%)',
     apiFields: ['earningsYieldTTM'],
-    lowerIsBetter: false, green: 8, yellow: 5, asPercent: true,
+    lowerIsBetter: false, green: 0.08, yellow: 0.05, asPercent: true,
     explanation: 'Es el inverso del PER (Ganancias por Acción / Precio). Muestra las ganancias como un porcentaje del precio de la acción, permitiendo compararlo con el rendimiento de los bonos.',
   },
 
@@ -129,6 +290,14 @@ export const indicatorConfig: IndicatorConfig = {
   netDebtToEBITDA: {
     label: 'Deuda Neta/EBITDA',
     apiFields: ['netDebtToEBITDATTM', 'netDebtToEBITDA'],
+    compute: (raw: Record<string, number>) => {
+      const debt = Number(raw.totalDebt);
+      const cash = Number(raw.totalCash);
+      const ebitda = Number(raw.ebitda);
+      return Number.isFinite(debt) && Number.isFinite(cash) && Number.isFinite(ebitda) && ebitda > 0
+        ? (debt - cash) / ebitda
+        : null;
+    },
     lowerIsBetter: true, green: 1.5, yellow: 3.0,
     explanation: 'Muestra cuántos años necesitaría la empresa para pagar toda su deuda neta usando sus ganancias. Menos de 3 años es un nivel cómodo. Usa deuda neta (deuda total menos efectivo disponible), lo que refleja mejor la capacidad real de pago. Es muy seguido por agencias de rating.',
   },
@@ -255,7 +424,8 @@ export const indicatorConfig: IndicatorConfig = {
     compute: (raw: Record<string, number>) => {
       const sma50 = Number(raw.priceAvg50);
       const sma200 = Number(raw.priceAvg200);
-      return (sma50 && sma200 && sma50 > sma200) ? 1 : 0;
+      if (!Number.isFinite(sma50) || !Number.isFinite(sma200) || sma50 <= 0 || sma200 <= 0) return null;
+      return sma50 > sma200 ? 1 : 0;
     },
     lowerIsBetter: false, green: 1, yellow: 0,
     explanation: 'Si la media de 50 días está por encima de la de 200, es una señal alcista (Cruce Dorado). Si está por debajo, se considera bajista (Cruce de la Muerte).',

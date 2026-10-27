@@ -154,14 +154,46 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     };
 
     const deletePortfolio = async (portfolioId: number) => {
-        if (!user) return;
+        if (!user) throw new Error('Debes iniciar sesión para eliminar un portafolio.');
 
-        const { error } = await supabase
+        const portfolioResult = await supabase
+            .from('portfolios')
+            .select('id')
+            .eq('id', portfolioId)
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        if (portfolioResult.error) {
+            throw new Error(`No se pudo verificar el portafolio: ${portfolioResult.error.message}`);
+        }
+        if (!portfolioResult.data) {
+            throw new Error('El portafolio no existe o no tienes permiso para eliminarlo.');
+        }
+
+        const transactionsResult = await supabase
+            .from('transactions')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('portfolio_id', portfolioId);
+
+        if (transactionsResult.error) {
+            throw new Error(`No se pudieron eliminar las transacciones del portafolio: ${transactionsResult.error.message}`);
+        }
+
+        const deleteResult = await supabase
             .from('portfolios')
             .delete()
-            .eq('id', portfolioId);
+            .eq('id', portfolioId)
+            .eq('user_id', user.id)
+            .select('id')
+            .maybeSingle();
 
-        if (error) throw error;
+        if (deleteResult.error) {
+            throw new Error(`No se pudo eliminar el portafolio: ${deleteResult.error.message}`);
+        }
+        if (!deleteResult.data) {
+            throw new Error('No se eliminó el portafolio. Verifica los permisos de borrado en Supabase.');
+        }
 
         await queryClient.invalidateQueries({ queryKey: ['portfolio', user.id] });
         // Reset selection if deleted current

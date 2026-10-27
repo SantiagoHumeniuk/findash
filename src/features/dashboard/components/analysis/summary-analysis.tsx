@@ -235,10 +235,11 @@ function PanoramicOverview({ profiles, totalAssets }: { profiles: AssetProfile[]
                                         </div>
 
                                         <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-muted/30 p-2 text-xs sm:grid-cols-4">
-                                            <div><span className="text-muted-foreground">PER / forward</span><div className="font-semibold tabular-nums">{profile.trailingPE?.toFixed(2) ?? 'N/D'} / {profile.forwardPE?.toFixed(2) ?? 'N/D'}</div></div>
-                                            <div><span className="text-muted-foreground">EPS forward</span><div className="font-semibold tabular-nums">{profile.forwardEPS !== null ? `${profile.forwardEPS.toFixed(2)} ${profile.currency}` : 'N/D'}</div></div>
-                                            <div><span className="text-muted-foreground">Potencial objetivo</span><div className="font-semibold tabular-nums">{profile.targetUpsidePct !== null ? `${profile.targetUpsidePct > 0 ? '+' : ''}${profile.targetUpsidePct.toFixed(1)}%` : 'N/D'}</div></div>
-                                            <div><span className="text-muted-foreground">Cobertura</span><div className="font-semibold tabular-nums">{profile.coverage}% de señales disponibles</div></div>
+                                            {profile.trailingPE != null && <div><span className="text-muted-foreground">PER</span><div className="font-semibold tabular-nums">{profile.trailingPE.toFixed(2)}</div></div>}
+                                            {profile.forwardPE != null && <div><span className="text-muted-foreground">PER forward</span><div className="font-semibold tabular-nums">{profile.forwardPE.toFixed(2)}</div></div>}
+                                            {profile.forwardEPS != null && <div><span className="text-muted-foreground">EPS forward</span><div className="font-semibold tabular-nums">{profile.forwardEPS.toFixed(2)} {profile.currency}</div></div>}
+                                            {profile.targetUpsidePct != null && <div><span className="text-muted-foreground">Potencial objetivo</span><div className="font-semibold tabular-nums">{profile.targetUpsidePct > 0 ? '+' : ''}{profile.targetUpsidePct.toFixed(1)}%</div></div>}
+                                            {profile.coverage > 0 && <div><span className="text-muted-foreground">Cobertura</span><div className="font-semibold tabular-nums">{profile.coverage}%</div></div>}
                                         </div>
 
                                         {/* Verdict explanation */}
@@ -281,15 +282,16 @@ function PanoramicOverview({ profiles, totalAssets }: { profiles: AssetProfile[]
 }
 
 export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnalysisProps) {
-    const fallbackAssets = useMemo(
-        () => assets.filter(asset => asset.dataSource === 'Yahoo Finance'),
-        [assets],
-    );
     const analysisAssets = useMemo(
-        () => assets.filter(asset => asset.dataSource !== 'Yahoo Finance'),
+        () => assets.filter((asset) =>
+            asset.dataSource !== 'Yahoo Finance' || scoreAssetSummary(asset).coverage > 0
+        ),
         [assets],
     );
-
+    const fallbackAssets = useMemo(
+        () => assets.filter(asset => !analysisAssets.includes(asset)),
+        [assets, analysisAssets],
+    );
     const analysis = useMemo(() => {
         if (analysisAssets.length < 1) return null;
 
@@ -372,7 +374,7 @@ export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnal
                 strengths: summary.strengths,
                 weaknesses: summary.weaknesses,
                 reasons: summary.reasons,
-                sector: asset.profile.sector || 'N/A',
+                sector: asset.profile.sector || '',
                 price,
                 currency: asset.profile.currency || 'USD',
                 changePercent: asset.quote?.changePercentage ?? asset.profile.changePercentage ?? 0,
@@ -405,23 +407,15 @@ export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnal
                 <CardContent className="text-center text-muted-foreground py-8 sm:py-10 px-4 text-sm sm:text-base">
                     {fallbackAssets.length > 0 ? (
                         <div className="space-y-2">
-                            <p>
-                                FMP no respondió para {fallbackAssets.map(asset => asset.profile.symbol).join(', ')}.
-                                Se muestran cotizaciones y métricas forward de Yahoo Finance, pero no se los incluye
-                                en el ranking fundamental porque Yahoo no entregó el resto de las métricas necesarias.
-                            </p>
+                            <p>No hay métricas suficientes para generar el ranking fundamental.</p>
                             {fallbackAssets.map(asset => (
                                 <p key={asset.profile.symbol} className="font-medium">
-                                    {asset.profile.symbol}: {asset.profile.companyName} · {asset.profile.currency}{' '}
-                                    {asset.quote.price.toFixed(2)} · PER {asset.quote.pe && asset.quote.pe > 0
-                                        ? asset.quote.pe.toFixed(2)
-                                        : 'No disponible'} · PER forward {asset.quote.forwardPE && asset.quote.forwardPE > 0
-                                        ? asset.quote.forwardPE.toFixed(2)
-                                        : 'No disponible'} · EPS forward {asset.quote.forwardEPS && asset.quote.forwardEPS > 0
-                                        ? asset.quote.forwardEPS.toFixed(2)
-                                        : 'No disponible'} · Objetivo {asset.priceTargetConsensus.targetConsensus > 0
-                                        ? `${asset.profile.currency} ${asset.priceTargetConsensus.targetConsensus.toFixed(2)}`
-                                        : 'No disponible'}
+                                    {asset.profile.symbol}: {asset.profile.companyName}
+                                    {asset.quote.price > 0 && Number.isFinite(asset.quote.price) && ` · ${asset.profile.currency} ${asset.quote.price.toFixed(2)}`}
+                                    {asset.quote.pe != null && Number.isFinite(asset.quote.pe) && ` · PER ${asset.quote.pe.toFixed(2)}`}
+                                    {asset.quote.forwardPE != null && Number.isFinite(asset.quote.forwardPE) && ` · PER forward ${asset.quote.forwardPE.toFixed(2)}`}
+                                    {asset.quote.forwardEPS != null && Number.isFinite(asset.quote.forwardEPS) && ` · EPS forward ${asset.quote.forwardEPS.toFixed(2)}`}
+                                    {asset.priceTargetConsensus.targetConsensus > 0 && Number.isFinite(asset.priceTargetConsensus.targetConsensus) && ` · Objetivo ${asset.profile.currency} ${asset.priceTargetConsensus.targetConsensus.toFixed(2)}`}
                                 </p>
                             ))}
                         </div>
@@ -445,15 +439,6 @@ export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnal
             initial="hidden"
             animate="visible"
         >
-            {fallbackAssets.length > 0 && (
-                <Card className="border-amber-500/30">
-                    <CardContent className="p-4 text-sm text-muted-foreground">
-                        FMP no respondió para {fallbackAssets.map(asset => asset.profile.symbol).join(', ')}.
-                        Se muestran sus cotizaciones de Yahoo Finance, pero se excluyen del ranking
-                        fundamental para no presentar métricas faltantes como calificaciones.
-                    </CardContent>
-                </Card>
-            )}
             {/* 1. Panoramic Overview — THE main beginner-friendly section */}
             <PanoramicOverview
                 profiles={analysis.assetProfiles}

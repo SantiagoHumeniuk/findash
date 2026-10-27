@@ -10,6 +10,17 @@ interface RecommendationModalProps {
     result: AdvisoryResult;
 }
 
+function TechnicalMetric({ label, value }: { label: string; value: string | null }) {
+    if (value === null) return null;
+
+    return (
+        <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
+            <span className="text-muted-foreground">{label}</span>
+            <span className="font-bold">{value}</span>
+        </div>
+    );
+}
+
 export function RecommendationModal({ symbol, result }: RecommendationModalProps) {
     const getStatusConfig = () => {
         switch (result.status) {
@@ -63,14 +74,12 @@ export function RecommendationModal({ symbol, result }: RecommendationModalProps
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-                        <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
-                            <span className="text-muted-foreground">Valor justo:</span>
-                            <span className="font-bold">{result.valuation.fairValue !== null ? `$${result.valuation.fairValue.toFixed(2)}` : 'N/A'}</span>
-                        </div>
-                        <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
-                            <span className="text-muted-foreground">Potencial:</span>
-                            <span className="font-bold">{result.valuation.upsidePct !== null ? `${result.valuation.upsidePct > 0 ? '+' : ''}${result.valuation.upsidePct.toFixed(1)}%` : 'N/A'}</span>
-                        </div>
+                        {result.valuation.fairValue !== null && Number.isFinite(result.valuation.fairValue) && (
+                            <TechnicalMetric label="Valor justo:" value={`$${result.valuation.fairValue.toFixed(2)}`} />
+                        )}
+                        {result.valuation.upsidePct !== null && Number.isFinite(result.valuation.upsidePct) && (
+                            <TechnicalMetric label="Potencial:" value={`${result.valuation.upsidePct > 0 ? '+' : ''}${result.valuation.upsidePct.toFixed(1)}%`} />
+                        )}
                         {result.valuation.fairValueRange && (
                             <div className="col-span-2 p-2 bg-muted/30 border rounded flex justify-between items-center">
                                 <span className="text-muted-foreground">Rango entre modelos:</span>
@@ -105,55 +114,35 @@ export function RecommendationModal({ symbol, result }: RecommendationModalProps
 
                     {/* Datos Técnicos Mini-Grid */}
                     <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-                        <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
-                            <span className="text-muted-foreground">P/E Ratio:</span>
-                            <span className="font-bold">{result.techData.pe ? result.techData.pe.toFixed(2) : 'N/A'}</span>
-                        </div>
-                        <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
-                            <span className="text-muted-foreground">P/E forward:</span>
-                            <span className="font-bold">{result.techData.forwardPE && result.techData.forwardPE > 0 ? result.techData.forwardPE.toFixed(2) : 'N/A'}</span>
-                        </div>
-                        <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
-                            <span className="text-muted-foreground">{result.techData.isFinancialCompany ? 'Deuda/Equity (no comparable):' : 'Deuda/Equity:'}</span>
-                            <span className="font-bold">{result.techData.isFinancialCompany ? 'N/A' : result.techData.debtToEquity ? result.techData.debtToEquity.toFixed(2) : 'N/A'}</span>
-                        </div>
-                        <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
-                            <span className="text-muted-foreground">ROE:</span>
-                            <span className="font-bold">{result.techData.roe ? (result.techData.roe * 100).toFixed(1) + '%' : 'N/A'}</span>
-                        </div>
-                        <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
-                            <span className="text-muted-foreground">Beta:</span>
-                            <span className="font-bold">{result.techData.beta ? result.techData.beta.toFixed(2) : 'N/A'}</span>
-                        </div>
+                        <TechnicalMetric label="P/E Ratio:" value={result.techData.pe != null && Number.isFinite(result.techData.pe) ? result.techData.pe.toFixed(2) : null} />
+                        <TechnicalMetric label="P/E forward:" value={result.techData.forwardPE != null && Number.isFinite(result.techData.forwardPE) ? result.techData.forwardPE.toFixed(2) : null} />
+                        {!result.techData.isFinancialCompany && (
+                            <TechnicalMetric label="Deuda/Equity:" value={result.techData.debtToEquity != null && Number.isFinite(result.techData.debtToEquity) ? result.techData.debtToEquity.toFixed(2) : null} />
+                        )}
+                        <TechnicalMetric label="ROE:" value={result.techData.roe != null && Number.isFinite(result.techData.roe) ? `${(result.techData.roe * 100).toFixed(1)}%` : null} />
+                        <TechnicalMetric label="Beta:" value={result.techData.beta != null && Number.isFinite(result.techData.beta) ? result.techData.beta.toFixed(2) : null} />
                         {!result.techData.isFinancialCompany && (
                             <>
-                                <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
-                                    <span className="text-muted-foreground">Deuda neta/EBITDA:</span>
-                                    <span className="font-bold">{result.techData.netDebtToEbitda !== null ? result.techData.netDebtToEbitda.toFixed(2) : 'N/A'}</span>
-                                </div>
-                                <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
-                                    <span className="text-muted-foreground">Liquidez corriente:</span>
-                                    <span className="font-bold">{result.techData.currentRatio !== null ? result.techData.currentRatio.toFixed(2) : 'N/A'}</span>
-                                </div>
-                                <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
-                                    <span className="text-muted-foreground">Cobertura intereses:</span>
-                                    <span className="font-bold">{result.techData.interestCoverage !== null ? result.techData.interestCoverage.toFixed(2) : 'N/A'}</span>
-                                </div>
+                                <TechnicalMetric label="Deuda neta/EBITDA:" value={result.techData.netDebtToEbitda !== null && Number.isFinite(result.techData.netDebtToEbitda) ? result.techData.netDebtToEbitda.toFixed(2) : null} />
+                                <TechnicalMetric label="Liquidez corriente:" value={result.techData.currentRatio !== null && Number.isFinite(result.techData.currentRatio) ? result.techData.currentRatio.toFixed(2) : null} />
+                                <TechnicalMetric label="Cobertura intereses:" value={result.techData.interestCoverage !== null && Number.isFinite(result.techData.interestCoverage) ? result.techData.interestCoverage.toFixed(2) : null} />
                             </>
                         )}
-                        <div className="p-2 bg-muted/30 border rounded flex justify-between items-center">
-                            <span className="text-muted-foreground">Margen operativo:</span>
-                            <span className="font-bold">{result.techData.operatingMargin !== null ? `${(result.techData.operatingMargin * 100).toFixed(1)}%` : 'N/A'}</span>
-                        </div>
+                        <TechnicalMetric label="Margen operativo:" value={result.techData.operatingMargin !== null && Number.isFinite(result.techData.operatingMargin) ? `${(result.techData.operatingMargin * 100).toFixed(1)}%` : null} />
                     </div>
 
                     {/* Simulador de Impacto */}
-                    <div className="mt-4 p-3 bg-primary/10 border border-primary/20 text-primary-foreground dark:text-primary rounded-lg text-xs leading-relaxed flex gap-2 items-start">
-                        <TrendingDown className="w-4 h-4 mt-0.5 shrink-0" />
-                        <div>
-                            <strong className="font-semibold">Simulador de Riesgo:</strong> Si decides vender este activo, la exposición de tu portafolio al sector <span className="font-bold">"{result.impact.sector}"</span> pasaría del <span className="font-bold underline">{result.impact.currentAllocationPercent !== null ? `${result.impact.currentAllocationPercent.toFixed(1)}%` : 'N/D'}</span> al <span className="font-bold underline">{result.impact.simulatedAllocationPercent !== null ? `${result.impact.simulatedAllocationPercent.toFixed(1)}%` : 'N/D'}</span>.
-                        </div>
-                    </div>
+                    {result.impact.currentAllocationPercent !== null &&
+                        result.impact.simulatedAllocationPercent !== null &&
+                        Number.isFinite(result.impact.currentAllocationPercent) &&
+                        Number.isFinite(result.impact.simulatedAllocationPercent) && (
+                            <div className="mt-4 p-3 bg-primary/10 border border-primary/20 text-primary-foreground dark:text-primary rounded-lg text-xs leading-relaxed flex gap-2 items-start">
+                                <TrendingDown className="w-4 h-4 mt-0.5 shrink-0" />
+                                <div>
+                                    <strong className="font-semibold">Simulador de Riesgo:</strong> Si decides vender este activo, la exposición de tu portafolio al sector <span className="font-bold">"{result.impact.sector}"</span> pasaría del <span className="font-bold underline">{result.impact.currentAllocationPercent.toFixed(1)}%</span> al <span className="font-bold underline">{result.impact.simulatedAllocationPercent.toFixed(1)}%</span>.
+                                </div>
+                            </div>
+                        )}
                 </div>
             </DialogContent>
         </Dialog>

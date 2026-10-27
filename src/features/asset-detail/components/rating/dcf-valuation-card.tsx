@@ -72,7 +72,7 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
                   </p>
                   <div className="space-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
                     <p>{modelsUsed.length} modelos válidos participan del valor ponderado.</p>
-                    <p>La mediana FMP se usa cuando hay tres o más pares con múltiplos comparables.</p>
+                    <p>La mediana de empresas comparables se usa cuando hay tres o más pares con múltiplos comparables.</p>
                     <p>El precio objetivo de analistas tiene un peso secundario.</p>
                   </div>
                 </TooltipContent>
@@ -259,6 +259,13 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
             ))}
           </div>
         </details>
+        {asset.dataSource === 'Yahoo Finance' && (
+          <p className="mt-3 text-[10px] italic text-muted-foreground">
+            Modelos calculados por FinDash con datos de {asset.fundamentalsSource ?? 'Yahoo Finance'}
+            {asset.dcf.length > 0 ? `; DCF a ${asset.dcf.length} años con WACC ${asset.dcf[0].wacc.toFixed(1)}%` : ''}.
+            Es una estimación, no una recomendación.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

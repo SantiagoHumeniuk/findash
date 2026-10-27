@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Button } from "../../../components/ui/button";
 import { logger } from "../../../lib/logger";
-import { UserCircle } from "lucide-react";
+import { MonitorCog, UserCircle } from "lucide-react";
+import { Card, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card";
+import { ModeToggle } from "../../../components/ui/mode-toggle";
 import { OnboardingProfile, UserProfile } from "../types/profile.types";
 import { extractOnboardingProfile, formatSupabaseError } from "../lib/profile.utils";
 import {
@@ -131,6 +133,19 @@ export default function ProfilePage() {
           </div>
         </div>
       </motion.div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <MonitorCog className="mt-1 h-5 w-5 text-primary" />
+            <div>
+              <CardTitle className="text-base">Apariencia</CardTitle>
+              <CardDescription>Elegí el tema claro, oscuro o el que usa tu dispositivo.</CardDescription>
+            </div>
+          </div>
+          <ModeToggle />
+        </CardHeader>
+      </Card>
 
       <form
         onSubmit={(e) => {

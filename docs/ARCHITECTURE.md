@@ -31,7 +31,7 @@ La aplicación utiliza un modelo de estado híbrido:
    - Si no los hay (o están obsoletos):
      3. Llama a la `queryFn` (ej: `fetchTickerData`).
      4. `fetchTickerData` (Capa de Servicio) -> Realiza la llamada a la Supabase Edge Function.
-     5. Supabase -> Llama a la API externa (FMP).
+     5. La Edge Function consulta Yahoo Finance y normaliza la respuesta.
      6. Los datos regresan, son procesados y cacheados por React Query.
 7. El componente se actualiza con los nuevos datos.
 ```
@@ -45,7 +45,7 @@ Vite ofrece un arranque en desarrollo casi instantáneo (HMR) y un proceso de bu
 Supabase fue elegido como un backend-as-a-service integral que proporciona:
 * **Autenticación:** Solución completa y segura para la gestión de usuarios.
 * **Base de Datos PostgreSQL:** Una base de datos relacional robusta y escalable.
-* **Edge Functions:** Permiten crear un proxy seguro para ocultar las claves de API de servicios externos (FMP) y controlar el rate-limiting desde el servidor.
+* **Edge Functions:** Proveen el proxy de Yahoo Finance y permiten centralizar solicitudes externas.
 
 ### ¿Por qué TanStack Query (React Query)?
 Reemplaza la gestión manual de estado asíncrono. Resuelve de forma nativa problemas complejos como:
@@ -59,28 +59,57 @@ Esta combinación ofrece la máxima flexibilidad. No es una librería de compone
 
 ## 4. Proveedores de datos financieros
 
-### Acciones: FMP y Yahoo Finance
+### Acciones: Yahoo Finance (sin FMP)
 
-FMP sigue siendo el proveedor principal de estados financieros, calificaciones y demás datos fundamentales. Yahoo Finance complementa las cotizaciones cuando devuelve valores disponibles —incluidos PER y EPS forward— y se usa como fallback si la consulta o los datos esenciales de FMP fallan. Los precios de Yahoo sustituyen a los de FMP únicamente cuando Yahoo informa una cotización más reciente.
+Yahoo Finance es el único proveedor de mercado para renta variable y no se invoca
+FMP. El proxy `yahoo-finance-proxy` sirve cotizaciones, histórico, estados
+financieros (`fundamentals-timeseries`, con SEC EDGAR como respaldo para emisores de
+EE. UU.), consenso y calificaciones de analistas, estimaciones, comparables,
+búsqueda, noticias, screeners, dividendos, sectores/industrias y presentaciones SEC.
+Comparte resultados entre usuarios en `asset_data_cache` (claves `yahoo:*`).
 
-La verificación del límite del plan sucede antes de consultar cualquiera de los proveedores. Si el usuario no tiene llamadas FMP disponibles, se usa la caché válida o se muestra el error; Yahoo no se consulta para eludir el límite. Un fallback Yahoo exitoso también cuenta como una consulta de activo. Las métricas de variación de Yahoo se conservan en puntos porcentuales y su historial se ordena cronológicamente antes de calcular cambios.
+Los ratios, métricas TTM y anuales, el DCF a 5 años y el scorecard se calculan en
+`src/services/api/yahoo-fundamentals.ts` con el mismo formato que antes devolvía
+FMP; cuando falta un dato de entrada la métrica es `null`, nunca `0`. Los sectores e
+industrias usan los índices propios de Yahoo (`^YH...`). La prima de riesgo país
+proviene de la tabla de Damodaran incluida en `src/data/`. El calendario
+macroeconómico y la segmentación de ingresos no tienen fuente gratuita equivalente.
+
+La búsqueda no usa una lista fija de símbolos: consulta las acciones (`EQUITY`)
+que devuelve Yahoo y permite ingresar manualmente cualquier símbolo bursátil
+compatible con Yahoo Finance. Esto no garantiza que Yahoo reconozca todos los
+mercados ni que publique todas las métricas para cada empresa. Se mantienen los
+límites diarios por rol de FinDash, independientes de cualquier plan de FMP.
+
+Las consultas de activos mantienen la verificación de límites del plan y las
+cotizaciones se revalidan desde Yahoo. Las variaciones se calculan con el precio y
+el cierre previo; el historial se ordena cronológicamente antes de calcular cambios.
+El comparador SPY/QQQ y la analítica del portafolio reutilizan datos Yahoo sin crear
+series simuladas para completar información faltante.
 
 El comparador histórico SPY/QQQ consulta ambos índices en una operación Yahoo únicamente al seleccionarlo, verifica y actualiza el contador diario del usuario, y normaliza el portafolio y el índice como retornos porcentuales desde el mismo período. No se generan series simuladas para sustituir datos faltantes. La analítica y el historial del portafolio reutilizan el `AssetData` ya cargado para evitar consultas paralelas por cada holding.
 
-Para publicar el proxy actualizado de Yahoo Finance:
+Para ejecutar el proxy localmente, sin desplegarlo:
 
 ```bash
-supabase functions deploy yahoo-finance-proxy
+supabase functions serve yahoo-finance-proxy
 ```
+
+La guía [YAHOO_FINANCE_LOCAL_EXPERIMENT.md](./YAHOO_FINANCE_LOCAL_EXPERIMENT.md)
+describe la configuración local y cómo volver a la rama original.
 
 ### Renta fija argentina: DATA912
 
-La pestaña **Renta Fija en Vivo** consulta los endpoints públicos `/live/arg_bonds` y `/live/arg_corp` a través de `data912-fixed-income-proxy`, y muestra por separado bonos soberanos y obligaciones negociables. La pantalla actualiza las cotizaciones cada 30 segundos. DATA912 es un feed público separado del contador de consultas de activos; si falla uno de sus endpoints, la respuesta conserva y muestra los datos del otro junto con el error parcial.
+La pestaña **Renta Fija en Vivo** consulta los endpoints públicos `/live/arg_bonds` y `/live/arg_corp` a través de `data912-fixed-income-proxy`, y muestra primero las obligaciones negociables y luego los soberanos. Para instrumentos en dólares se utiliza y muestra únicamente el ticker D. La pantalla actualiza las cotizaciones cada 30 segundos. DATA912 es un feed público separado del contador de consultas de activos; si falla uno de sus endpoints, la respuesta conserva y muestra los datos del otro junto con el error parcial.
+
+`fixed-income-sheet-proxy` proporciona términos, precios de referencia, variación diaria, vencimientos y flujos publicados en el workbook compartido. En **Pesos / tasa fija**, los precios y tasas de la hoja sirven de respaldo cuando DATA912 no publica un ticker (por ejemplo, algunas LECAPs). La curva prioriza las cotizaciones DATA912 cuando existen y calcula rendimientos con flujos contractuales; también puede usar precio y TIR del workbook como respaldo. La calculadora compara el monto simulado con plazos fijos publicados, sin presentar proyecciones como rendimientos garantizados.
 
 Desde la raíz del proyecto, publicar la función nueva con:
 
 ```bash
 supabase functions deploy data912-fixed-income-proxy
+supabase functions deploy fixed-income-sheet-proxy
+supabase functions deploy yahoo-finance-proxy
 ```
 
 ### Variables macroeconómicas: ArgentinaDatos y Dolarazo
@@ -91,4 +120,4 @@ Las cotizaciones de dólares, inflación, plazos fijos y UVA, junto con la fuent
 supabase functions deploy argentina-macro-proxy
 ```
 
-Después del despliegue de ambas funciones y del frontend actualizado, verificar en Supabase que `data912-fixed-income-proxy` devuelva `fetchedAt`, `sovereign`, `corporate` y el objeto `errors`. La API de cotizaciones no incluye calendarios de cupones, amortizaciones ni flujos de fondos. La aplicación muestra vencimientos solo cuando se identifican en el ticker o en el mapeo local de series soberanas; las fechas inferidas deben cotejarse con la ficha oficial del instrumento. Estima TIR solo para letras cero cupón; para los demás instrumentos indica que no está disponible, en vez de presentar una tasa inventada. La TIR de un bono con cupones requiere además un calendario completo de pagos y un precio de liquidación comparable, por lo que no se debe derivar de la cotización sola.
+Después del despliegue de ambas funciones y del frontend actualizado, verificar en Supabase que `data912-fixed-income-proxy` devuelva `fetchedAt`, `sovereign`, `corporate` y el objeto `errors`, y que `fixed-income-sheet-proxy` devuelva los contratos y flujos del workbook. Si no hay un precio comparable o un calendario completo, la tasa queda vacía; no se deben inferir flujos ausentes ni mostrar tasas de ejemplo como rendimientos de mercado.

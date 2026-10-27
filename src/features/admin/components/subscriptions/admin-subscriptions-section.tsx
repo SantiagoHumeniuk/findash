@@ -1,7 +1,7 @@
 // src/features/admin/components/subscriptions/admin-subscriptions-section.tsx
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../components/ui/card';
+import { Card, CardContent } from '../../../../components/ui/card';
 import { Button } from '../../../../components/ui/button';
 import { Badge } from '../../../../components/ui/badge';
 import { Input } from '../../../../components/ui/input';
@@ -35,7 +35,7 @@ import {
   Crown,
   Rocket
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { paymentService, type SubscriptionRequest } from '../../../../services/payment-service';
 import { toast } from 'sonner';
@@ -96,7 +96,7 @@ export function AdminSubscriptionsSection() {
         (req) =>
           req.user_email.toLowerCase().includes(query) ||
           req.sender_name.toLowerCase().includes(query) ||
-          (req.receipt_reference && req.receipt_reference.toLowerCase().includes(query)) ||
+          req.receipt_reference?.toLowerCase().includes(query) ||
           req.plan.toLowerCase().includes(query)
       );
     }

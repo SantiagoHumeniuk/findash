@@ -137,6 +137,6 @@ export interface PortfolioMetrics {
     worstPerformerUsd: { symbol: string; plValue: number };
 
     positionsCount: number;
-    portfolioBeta: number | "N/A";
+    portfolioBeta: number | null;
     avgHoldingDays: number;
 }

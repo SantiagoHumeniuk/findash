@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { LoadingScreen } from '../components/ui/loading-screen';
 import { ErrorScreen } from '../components/ui/error-screen';
 import { queryClient } from '../lib/react-query';
+import { paymentService } from '../services/payment-service';
 
 // ✅ Mejora: Contexto con guard que lanza si se usa fuera del Provider
 const authContextGuard = new Proxy({}, {
@@ -91,7 +92,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       const dataUnknown = resp.data as unknown;
       if (dataUnknown && typeof dataUnknown === 'object') {
-        setProfile(dataUnknown as Profile);
+        const loadedProfile = dataUnknown as Profile;
+        if (!signal?.aborted && (loadedProfile.role === 'plus' || loadedProfile.role === 'premium')) {
+          const subscriptionExpired = await paymentService.expireCurrentUserPlanIfDue();
+          if (signal?.aborted) return;
+          setProfile(subscriptionExpired ? { ...loadedProfile, role: 'basico' } : loadedProfile);
+        } else {
+          setProfile(loadedProfile);
+        }
       } else {
         setProfile(null);
       }

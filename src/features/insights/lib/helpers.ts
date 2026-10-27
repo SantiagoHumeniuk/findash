@@ -29,8 +29,8 @@ export function toInsightItem(a: AssetData, riskPremiumData: RiskPremiumData[] =
   const targetUpsidePct = target && price > 0 ? ((target - price) / price) * 100 : undefined;
 
   return {
-    symbol: a.profile?.symbol ?? a.quote?.symbol ?? 'N/A',
-    companyName: a.profile?.companyName ?? a.quote?.name ?? 'N/A',
+    symbol: a.profile?.symbol ?? a.quote?.symbol ?? '',
+    companyName: a.profile?.companyName ?? a.quote?.name ?? '',
     currentPrice: price,
     dcf: fairValue,
     priceTarget: target,

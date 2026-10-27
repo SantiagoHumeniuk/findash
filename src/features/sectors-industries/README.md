@@ -107,15 +107,15 @@ de mercado pueden estar retrasados. Los campos ausentes se muestran como
 **No disponible**; la hora que se muestra corresponde a la cotización reportada por
 Yahoo, junto con el momento de recepción de la respuesta.
 
-### Fallback automático al buscar un activo
+### Datos del activo en modo Yahoo-only
 
-La carga de activos intenta FMP primero. Si FMP falla, devuelve un símbolo inexistente,
-o se alcanzó el límite de llamadas de FMP, `fetchTickerData` consulta el mismo proxy
-Yahoo Finance para el ticker buscado. En ese caso el dashboard muestra cotización,
-PER trailing y forward PER cuando Yahoo los entregue, etiqueta el activo como
-**Yahoo Finance · fallback** y excluye los datos incompletos de las puntuaciones
-fundamentales. Si también falla Yahoo, se usan datos guardados cuando existan; de lo
-contrario se muestran ambos errores.
+`fetchTickerData` consulta Yahoo Finance como proveedor único para cotizaciones,
+histórico y métricas fundamentales. La vista de sectores e industrias usa la
+clasificación de Yahoo (11 sectores y ~145 industrias, acción `sectors` del proxy)
+y el historial semanal de 5 años del índice propio de cada categoría (`^YH311` =
+Technology, `^YH31130020` = Semiconductors), que Yahoo calcula con las compañías
+que clasifica en ella. Es un agregado real de la categoría, no un ETF de referencia;
+la clasificación es la de Yahoo y puede diferir de GICS.
 
 ## Hooks Personalizados
 
@@ -196,17 +196,12 @@ Contiene funciones helper para formateo y cálculos:
 ## Configuración
 
 ### config.json
-Los endpoints están registrados en `public/config.json`:
+El proveedor está configurado en `public/config.json`:
 
 ```json
 {
   "api": {
-    "fmpProxyEndpoints": {
-      "availableIndustries": "stable/available-industries",
-      "availableSectors": "stable/available-sectors",
-      "historicalIndustryPerformance": "stable/historical-industry-performance",
-      "historicalSectorPerformance": "stable/historical-sector-performance"
-    }
+    "marketDataProvider": "yahoo-finance"
   }
 }
 ```

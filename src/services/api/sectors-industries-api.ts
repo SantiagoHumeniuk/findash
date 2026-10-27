@@ -1,115 +1,89 @@
-// src/services/api/sectors-industries-api.ts
-
-import { supabase } from '../../lib/supabase';
-import type { 
-  Industry, 
-  Sector, 
-  HistoricalIndustryPerformance, 
-  HistoricalSectorPerformance 
+import { fetchYahooHistory, fetchYahooSectors, type YahooSectorSummary } from './yahoo-finance-api';
+import type {
+  Industry,
+  Sector,
+  HistoricalIndustryPerformance,
+  HistoricalSectorPerformance,
 } from '../../features/sectors-industries/types';
 
-/**
- * Fetches the list of available industries from the FMP API via Supabase Edge Function.
- * 
- * @returns Promise resolving to an array of industries
- * @throws Error if the API call fails or returns invalid data
- */
-export async function fetchAvailableIndustries(): Promise<Industry[]> {
-  const { data, error } = await supabase.functions.invoke('fmp-proxy', {
-    body: { 
-      endpointPath: 'stable/available-industries'
-    }
+// Yahoo publishes one index per sector (^YH311 = Technology) and per industry
+// (^YH31130020 = Semiconductors), built from the companies it classifies there.
+// Their history is the aggregate performance of the category, like FMP's endpoints.
+
+let sectorsRequest: Promise<YahooSectorSummary[]> | null = null;
+
+function loadSectors(): Promise<YahooSectorSummary[]> {
+  sectorsRequest ??= fetchYahooSectors().catch((error: unknown) => {
+    sectorsRequest = null;
+    throw error;
   });
+  return sectorsRequest;
+}
 
-  if (error) {
-    console.error('Error fetching available industries:', error);
-    throw new Error('Failed to fetch available industries');
+async function findIndexSymbol(kind: 'sector' | 'industry', name: string): Promise<string> {
+  const sectors = await loadSectors();
+  const symbol = kind === 'sector'
+    ? sectors.find((sector) => sector.name === name)?.symbol
+    : sectors.flatMap((sector) => sector.industries).find((industry) => industry.name === name)?.symbol;
+  if (!symbol) {
+    throw new Error(`Yahoo Finance no publica un índice para ${kind === 'sector' ? 'el sector' : 'la industria'} ${name}.`);
   }
+  return symbol;
+}
 
-  if (!Array.isArray(data)) {
-    throw new Error('Invalid data format received from industries endpoint');
+async function fetchIndexPerformance(
+  symbol: string,
+): Promise<{ date: string; exchange: string; averageChange: number }[]> {
+  const { history } = await fetchYahooHistory(symbol, '5y', '1wk');
+  if (history.length === 0) {
+    throw new Error(`Yahoo Finance no devolvió historial para el índice ${symbol}.`);
   }
-
-  return data as Industry[];
+  const sorted = [...history].sort((left, right) => left.date.localeCompare(right.date));
+  return sorted.map((entry, index) => {
+    const previousClose = sorted[index - 1]?.close;
+    return {
+      date: entry.date,
+      exchange: `Índice Yahoo Finance ${symbol}`,
+      averageChange: previousClose ? ((entry.close - previousClose) / previousClose) * 100 : 0,
+    };
+  });
 }
 
 /**
- * Fetches the list of available sectors from the FMP API via Supabase Edge Function.
- * 
- * @returns Promise resolving to an array of sectors
- * @throws Error if the API call fails or returns invalid data
+ * Lists the eleven sectors of Yahoo's classification.
  */
 export async function fetchAvailableSectors(): Promise<Sector[]> {
-  const { data, error } = await supabase.functions.invoke('fmp-proxy', {
-    body: { 
-      endpointPath: 'stable/available-sectors'
-    }
-  });
-
-  if (error) {
-    console.error('Error fetching available sectors:', error);
-    throw new Error('Failed to fetch available sectors');
-  }
-
-  if (!Array.isArray(data)) {
-    throw new Error('Invalid data format received from sectors endpoint');
-  }
-
-  return data as Sector[];
+  const sectors = await loadSectors();
+  return sectors
+    .map((sector) => ({ sector: sector.name }))
+    .sort((left, right) => left.sector.localeCompare(right.sector));
 }
 
 /**
- * Fetches historical performance data for a specific industry.
- * 
- * @param industry - Name of the industry to fetch performance for
- * @returns Promise resolving to an array of historical performance data
- * @throws Error if the API call fails or returns invalid data
+ * Lists every industry of Yahoo's classification that has its own index.
+ */
+export async function fetchAvailableIndustries(): Promise<Industry[]> {
+  const sectors = await loadSectors();
+  const names = new Set(sectors.flatMap((sector) => sector.industries.map((industry) => industry.name)));
+  return [...names].sort((left, right) => left.localeCompare(right)).map((industry) => ({ industry }));
+}
+
+/**
+ * Weekly performance of the requested industry's Yahoo index.
  */
 export async function fetchIndustryPerformance(
-  industry: string
+  industry: string,
 ): Promise<HistoricalIndustryPerformance[]> {
-  const { data, error } = await supabase.functions.invoke('fmp-proxy', {
-    body: { 
-      endpointPath: `stable/historical-industry-performance?industry=${encodeURIComponent(industry)}`
-    }
-  });
-
-  if (error) {
-    console.error(`Error fetching performance for industry ${industry}:`, error);
-    throw new Error(`Failed to fetch performance for industry: ${industry}`);
-  }
-
-  if (!Array.isArray(data)) {
-    throw new Error('Invalid data format received from industry performance endpoint');
-  }
-
-  return data as HistoricalIndustryPerformance[];
+  const performance = await fetchIndexPerformance(await findIndexSymbol('industry', industry));
+  return performance.map((item) => ({ ...item, industry }));
 }
 
 /**
- * Fetches historical performance data for a specific sector.
- * 
- * @param sector - Name of the sector to fetch performance for
- * @returns Promise resolving to an array of historical performance data
- * @throws Error if the API call fails or returns invalid data
+ * Weekly performance of the requested sector's Yahoo index.
  */
 export async function fetchSectorPerformance(
-  sector: string
+  sector: string,
 ): Promise<HistoricalSectorPerformance[]> {
-  const { data, error } = await supabase.functions.invoke('fmp-proxy', {
-    body: { 
-      endpointPath: `stable/historical-sector-performance?sector=${encodeURIComponent(sector)}`
-    }
-  });
-
-  if (error) {
-    console.error(`Error fetching performance for sector ${sector}:`, error);
-    throw new Error(`Failed to fetch performance for sector: ${sector}`);
-  }
-
-  if (!Array.isArray(data)) {
-    throw new Error('Invalid data format received from sector performance endpoint');
-  }
-
-  return data as HistoricalSectorPerformance[];
+  const performance = await fetchIndexPerformance(await findIndexSymbol('sector', sector));
+  return performance.map((item) => ({ ...item, sector }));
 }

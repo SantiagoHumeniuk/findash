@@ -11,21 +11,14 @@ import {
 } from "./components/ui/sidebar";
 import { AppSidebar } from "./components/ui/app-sidebar";
 import { Toaster } from "sonner";
-import { ModeToggle } from "./components/ui/mode-toggle";
-import GenericBreadcrumb from "./components/ui/breadcrumb-demo";
 import ActivesBar from "./components/ui/actives-bar";
 import { AnimatedBackground } from "./components/ui/animated-background";
-import { CommandMenu } from "./components/search/command-menu";
 import { ErrorBoundary } from "./components/error-boundary";
 import { SuspenseFallback } from "./components/suspense";
 import { SubscriptionStatusModal } from "./components/shared/subscription-status-modal";
 
 export default function App() {
   const location = useLocation();
-  const isHomePage = location.pathname === '/' || location.pathname === '/inicio';
-  const headerClass = isHomePage 
-    ? "flex h-16 shrink-0 items-center justify-between gap-2 border-b border-white/[0.02] bg-transparent px-4 relative z-20"
-    : "flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border/40 bg-background/80 backdrop-blur-xl px-4 relative z-20 transition-all duration-300";
 
   return (
     <ErrorBoundary level="root">
@@ -55,12 +48,6 @@ export default function App() {
                 </AnimatePresence>
               </main>
             </AnimatedBackground>
-
-            {/* Controles flotantes libres (sin header) */}
-            <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
-              <CommandMenu />
-              <ModeToggle />
-            </div>
 
             {/* Modal de estado de suscripción y pago */}
             <SubscriptionStatusModal />

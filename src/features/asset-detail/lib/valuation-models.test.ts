@@ -81,6 +81,26 @@ describe('growth-aware financial valuation', () => {
     expect(recommendation.status).not.toBe('BUY');
   });
 
+  it('uses Yahoo target consensus only when analyst coverage is sufficient', () => {
+    const asset = makeTechnologyAsset('US');
+    asset.quote.price = 100;
+    asset.yahooMetrics = {
+      'financialData.targetMeanPrice': 70,
+      'financialData.numberOfAnalystOpinions': 6,
+    };
+
+    const coveredRecommendation = generateAdvisory('TECH', { TECH: asset }, []);
+    expect(coveredRecommendation.reasons.some((reason) =>
+      reason.text.includes('objetivo medio') && reason.type === 'negative'
+    )).toBe(true);
+
+    asset.yahooMetrics['financialData.numberOfAnalystOpinions'] = 2;
+    const sparseRecommendation = generateAdvisory('TECH', { TECH: asset }, []);
+    expect(sparseRecommendation.reasons.some((reason) =>
+      reason.text.includes('cobertura insuficiente') && reason.type === 'neutral'
+    )).toBe(true);
+  });
+
   it('does not calculate sector concentration across mixed quote currencies', () => {
     const usdAsset = makeFintechAsset(6.4);
     const arsAsset = {
@@ -234,7 +254,7 @@ describe('sector and country comparable valuation', () => {
     expect(insight!.dcf).not.toBe(50);
   });
 
-  it('uses FMP country risk premium instead of the static fallback when available', () => {
+  it('uses the country risk premium dataset instead of the static fallback when available', () => {
     const result = calculateBlendedFairValue(makeTechnologyAsset('BR'), [{
       country: 'Brazil', continent: 'South America', countryRiskPremium: 6.5, totalEquityRiskPremium: 11.2,
     }]);
@@ -243,7 +263,7 @@ describe('sector and country comparable valuation', () => {
     expect(result.context.countryRiskPremiumPct).toBeCloseTo(6.5);
   });
 
-  it('keeps analyst targets as a low-weight reference and includes the advanced FMP DCF', () => {
+  it('keeps analyst targets as a low-weight reference and includes the advanced DCF', () => {
     const asset = makeTechnologyAsset('US');
     asset.priceTargetConsensus = {
       symbol: 'TECH', targetHigh: 130, targetLow: 95, targetConsensus: 112, targetMedian: 110,
@@ -252,13 +272,13 @@ describe('sector and country comparable valuation', () => {
 
     const result = calculateBlendedFairValue(asset);
     const analystTarget = result.modelsUsed.find((model) => model.name === 'Consenso de Analistas');
-    const advancedDcf = result.modelsUsed.find((model) => model.name === 'DCF Avanzado FMP');
+    const advancedDcf = result.modelsUsed.find((model) => model.name === 'DCF Avanzado');
 
     expect(analystTarget?.weight).toBe(0.25);
     expect(advancedDcf?.value).toBe(125);
   });
 
-  it('uses median FMP peer multiples when at least three peers provide each ratio', () => {
+  it('uses median peer multiples when at least three peers provide each ratio', () => {
     const asset = makeTechnologyAsset('US');
     asset.peerValuations = [
       { symbol: 'P1', companyName: 'Peer One', price: 10, marketCap: 100, priceToEarningsRatio: 15, priceToBookRatio: 2, priceToSalesRatio: 2, priceToFreeCashFlowRatio: 20, ebitMargin: 0.1, evToEBITDA: 10, evToEBIT: 20, evToSales: 3 },
@@ -268,13 +288,13 @@ describe('sector and country comparable valuation', () => {
     asset.ratios[0].ebitMargin = 0.3;
 
     const result = calculateBlendedFairValue(asset);
-    const evEbitda = result.modelsUsed.find((model) => model.name === 'EV/EBITDA por Pares FMP');
+    const evEbitda = result.modelsUsed.find((model) => model.name === 'EV/EBITDA por Pares');
 
     expect(evEbitda).toBeDefined();
     expect(evEbitda!.value).toBeCloseTo(100);
-    expect(result.modelsUsed.find((model) => model.name === 'P/E por EPS estimado')!.description).toContain('mediana FMP de 3 pares');
-    expect(result.modelsUsed.some((model) => model.name === 'Precio/Ventas por Pares FMP')).toBe(true);
-    expect(result.modelsUsed.find((model) => model.name === 'EV/Ventas por Pares FMP')!.description).toContain('margen EBIT ajustado 1.50x');
+    expect(result.modelsUsed.find((model) => model.name === 'P/E por EPS estimado')!.description).toContain('mediana de 3 pares');
+    expect(result.modelsUsed.some((model) => model.name === 'Precio/Ventas por Pares')).toBe(true);
+    expect(result.modelsUsed.find((model) => model.name === 'EV/Ventas por Pares')!.description).toContain('margen EBIT ajustado 1.50x');
     expect(result.context.forwardEpsGrowthPct).toBeNull();
   });
 

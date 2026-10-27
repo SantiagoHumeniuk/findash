@@ -84,12 +84,15 @@ const normalizeForRadar = (value: number | null, key: string): number => {
 
 // --- Componente Principal ---
 export const RadarComparison = React.memo(function RadarComparison({ assets }: RadarComparisonProps) {
+    // An asset needs at least three resolvable axes to draw a meaningful shape.
+    const hasRadarCoverage = (asset: AssetData) =>
+        radarKeys.filter((key) => resolveValue(asset, key) !== null).length >= 3;
     const fallbackAssets = React.useMemo(
-        () => assets.filter(asset => asset.dataSource === 'Yahoo Finance'),
+        () => assets.filter(asset => !hasRadarCoverage(asset)),
         [assets]
     );
     const chartAssets = React.useMemo(
-        () => assets.filter(asset => asset.dataSource !== 'Yahoo Finance'),
+        () => assets.filter(hasRadarCoverage),
         [assets]
     );
 
@@ -131,7 +134,7 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
                 metricData[symbol] = normalizeForRadar(rawValue, key);
 
                 // Valor original formateado para el tooltip
-                let originalFormatted = 'N/A';
+                let originalFormatted = '';
                 if (rawValue !== null) {
                     const isPercent = indicatorConfig[key]?.asPercent;
                     // Si es porcentaje en la config pero el rango radar está en decimales (ej ROIC),
@@ -139,7 +142,7 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
                     if (isPercent) {
                         // Si el valor crudo es pequeño (ej 0.05) y esperamos %, lo multiplicamos
                         // Pero ojo, si ya viene como 5.0, no lo multiplicamos.
-                        // Asumimos que FMP devuelve decimales (0.05) para ratios.
+                        // Ratio metrics are normalized to decimal values before display.
                         originalFormatted = (rawValue * 100).toFixed(2) + '%';
                     } else {
                         originalFormatted = rawValue.toFixed(2);
@@ -166,11 +169,11 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
             <Card className="flex items-center justify-center h-64 sm:h-96">
                 <div className="text-center text-muted-foreground px-4">
                     <p className="font-semibold text-sm sm:text-base">
-                        {fallbackAssets.length > 0 ? 'Radar no disponible para datos de Yahoo' : 'Sin activos para comparar'}
+                        {fallbackAssets.length > 0 ? 'No hay métricas suficientes para generar el radar' : 'Sin activos para comparar'}
                     </p>
                     <p className="text-xs sm:text-sm">
                         {fallbackAssets.length > 0
-                            ? 'Yahoo Finance no devolvió todas las métricas necesarias. El activo sigue disponible en precios y PER.'
+                            ? 'Añade activos con métricas comparables para ver el gráfico.'
                             : 'Añade al menos un activo para ver el gráfico radar.'}
                     </p>
                 </div>
