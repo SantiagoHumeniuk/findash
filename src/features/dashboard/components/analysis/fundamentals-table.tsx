@@ -166,9 +166,13 @@ function resolveIndicatorValue(asset: AssetData, key: string): number | null {
 
     // 1. Buscar valor directo en los campos API definidos
     // Prioridad de búsqueda: KeyMetrics (TTM) -> Quote (Tiempo real) -> Profile (Estático) -> Rating
-    const sources = [asset.keyMetrics, asset.quote, asset.profile, asset.rating];
+    // Yahoo quote/profile fields hold 0 when Yahoo omits them, so only the computed
+    // statement metrics (null when missing) are searched for Yahoo assets.
+    const sources = asset.dataSource === 'Yahoo Finance'
+        ? [asset.keyMetrics, asset.ratios[0]]
+        : [asset.keyMetrics, asset.quote, asset.profile, asset.rating];
 
-    if (value === null && asset.dataSource !== 'Yahoo Finance') {
+    if (value === null) {
         for (const field of config.apiFields) {
             for (const source of sources) {
                 if (source && typeof source === 'object' && field in source) {

@@ -23,7 +23,7 @@ export function RatingScorecard({ asset }: RatingScorecardProps) {
   const { data: riskPremiumData = [] } = useRiskPremiumQuery();
   const contextualScores = calculateContextualRatingScores(asset, riskPremiumData);
 
-  if (!rating) return null;
+  if (!rating?.rating) return null;
 
   // Función auxiliar para colores de texto según el score (1-5)
   const getScoreColor = (score: number | null) => {
@@ -147,6 +147,9 @@ export function RatingScorecard({ asset }: RatingScorecardProps) {
 
         <div className="text-[10px] text-muted-foreground pt-2 border-t text-center italic">
           Estrellas individuales ajustadas por valoración y empresas comparables.
+          {asset.dataSource === 'Yahoo Finance' && (
+            <> Calculado por FinDash con estados financieros de {asset.fundamentalsSource ?? 'Yahoo Finance'}.</>
+          )}
         </div>
       </CardContent>
     </Card>

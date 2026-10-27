@@ -282,15 +282,15 @@ function PanoramicOverview({ profiles, totalAssets }: { profiles: AssetProfile[]
 }
 
 export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnalysisProps) {
-    const fallbackAssets = useMemo(
-        () => assets.filter(asset => asset.dataSource === 'Yahoo Finance'),
-        [assets],
-    );
     const analysisAssets = useMemo(
         () => assets.filter((asset) =>
             asset.dataSource !== 'Yahoo Finance' || scoreAssetSummary(asset).coverage > 0
         ),
         [assets],
+    );
+    const fallbackAssets = useMemo(
+        () => assets.filter(asset => !analysisAssets.includes(asset)),
+        [assets, analysisAssets],
     );
     const analysis = useMemo(() => {
         if (analysisAssets.length < 1) return null;

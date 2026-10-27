@@ -12,7 +12,7 @@ import { AreaChartIcon } from "lucide-react"
 import { useAuth } from "../../../../hooks/use-auth"
 import { useConfig } from "../../../../hooks/use-config"
 import { hasApiCallsAvailable, incrementApiCallCounter } from "../../../../services/api/apiLimiter"
-import { fetchYahooFinanceQuotes } from "../../../../services/api/yahoo-finance-api"
+import { fetchYahooHistory } from "../../../../services/api/yahoo-finance-api"
 import { normalizeHistoricalPerformance, type HistoricalPerformanceRow } from "../../lib/historical-performance"
 
 interface HistoricalPerformanceChartProps {
@@ -48,13 +48,13 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
       }
 
       const symbol = selectedBenchmark;
-      const response = await fetchYahooFinanceQuotes([symbol]);
-      const quote = response.quotes.find((item) => item.symbol === symbol);
-      const history = quote?.history.filter((point) =>
+      // The history action is cached server-side and skips fundamentals and peers.
+      const response = await fetchYahooHistory(symbol, '5y', '1wk');
+      const history = response.history.filter((point) =>
         Number.isFinite(Date.parse(point.date)) && Number.isFinite(point.close) && point.close > 0
-      ) ?? [];
+      );
       if (history.length < 2) {
-        throw new Error(quote?.error ?? `No se recibió historial suficiente para ${symbol}.`);
+        throw new Error(`No se recibió historial suficiente para ${symbol}.`);
       }
 
       if (user) await incrementApiCallCounter(user.id);

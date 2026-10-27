@@ -1,0 +1,1609 @@
+{
+  "source": "https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html",
+  "sourceUpdatedAt": "2026-01-05",
+  "generatedAt": "2026-10-27",
+  "countries": [
+    {
+      "country": "Abu Dhabi",
+      "continent": "Asia",
+      "moodysRating": "Aa2",
+      "defaultSpread": 0.42,
+      "countryRiskPremium": 0.64,
+      "totalEquityRiskPremium": 4.87,
+      "corporateTaxRate": 9
+    },
+    {
+      "country": "Albania",
+      "continent": "Europe",
+      "moodysRating": "Ba3",
+      "defaultSpread": 3.06,
+      "countryRiskPremium": 4.66,
+      "totalEquityRiskPremium": 8.89,
+      "corporateTaxRate": 15
+    },
+    {
+      "country": "Algeria",
+      "continent": "Africa",
+      "moodysRating": "NR",
+      "defaultSpread": 3.83,
+      "countryRiskPremium": 5.83,
+      "totalEquityRiskPremium": 10.06,
+      "corporateTaxRate": 10.07
+    },
+    {
+      "country": "Andorra (Principality of)",
+      "continent": "Europe",
+      "moodysRating": "Baa1",
+      "defaultSpread": 1.36,
+      "countryRiskPremium": 2.07,
+      "totalEquityRiskPremium": 6.3,
+      "corporateTaxRate": 10
+    },
+    {
+      "country": "Angola",
+      "continent": "Africa",
+      "moodysRating": "B3",
+      "defaultSpread": 5.52,
+      "countryRiskPremium": 8.41,
+      "totalEquityRiskPremium": 12.64,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Argentina",
+      "continent": "South America",
+      "moodysRating": "Caa1",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 35
+    },
+    {
+      "country": "Armenia",
+      "continent": "Asia",
+      "moodysRating": "Ba3",
+      "defaultSpread": 3.06,
+      "countryRiskPremium": 4.66,
+      "totalEquityRiskPremium": 8.89,
+      "corporateTaxRate": 18
+    },
+    {
+      "country": "Aruba",
+      "continent": "North America",
+      "moodysRating": "Baa3",
+      "defaultSpread": 1.87,
+      "countryRiskPremium": 2.85,
+      "totalEquityRiskPremium": 7.08,
+      "corporateTaxRate": 22
+    },
+    {
+      "country": "Australia",
+      "continent": "Oceania",
+      "moodysRating": "Aaa",
+      "defaultSpread": 0,
+      "countryRiskPremium": 0,
+      "totalEquityRiskPremium": 4.23,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Austria",
+      "continent": "Europe",
+      "moodysRating": "Aa1",
+      "defaultSpread": 0.23,
+      "countryRiskPremium": 0.36,
+      "totalEquityRiskPremium": 4.59,
+      "corporateTaxRate": 23
+    },
+    {
+      "country": "Azerbaijan",
+      "continent": "Asia",
+      "moodysRating": "Baa3",
+      "defaultSpread": 1.87,
+      "countryRiskPremium": 2.85,
+      "totalEquityRiskPremium": 7.08,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "Bahamas",
+      "continent": "North America",
+      "moodysRating": "B1",
+      "defaultSpread": 3.83,
+      "countryRiskPremium": 5.83,
+      "totalEquityRiskPremium": 10.06,
+      "corporateTaxRate": 0
+    },
+    {
+      "country": "Bahrain",
+      "continent": "Asia",
+      "moodysRating": "B2",
+      "defaultSpread": 4.67,
+      "countryRiskPremium": 7.12,
+      "totalEquityRiskPremium": 11.35,
+      "corporateTaxRate": 0
+    },
+    {
+      "country": "Bangladesh",
+      "continent": "Asia",
+      "moodysRating": "B2",
+      "defaultSpread": 4.67,
+      "countryRiskPremium": 7.12,
+      "totalEquityRiskPremium": 11.35,
+      "corporateTaxRate": 27.5
+    },
+    {
+      "country": "Barbados",
+      "continent": "North America",
+      "moodysRating": "B2",
+      "defaultSpread": 4.67,
+      "countryRiskPremium": 7.12,
+      "totalEquityRiskPremium": 11.35,
+      "corporateTaxRate": 9
+    },
+    {
+      "country": "Belarus",
+      "continent": "Europe",
+      "moodysRating": "C",
+      "defaultSpread": 17.5,
+      "countryRiskPremium": 26.66,
+      "totalEquityRiskPremium": 30.89,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Belgium",
+      "continent": "Europe",
+      "moodysRating": "Aa3",
+      "defaultSpread": 0.51,
+      "countryRiskPremium": 0.78,
+      "totalEquityRiskPremium": 5.01,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Belize",
+      "continent": "North America",
+      "moodysRating": "Caa1",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 0
+    },
+    {
+      "country": "Benin",
+      "continent": "Africa",
+      "moodysRating": "B1",
+      "defaultSpread": 3.83,
+      "countryRiskPremium": 5.83,
+      "totalEquityRiskPremium": 10.06,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Bermuda",
+      "continent": "North America",
+      "moodysRating": "A2",
+      "defaultSpread": 0.72,
+      "countryRiskPremium": 1.1,
+      "totalEquityRiskPremium": 5.33,
+      "corporateTaxRate": 0
+    },
+    {
+      "country": "Bolivia",
+      "continent": "South America",
+      "moodysRating": "Ca",
+      "defaultSpread": 10.2,
+      "countryRiskPremium": 15.54,
+      "totalEquityRiskPremium": 19.77,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Bosnia and Herzegovina",
+      "continent": "Europe",
+      "moodysRating": "B3",
+      "defaultSpread": 5.52,
+      "countryRiskPremium": 8.41,
+      "totalEquityRiskPremium": 12.64,
+      "corporateTaxRate": 10
+    },
+    {
+      "country": "Botswana",
+      "continent": "Africa",
+      "moodysRating": "Baa1",
+      "defaultSpread": 1.36,
+      "countryRiskPremium": 2.07,
+      "totalEquityRiskPremium": 6.3,
+      "corporateTaxRate": 22
+    },
+    {
+      "country": "Brazil",
+      "continent": "South America",
+      "moodysRating": "Ba1",
+      "defaultSpread": 2.13,
+      "countryRiskPremium": 3.24,
+      "totalEquityRiskPremium": 7.47,
+      "corporateTaxRate": 34
+    },
+    {
+      "country": "Brunei",
+      "continent": "Asia",
+      "moodysRating": "NR",
+      "defaultSpread": 0.51,
+      "countryRiskPremium": 0.78,
+      "totalEquityRiskPremium": 5.01,
+      "corporateTaxRate": 5.02
+    },
+    {
+      "country": "Bulgaria",
+      "continent": "Europe",
+      "moodysRating": "Baa1",
+      "defaultSpread": 1.36,
+      "countryRiskPremium": 2.07,
+      "totalEquityRiskPremium": 6.3,
+      "corporateTaxRate": 10
+    },
+    {
+      "country": "Burkina Faso",
+      "continent": "Africa",
+      "moodysRating": "Caa1",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 27.5
+    },
+    {
+      "country": "Cambodia",
+      "continent": "Asia",
+      "moodysRating": "B2",
+      "defaultSpread": 4.67,
+      "countryRiskPremium": 7.12,
+      "totalEquityRiskPremium": 11.35,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "Cameroon",
+      "continent": "Africa",
+      "moodysRating": "Caa1",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 33
+    },
+    {
+      "country": "Canada",
+      "continent": "North America",
+      "moodysRating": "Aaa",
+      "defaultSpread": 0,
+      "countryRiskPremium": 0,
+      "totalEquityRiskPremium": 4.23,
+      "corporateTaxRate": 26.14
+    },
+    {
+      "country": "Cape Verde",
+      "continent": "Africa",
+      "moodysRating": "B2",
+      "defaultSpread": 4.67,
+      "countryRiskPremium": 7.12,
+      "totalEquityRiskPremium": 11.35,
+      "corporateTaxRate": 26.86
+    },
+    {
+      "country": "Cayman Islands",
+      "continent": "North America",
+      "moodysRating": "Aa3",
+      "defaultSpread": 0.51,
+      "countryRiskPremium": 0.78,
+      "totalEquityRiskPremium": 5.01,
+      "corporateTaxRate": 0
+    },
+    {
+      "country": "Chile",
+      "continent": "South America",
+      "moodysRating": "A2",
+      "defaultSpread": 0.72,
+      "countryRiskPremium": 1.1,
+      "totalEquityRiskPremium": 5.33,
+      "corporateTaxRate": 27
+    },
+    {
+      "country": "China",
+      "continent": "Asia",
+      "moodysRating": "A1",
+      "defaultSpread": 0.6,
+      "countryRiskPremium": 0.91,
+      "totalEquityRiskPremium": 5.14,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Colombia",
+      "continent": "South America",
+      "moodysRating": "Baa3",
+      "defaultSpread": 1.87,
+      "countryRiskPremium": 2.85,
+      "totalEquityRiskPremium": 7.08,
+      "corporateTaxRate": 35
+    },
+    {
+      "country": "Congo (Democratic Republic of)",
+      "continent": "Africa",
+      "moodysRating": "B3",
+      "defaultSpread": 5.52,
+      "countryRiskPremium": 8.41,
+      "totalEquityRiskPremium": 12.64,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Congo (Republic of)",
+      "continent": "Africa",
+      "moodysRating": "Caa2",
+      "defaultSpread": 7.65,
+      "countryRiskPremium": 11.66,
+      "totalEquityRiskPremium": 15.89,
+      "corporateTaxRate": 26.86
+    },
+    {
+      "country": "Cook Islands",
+      "continent": "Oceania",
+      "moodysRating": "B1",
+      "defaultSpread": 3.83,
+      "countryRiskPremium": 5.83,
+      "totalEquityRiskPremium": 10.06,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "Costa Rica",
+      "continent": "North America",
+      "moodysRating": "Ba2",
+      "defaultSpread": 2.56,
+      "countryRiskPremium": 3.9,
+      "totalEquityRiskPremium": 8.13,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Côte d'Ivoire",
+      "continent": "Africa",
+      "moodysRating": "Ba2",
+      "defaultSpread": 2.56,
+      "countryRiskPremium": 3.9,
+      "totalEquityRiskPremium": 8.13,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Croatia",
+      "continent": "Europe",
+      "moodysRating": "A3",
+      "defaultSpread": 1.02,
+      "countryRiskPremium": 1.55,
+      "totalEquityRiskPremium": 5.78,
+      "corporateTaxRate": 18
+    },
+    {
+      "country": "Cuba",
+      "continent": "North America",
+      "moodysRating": "Ca",
+      "defaultSpread": 10.2,
+      "countryRiskPremium": 15.54,
+      "totalEquityRiskPremium": 19.77,
+      "corporateTaxRate": 35
+    },
+    {
+      "country": "Curacao",
+      "continent": "North America",
+      "moodysRating": "Baa3",
+      "defaultSpread": 1.87,
+      "countryRiskPremium": 2.85,
+      "totalEquityRiskPremium": 7.08,
+      "corporateTaxRate": 22
+    },
+    {
+      "country": "Cyprus",
+      "continent": "Europe",
+      "moodysRating": "A3",
+      "defaultSpread": 1.02,
+      "countryRiskPremium": 1.55,
+      "totalEquityRiskPremium": 5.78,
+      "corporateTaxRate": 12.5
+    },
+    {
+      "country": "Czech Republic",
+      "continent": "Europe",
+      "moodysRating": "Aa3",
+      "defaultSpread": 0.51,
+      "countryRiskPremium": 0.78,
+      "totalEquityRiskPremium": 5.01,
+      "corporateTaxRate": 21
+    },
+    {
+      "country": "Denmark",
+      "continent": "Europe",
+      "moodysRating": "Aaa",
+      "defaultSpread": 0,
+      "countryRiskPremium": 0,
+      "totalEquityRiskPremium": 4.23,
+      "corporateTaxRate": 22
+    },
+    {
+      "country": "Dominican Republic",
+      "continent": "North America",
+      "moodysRating": "Ba2",
+      "defaultSpread": 2.56,
+      "countryRiskPremium": 3.9,
+      "totalEquityRiskPremium": 8.13,
+      "corporateTaxRate": 27
+    },
+    {
+      "country": "Ecuador",
+      "continent": "South America",
+      "moodysRating": "Caa3",
+      "defaultSpread": 8.5,
+      "countryRiskPremium": 12.95,
+      "totalEquityRiskPremium": 17.18,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Egypt",
+      "continent": "Africa",
+      "moodysRating": "Caa1",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 22.5
+    },
+    {
+      "country": "El Salvador",
+      "continent": "North America",
+      "moodysRating": "B3",
+      "defaultSpread": 5.52,
+      "countryRiskPremium": 8.41,
+      "totalEquityRiskPremium": 12.64,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Estonia",
+      "continent": "Europe",
+      "moodysRating": "A1",
+      "defaultSpread": 0.6,
+      "countryRiskPremium": 0.91,
+      "totalEquityRiskPremium": 5.14,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "Ethiopia",
+      "continent": "Africa",
+      "moodysRating": "Caa2",
+      "defaultSpread": 7.65,
+      "countryRiskPremium": 11.66,
+      "totalEquityRiskPremium": 15.89,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Fiji",
+      "continent": "Oceania",
+      "moodysRating": "B1",
+      "defaultSpread": 3.83,
+      "countryRiskPremium": 5.83,
+      "totalEquityRiskPremium": 10.06,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Finland",
+      "continent": "Europe",
+      "moodysRating": "Aa1",
+      "defaultSpread": 0.23,
+      "countryRiskPremium": 0.36,
+      "totalEquityRiskPremium": 4.59,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "France",
+      "continent": "Europe",
+      "moodysRating": "Aa3",
+      "defaultSpread": 0.51,
+      "countryRiskPremium": 0.78,
+      "totalEquityRiskPremium": 5.01,
+      "corporateTaxRate": 25.83
+    },
+    {
+      "country": "Gabon",
+      "continent": "Africa",
+      "moodysRating": "Caa2",
+      "defaultSpread": 7.65,
+      "countryRiskPremium": 11.66,
+      "totalEquityRiskPremium": 15.89,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Gambia",
+      "continent": "Africa",
+      "moodysRating": "NR",
+      "defaultSpread": 4.67,
+      "countryRiskPremium": 7.12,
+      "totalEquityRiskPremium": 11.35,
+      "corporateTaxRate": 11.36
+    },
+    {
+      "country": "Georgia",
+      "continent": "Asia",
+      "moodysRating": "Ba2",
+      "defaultSpread": 2.56,
+      "countryRiskPremium": 3.9,
+      "totalEquityRiskPremium": 8.13,
+      "corporateTaxRate": 15
+    },
+    {
+      "country": "Germany",
+      "continent": "Europe",
+      "moodysRating": "Aaa",
+      "defaultSpread": 0,
+      "countryRiskPremium": 0,
+      "totalEquityRiskPremium": 4.23,
+      "corporateTaxRate": 29.93
+    },
+    {
+      "country": "Ghana",
+      "continent": "Africa",
+      "moodysRating": "Caa1",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Greece",
+      "continent": "Europe",
+      "moodysRating": "Baa3",
+      "defaultSpread": 1.87,
+      "countryRiskPremium": 2.85,
+      "totalEquityRiskPremium": 7.08,
+      "corporateTaxRate": 22
+    },
+    {
+      "country": "Guatemala",
+      "continent": "North America",
+      "moodysRating": "Ba1",
+      "defaultSpread": 2.13,
+      "countryRiskPremium": 3.24,
+      "totalEquityRiskPremium": 7.47,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Guernsey (States of)",
+      "continent": "Europe",
+      "moodysRating": "A1",
+      "defaultSpread": 0.6,
+      "countryRiskPremium": 0.91,
+      "totalEquityRiskPremium": 5.14,
+      "corporateTaxRate": 0
+    },
+    {
+      "country": "Guinea",
+      "continent": "Africa",
+      "moodysRating": "NR",
+      "defaultSpread": 7.65,
+      "countryRiskPremium": 11.66,
+      "totalEquityRiskPremium": 15.89,
+      "corporateTaxRate": 15.9
+    },
+    {
+      "country": "Guinea-Bissau",
+      "continent": "Africa",
+      "moodysRating": "NR",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 13.95
+    },
+    {
+      "country": "Guyana",
+      "continent": "South America",
+      "moodysRating": "NR",
+      "defaultSpread": 1.36,
+      "countryRiskPremium": 2.07,
+      "totalEquityRiskPremium": 6.3,
+      "corporateTaxRate": 6.31
+    },
+    {
+      "country": "Haiti",
+      "continent": "North America",
+      "moodysRating": "NR",
+      "defaultSpread": 8.5,
+      "countryRiskPremium": 12.95,
+      "totalEquityRiskPremium": 17.18,
+      "corporateTaxRate": 17.19
+    },
+    {
+      "country": "Honduras",
+      "continent": "North America",
+      "moodysRating": "B1",
+      "defaultSpread": 3.83,
+      "countryRiskPremium": 5.83,
+      "totalEquityRiskPremium": 10.06,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Hong Kong",
+      "continent": "Asia",
+      "moodysRating": "Aa3",
+      "defaultSpread": 0.51,
+      "countryRiskPremium": 0.78,
+      "totalEquityRiskPremium": 5.01,
+      "corporateTaxRate": 16.5
+    },
+    {
+      "country": "Hungary",
+      "continent": "Europe",
+      "moodysRating": "Baa2",
+      "defaultSpread": 1.62,
+      "countryRiskPremium": 2.46,
+      "totalEquityRiskPremium": 6.69,
+      "corporateTaxRate": 9
+    },
+    {
+      "country": "Iceland",
+      "continent": "Europe",
+      "moodysRating": "A1",
+      "defaultSpread": 0.6,
+      "countryRiskPremium": 0.91,
+      "totalEquityRiskPremium": 5.14,
+      "corporateTaxRate": 21
+    },
+    {
+      "country": "India",
+      "continent": "Asia",
+      "moodysRating": "Baa3",
+      "defaultSpread": 1.87,
+      "countryRiskPremium": 2.85,
+      "totalEquityRiskPremium": 7.08,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Indonesia",
+      "continent": "Asia",
+      "moodysRating": "Baa2",
+      "defaultSpread": 1.62,
+      "countryRiskPremium": 2.46,
+      "totalEquityRiskPremium": 6.69,
+      "corporateTaxRate": 22
+    },
+    {
+      "country": "Iran",
+      "continent": "Asia",
+      "moodysRating": "NR",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 13.95
+    },
+    {
+      "country": "Iraq",
+      "continent": "Asia",
+      "moodysRating": "Caa1",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 15
+    },
+    {
+      "country": "Ireland",
+      "continent": "Europe",
+      "moodysRating": "Aa3",
+      "defaultSpread": 0.51,
+      "countryRiskPremium": 0.78,
+      "totalEquityRiskPremium": 5.01,
+      "corporateTaxRate": 12.5
+    },
+    {
+      "country": "Isle of Man",
+      "continent": "Europe",
+      "moodysRating": "Aa3",
+      "defaultSpread": 0.51,
+      "countryRiskPremium": 0.78,
+      "totalEquityRiskPremium": 5.01,
+      "corporateTaxRate": 0
+    },
+    {
+      "country": "Israel",
+      "continent": "Asia",
+      "moodysRating": "Baa1",
+      "defaultSpread": 1.36,
+      "countryRiskPremium": 2.07,
+      "totalEquityRiskPremium": 6.3,
+      "corporateTaxRate": 23
+    },
+    {
+      "country": "Italy",
+      "continent": "Europe",
+      "moodysRating": "Baa2",
+      "defaultSpread": 1.62,
+      "countryRiskPremium": 2.46,
+      "totalEquityRiskPremium": 6.69,
+      "corporateTaxRate": 27.81
+    },
+    {
+      "country": "Jamaica",
+      "continent": "North America",
+      "moodysRating": "Ba3",
+      "defaultSpread": 3.06,
+      "countryRiskPremium": 4.66,
+      "totalEquityRiskPremium": 8.89,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Japan",
+      "continent": "Asia",
+      "moodysRating": "A1",
+      "defaultSpread": 0.6,
+      "countryRiskPremium": 0.91,
+      "totalEquityRiskPremium": 5.14,
+      "corporateTaxRate": 29.74
+    },
+    {
+      "country": "Jersey (States of)",
+      "continent": "Europe",
+      "moodysRating": "Aa3",
+      "defaultSpread": 0.51,
+      "countryRiskPremium": 0.78,
+      "totalEquityRiskPremium": 5.01,
+      "corporateTaxRate": 0
+    },
+    {
+      "country": "Jordan",
+      "continent": "Asia",
+      "moodysRating": "Ba3",
+      "defaultSpread": 3.06,
+      "countryRiskPremium": 4.66,
+      "totalEquityRiskPremium": 8.89,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "Kazakhstan",
+      "continent": "Asia",
+      "moodysRating": "Baa1",
+      "defaultSpread": 1.36,
+      "countryRiskPremium": 2.07,
+      "totalEquityRiskPremium": 6.3,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "Kenya",
+      "continent": "Africa",
+      "moodysRating": "Caa1",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "South Korea",
+      "continent": "Asia",
+      "moodysRating": "Aa2",
+      "defaultSpread": 0.42,
+      "countryRiskPremium": 0.64,
+      "totalEquityRiskPremium": 4.87,
+      "corporateTaxRate": 26.4
+    },
+    {
+      "country": "North Korea",
+      "continent": "Asia",
+      "moodysRating": "NR",
+      "defaultSpread": 10.2,
+      "countryRiskPremium": 15.54,
+      "totalEquityRiskPremium": 19.77,
+      "corporateTaxRate": 19.78
+    },
+    {
+      "country": "Kuwait",
+      "continent": "Asia",
+      "moodysRating": "A1",
+      "defaultSpread": 0.6,
+      "countryRiskPremium": 0.91,
+      "totalEquityRiskPremium": 5.14,
+      "corporateTaxRate": 15
+    },
+    {
+      "country": "Kyrgyzstan",
+      "continent": "Asia",
+      "moodysRating": "B3",
+      "defaultSpread": 5.52,
+      "countryRiskPremium": 8.41,
+      "totalEquityRiskPremium": 12.64,
+      "corporateTaxRate": 10
+    },
+    {
+      "country": "Laos",
+      "continent": "Asia",
+      "moodysRating": "Caa2",
+      "defaultSpread": 7.65,
+      "countryRiskPremium": 11.66,
+      "totalEquityRiskPremium": 15.89,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "Latvia",
+      "continent": "Europe",
+      "moodysRating": "A3",
+      "defaultSpread": 1.02,
+      "countryRiskPremium": 1.55,
+      "totalEquityRiskPremium": 5.78,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "Lebanon",
+      "continent": "Asia",
+      "moodysRating": "C",
+      "defaultSpread": 17.5,
+      "countryRiskPremium": 26.66,
+      "totalEquityRiskPremium": 30.89,
+      "corporateTaxRate": 17
+    },
+    {
+      "country": "Liberia",
+      "continent": "Africa",
+      "moodysRating": "NR",
+      "defaultSpread": 7.65,
+      "countryRiskPremium": 11.66,
+      "totalEquityRiskPremium": 15.89,
+      "corporateTaxRate": 15.9
+    },
+    {
+      "country": "Libya",
+      "continent": "Africa",
+      "moodysRating": "NR",
+      "defaultSpread": 2.56,
+      "countryRiskPremium": 3.9,
+      "totalEquityRiskPremium": 8.13,
+      "corporateTaxRate": 8.14
+    },
+    {
+      "country": "Liechtenstein",
+      "continent": "Europe",
+      "moodysRating": "Aaa",
+      "defaultSpread": 0,
+      "countryRiskPremium": 0,
+      "totalEquityRiskPremium": 4.23,
+      "corporateTaxRate": 12.5
+    },
+    {
+      "country": "Lithuania",
+      "continent": "Europe",
+      "moodysRating": "A2",
+      "defaultSpread": 0.72,
+      "countryRiskPremium": 1.1,
+      "totalEquityRiskPremium": 5.33,
+      "corporateTaxRate": 15
+    },
+    {
+      "country": "Luxembourg",
+      "continent": "Europe",
+      "moodysRating": "Aaa",
+      "defaultSpread": 0,
+      "countryRiskPremium": 0,
+      "totalEquityRiskPremium": 4.23,
+      "corporateTaxRate": 24.94
+    },
+    {
+      "country": "Macao",
+      "continent": "Asia",
+      "moodysRating": "Aa3",
+      "defaultSpread": 0.51,
+      "countryRiskPremium": 0.78,
+      "totalEquityRiskPremium": 5.01,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Macedonia",
+      "continent": "Europe",
+      "moodysRating": "Ba3",
+      "defaultSpread": 3.06,
+      "countryRiskPremium": 4.66,
+      "totalEquityRiskPremium": 8.89,
+      "corporateTaxRate": 10
+    },
+    {
+      "country": "Madagascar",
+      "continent": "Africa",
+      "moodysRating": "NR",
+      "defaultSpread": 5.52,
+      "countryRiskPremium": 8.41,
+      "totalEquityRiskPremium": 12.64,
+      "corporateTaxRate": 12.65
+    },
+    {
+      "country": "Malawi",
+      "continent": "Africa",
+      "moodysRating": "NR",
+      "defaultSpread": 8.5,
+      "countryRiskPremium": 12.95,
+      "totalEquityRiskPremium": 17.18,
+      "corporateTaxRate": 17.19
+    },
+    {
+      "country": "Malaysia",
+      "continent": "Asia",
+      "moodysRating": "A3",
+      "defaultSpread": 1.02,
+      "countryRiskPremium": 1.55,
+      "totalEquityRiskPremium": 5.78,
+      "corporateTaxRate": 24
+    },
+    {
+      "country": "Maldives",
+      "continent": "Asia",
+      "moodysRating": "Caa2",
+      "defaultSpread": 7.65,
+      "countryRiskPremium": 11.66,
+      "totalEquityRiskPremium": 15.89,
+      "corporateTaxRate": 15
+    },
+    {
+      "country": "Mali",
+      "continent": "Africa",
+      "moodysRating": "Caa2",
+      "defaultSpread": 7.65,
+      "countryRiskPremium": 11.66,
+      "totalEquityRiskPremium": 15.89,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Malta",
+      "continent": "Europe",
+      "moodysRating": "A2",
+      "defaultSpread": 0.72,
+      "countryRiskPremium": 1.1,
+      "totalEquityRiskPremium": 5.33,
+      "corporateTaxRate": 35
+    },
+    {
+      "country": "Mauritius",
+      "continent": "Africa",
+      "moodysRating": "Baa3",
+      "defaultSpread": 1.87,
+      "countryRiskPremium": 2.85,
+      "totalEquityRiskPremium": 7.08,
+      "corporateTaxRate": 15
+    },
+    {
+      "country": "Mexico",
+      "continent": "North America",
+      "moodysRating": "Baa2",
+      "defaultSpread": 1.62,
+      "countryRiskPremium": 2.46,
+      "totalEquityRiskPremium": 6.69,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Moldova",
+      "continent": "Europe",
+      "moodysRating": "B3",
+      "defaultSpread": 5.52,
+      "countryRiskPremium": 8.41,
+      "totalEquityRiskPremium": 12.64,
+      "corporateTaxRate": 12
+    },
+    {
+      "country": "Mongolia",
+      "continent": "Asia",
+      "moodysRating": "B1",
+      "defaultSpread": 3.83,
+      "countryRiskPremium": 5.83,
+      "totalEquityRiskPremium": 10.06,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Montenegro",
+      "continent": "Europe",
+      "moodysRating": "B1",
+      "defaultSpread": 3.83,
+      "countryRiskPremium": 5.83,
+      "totalEquityRiskPremium": 10.06,
+      "corporateTaxRate": 15
+    },
+    {
+      "country": "Montserrat",
+      "continent": "North America",
+      "moodysRating": "Baa3",
+      "defaultSpread": 1.87,
+      "countryRiskPremium": 2.85,
+      "totalEquityRiskPremium": 7.08,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Morocco",
+      "continent": "Africa",
+      "moodysRating": "Ba1",
+      "defaultSpread": 2.13,
+      "countryRiskPremium": 3.24,
+      "totalEquityRiskPremium": 7.47,
+      "corporateTaxRate": 33
+    },
+    {
+      "country": "Mozambique",
+      "continent": "Africa",
+      "moodysRating": "Caa3",
+      "defaultSpread": 8.5,
+      "countryRiskPremium": 12.95,
+      "totalEquityRiskPremium": 17.18,
+      "corporateTaxRate": 32
+    },
+    {
+      "country": "Myanmar",
+      "continent": "Asia",
+      "moodysRating": "NR",
+      "defaultSpread": 10.2,
+      "countryRiskPremium": 15.54,
+      "totalEquityRiskPremium": 19.77,
+      "corporateTaxRate": 19.78
+    },
+    {
+      "country": "Namibia",
+      "continent": "Africa",
+      "moodysRating": "B1",
+      "defaultSpread": 3.83,
+      "countryRiskPremium": 5.83,
+      "totalEquityRiskPremium": 10.06,
+      "corporateTaxRate": 32
+    },
+    {
+      "country": "Nepal",
+      "continent": "Asia",
+      "moodysRating": "Ba3",
+      "defaultSpread": 3.06,
+      "countryRiskPremium": 4.66,
+      "totalEquityRiskPremium": 8.89,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Netherlands",
+      "continent": "Europe",
+      "moodysRating": "Aaa",
+      "defaultSpread": 0,
+      "countryRiskPremium": 0,
+      "totalEquityRiskPremium": 4.23,
+      "corporateTaxRate": 25.8
+    },
+    {
+      "country": "New Zealand",
+      "continent": "Oceania",
+      "moodysRating": "Aaa",
+      "defaultSpread": 0,
+      "countryRiskPremium": 0,
+      "totalEquityRiskPremium": 4.23,
+      "corporateTaxRate": 28
+    },
+    {
+      "country": "Nicaragua",
+      "continent": "North America",
+      "moodysRating": "B2",
+      "defaultSpread": 4.67,
+      "countryRiskPremium": 7.12,
+      "totalEquityRiskPremium": 11.35,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Niger",
+      "continent": "Africa",
+      "moodysRating": "Caa3",
+      "defaultSpread": 8.5,
+      "countryRiskPremium": 12.95,
+      "totalEquityRiskPremium": 17.18,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Nigeria",
+      "continent": "Africa",
+      "moodysRating": "B3",
+      "defaultSpread": 5.52,
+      "countryRiskPremium": 8.41,
+      "totalEquityRiskPremium": 12.64,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Norway",
+      "continent": "Europe",
+      "moodysRating": "Aaa",
+      "defaultSpread": 0,
+      "countryRiskPremium": 0,
+      "totalEquityRiskPremium": 4.23,
+      "corporateTaxRate": 22
+    },
+    {
+      "country": "Oman",
+      "continent": "Asia",
+      "moodysRating": "Baa3",
+      "defaultSpread": 1.87,
+      "countryRiskPremium": 2.85,
+      "totalEquityRiskPremium": 7.08,
+      "corporateTaxRate": 15
+    },
+    {
+      "country": "Pakistan",
+      "continent": "Asia",
+      "moodysRating": "Caa1",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 29
+    },
+    {
+      "country": "Panama",
+      "continent": "North America",
+      "moodysRating": "Baa3",
+      "defaultSpread": 1.87,
+      "countryRiskPremium": 2.85,
+      "totalEquityRiskPremium": 7.08,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Papua New Guinea",
+      "continent": "Oceania",
+      "moodysRating": "B2",
+      "defaultSpread": 4.67,
+      "countryRiskPremium": 7.12,
+      "totalEquityRiskPremium": 11.35,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Paraguay",
+      "continent": "South America",
+      "moodysRating": "Baa3",
+      "defaultSpread": 1.87,
+      "countryRiskPremium": 2.85,
+      "totalEquityRiskPremium": 7.08,
+      "corporateTaxRate": 10
+    },
+    {
+      "country": "Peru",
+      "continent": "South America",
+      "moodysRating": "Baa1",
+      "defaultSpread": 1.36,
+      "countryRiskPremium": 2.07,
+      "totalEquityRiskPremium": 6.3,
+      "corporateTaxRate": 29.5
+    },
+    {
+      "country": "Philippines",
+      "continent": "Asia",
+      "moodysRating": "Baa2",
+      "defaultSpread": 1.62,
+      "countryRiskPremium": 2.46,
+      "totalEquityRiskPremium": 6.69,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Poland",
+      "continent": "Europe",
+      "moodysRating": "A2",
+      "defaultSpread": 0.72,
+      "countryRiskPremium": 1.1,
+      "totalEquityRiskPremium": 5.33,
+      "corporateTaxRate": 19
+    },
+    {
+      "country": "Portugal",
+      "continent": "Europe",
+      "moodysRating": "A3",
+      "defaultSpread": 1.02,
+      "countryRiskPremium": 1.55,
+      "totalEquityRiskPremium": 5.78,
+      "corporateTaxRate": 31.5
+    },
+    {
+      "country": "Qatar",
+      "continent": "Asia",
+      "moodysRating": "Aa2",
+      "defaultSpread": 0.42,
+      "countryRiskPremium": 0.64,
+      "totalEquityRiskPremium": 4.87,
+      "corporateTaxRate": 10
+    },
+    {
+      "country": "Ras Al Khaimah (Emirate of)",
+      "continent": "Asia",
+      "moodysRating": "A3",
+      "defaultSpread": 1.02,
+      "countryRiskPremium": 1.55,
+      "totalEquityRiskPremium": 5.78,
+      "corporateTaxRate": 18.94
+    },
+    {
+      "country": "Romania",
+      "continent": "Europe",
+      "moodysRating": "Baa3",
+      "defaultSpread": 1.87,
+      "countryRiskPremium": 2.85,
+      "totalEquityRiskPremium": 7.08,
+      "corporateTaxRate": 16
+    },
+    {
+      "country": "Russia",
+      "continent": "Europe",
+      "moodysRating": "NR",
+      "defaultSpread": 2.56,
+      "countryRiskPremium": 3.9,
+      "totalEquityRiskPremium": 8.13,
+      "corporateTaxRate": 8.14
+    },
+    {
+      "country": "Rwanda",
+      "continent": "Africa",
+      "moodysRating": "B2",
+      "defaultSpread": 4.67,
+      "countryRiskPremium": 7.12,
+      "totalEquityRiskPremium": 11.35,
+      "corporateTaxRate": 28
+    },
+    {
+      "country": "Saudi Arabia",
+      "continent": "Asia",
+      "moodysRating": "Aa3",
+      "defaultSpread": 0.51,
+      "countryRiskPremium": 0.78,
+      "totalEquityRiskPremium": 5.01,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "Senegal",
+      "continent": "Africa",
+      "moodysRating": "Caa1",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Serbia",
+      "continent": "Europe",
+      "moodysRating": "Ba2",
+      "defaultSpread": 2.56,
+      "countryRiskPremium": 3.9,
+      "totalEquityRiskPremium": 8.13,
+      "corporateTaxRate": 15
+    },
+    {
+      "country": "Sharjah",
+      "continent": "Asia",
+      "moodysRating": "Ba1",
+      "defaultSpread": 2.13,
+      "countryRiskPremium": 3.24,
+      "totalEquityRiskPremium": 7.47,
+      "corporateTaxRate": 18.94
+    },
+    {
+      "country": "Sierra Leone",
+      "continent": "Africa",
+      "moodysRating": "NR",
+      "defaultSpread": 5.52,
+      "countryRiskPremium": 8.41,
+      "totalEquityRiskPremium": 12.64,
+      "corporateTaxRate": 12.65
+    },
+    {
+      "country": "Singapore",
+      "continent": "Asia",
+      "moodysRating": "Aaa",
+      "defaultSpread": 0,
+      "countryRiskPremium": 0,
+      "totalEquityRiskPremium": 4.23,
+      "corporateTaxRate": 17
+    },
+    {
+      "country": "Slovakia",
+      "continent": "Europe",
+      "moodysRating": "A3",
+      "defaultSpread": 1.02,
+      "countryRiskPremium": 1.55,
+      "totalEquityRiskPremium": 5.78,
+      "corporateTaxRate": 21
+    },
+    {
+      "country": "Slovenia",
+      "continent": "Europe",
+      "moodysRating": "A3",
+      "defaultSpread": 1.02,
+      "countryRiskPremium": 1.55,
+      "totalEquityRiskPremium": 5.78,
+      "corporateTaxRate": 22
+    },
+    {
+      "country": "Solomon Islands",
+      "continent": "Oceania",
+      "moodysRating": "Caa1",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Somalia",
+      "continent": "Africa",
+      "moodysRating": "NR",
+      "defaultSpread": 8.5,
+      "countryRiskPremium": 12.95,
+      "totalEquityRiskPremium": 17.18,
+      "corporateTaxRate": 17.19
+    },
+    {
+      "country": "South Africa",
+      "continent": "Africa",
+      "moodysRating": "Ba2",
+      "defaultSpread": 2.56,
+      "countryRiskPremium": 3.9,
+      "totalEquityRiskPremium": 8.13,
+      "corporateTaxRate": 27
+    },
+    {
+      "country": "Spain",
+      "continent": "Europe",
+      "moodysRating": "A3",
+      "defaultSpread": 1.02,
+      "countryRiskPremium": 1.55,
+      "totalEquityRiskPremium": 5.78,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Sri Lanka",
+      "continent": "Asia",
+      "moodysRating": "Ca",
+      "defaultSpread": 10.2,
+      "countryRiskPremium": 15.54,
+      "totalEquityRiskPremium": 19.77,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "St. Maarten",
+      "continent": "North America",
+      "moodysRating": "Ba2",
+      "defaultSpread": 2.56,
+      "countryRiskPremium": 3.9,
+      "totalEquityRiskPremium": 8.13,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "St. Vincent & the Grenadines",
+      "continent": "North America",
+      "moodysRating": "B3",
+      "defaultSpread": 5.52,
+      "countryRiskPremium": 8.41,
+      "totalEquityRiskPremium": 12.64,
+      "corporateTaxRate": 28
+    },
+    {
+      "country": "Sudan",
+      "continent": "Africa",
+      "moodysRating": "NR",
+      "defaultSpread": 17.5,
+      "countryRiskPremium": 26.66,
+      "totalEquityRiskPremium": 30.89,
+      "corporateTaxRate": 30.9
+    },
+    {
+      "country": "Suriname",
+      "continent": "South America",
+      "moodysRating": "Caa1",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 36
+    },
+    {
+      "country": "Swaziland",
+      "continent": "Africa",
+      "moodysRating": "B2",
+      "defaultSpread": 4.67,
+      "countryRiskPremium": 7.12,
+      "totalEquityRiskPremium": 11.35,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Sweden",
+      "continent": "Europe",
+      "moodysRating": "Aaa",
+      "defaultSpread": 0,
+      "countryRiskPremium": 0,
+      "totalEquityRiskPremium": 4.23,
+      "corporateTaxRate": 20.6
+    },
+    {
+      "country": "Switzerland",
+      "continent": "Europe",
+      "moodysRating": "Aaa",
+      "defaultSpread": 0,
+      "countryRiskPremium": 0,
+      "totalEquityRiskPremium": 4.23,
+      "corporateTaxRate": 19.61
+    },
+    {
+      "country": "Syria",
+      "continent": "Asia",
+      "moodysRating": "NR",
+      "defaultSpread": 10.2,
+      "countryRiskPremium": 15.54,
+      "totalEquityRiskPremium": 19.77,
+      "corporateTaxRate": 19.78
+    },
+    {
+      "country": "Taiwan",
+      "continent": "Asia",
+      "moodysRating": "Aa3",
+      "defaultSpread": 0.51,
+      "countryRiskPremium": 0.78,
+      "totalEquityRiskPremium": 5.01,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "Tajikistan",
+      "continent": "Asia",
+      "moodysRating": "B3",
+      "defaultSpread": 5.52,
+      "countryRiskPremium": 8.41,
+      "totalEquityRiskPremium": 12.64,
+      "corporateTaxRate": 18
+    },
+    {
+      "country": "Tanzania",
+      "continent": "Africa",
+      "moodysRating": "B1",
+      "defaultSpread": 3.83,
+      "countryRiskPremium": 5.83,
+      "totalEquityRiskPremium": 10.06,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Thailand",
+      "continent": "Asia",
+      "moodysRating": "Baa1",
+      "defaultSpread": 1.36,
+      "countryRiskPremium": 2.07,
+      "totalEquityRiskPremium": 6.3,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "Togo",
+      "continent": "Africa",
+      "moodysRating": "B3",
+      "defaultSpread": 5.52,
+      "countryRiskPremium": 8.41,
+      "totalEquityRiskPremium": 12.64,
+      "corporateTaxRate": 27
+    },
+    {
+      "country": "Trinidad and Tobago",
+      "continent": "North America",
+      "moodysRating": "Ba2",
+      "defaultSpread": 2.56,
+      "countryRiskPremium": 3.9,
+      "totalEquityRiskPremium": 8.13,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Tunisia",
+      "continent": "Africa",
+      "moodysRating": "Caa1",
+      "defaultSpread": 6.37,
+      "countryRiskPremium": 9.71,
+      "totalEquityRiskPremium": 13.94,
+      "corporateTaxRate": 15
+    },
+    {
+      "country": "Turkey",
+      "continent": "Asia",
+      "moodysRating": "Ba3",
+      "defaultSpread": 3.06,
+      "countryRiskPremium": 4.66,
+      "totalEquityRiskPremium": 8.89,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Turks and Caicos Islands",
+      "continent": "North America",
+      "moodysRating": "Baa1",
+      "defaultSpread": 1.36,
+      "countryRiskPremium": 2.07,
+      "totalEquityRiskPremium": 6.3,
+      "corporateTaxRate": 0
+    },
+    {
+      "country": "Uganda",
+      "continent": "Africa",
+      "moodysRating": "B3",
+      "defaultSpread": 5.52,
+      "countryRiskPremium": 8.41,
+      "totalEquityRiskPremium": 12.64,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Ukraine",
+      "continent": "Europe",
+      "moodysRating": "Ca",
+      "defaultSpread": 10.2,
+      "countryRiskPremium": 15.54,
+      "totalEquityRiskPremium": 19.77,
+      "corporateTaxRate": 18
+    },
+    {
+      "country": "United Arab Emirates",
+      "continent": "Asia",
+      "moodysRating": "Aa2",
+      "defaultSpread": 0.42,
+      "countryRiskPremium": 0.64,
+      "totalEquityRiskPremium": 4.87,
+      "corporateTaxRate": 9
+    },
+    {
+      "country": "United Kingdom",
+      "continent": "Europe",
+      "moodysRating": "Aa3",
+      "defaultSpread": 0.51,
+      "countryRiskPremium": 0.78,
+      "totalEquityRiskPremium": 5.01,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "United States",
+      "continent": "North America",
+      "moodysRating": "Aa1",
+      "defaultSpread": 0.23,
+      "countryRiskPremium": 0.23,
+      "totalEquityRiskPremium": 4.46,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Uruguay",
+      "continent": "South America",
+      "moodysRating": "Baa1",
+      "defaultSpread": 1.36,
+      "countryRiskPremium": 2.07,
+      "totalEquityRiskPremium": 6.3,
+      "corporateTaxRate": 25
+    },
+    {
+      "country": "Uzbekistan",
+      "continent": "Asia",
+      "moodysRating": "Ba3",
+      "defaultSpread": 3.06,
+      "countryRiskPremium": 4.66,
+      "totalEquityRiskPremium": 8.89,
+      "corporateTaxRate": 15
+    },
+    {
+      "country": "Venezuela",
+      "continent": "South America",
+      "moodysRating": "C",
+      "defaultSpread": 17.5,
+      "countryRiskPremium": 26.66,
+      "totalEquityRiskPremium": 30.89,
+      "corporateTaxRate": 34
+    },
+    {
+      "country": "Vietnam",
+      "continent": "Asia",
+      "moodysRating": "Ba2",
+      "defaultSpread": 2.56,
+      "countryRiskPremium": 3.9,
+      "totalEquityRiskPremium": 8.13,
+      "corporateTaxRate": 20
+    },
+    {
+      "country": "Yemen, Republic",
+      "continent": "Asia",
+      "moodysRating": "NR",
+      "defaultSpread": 10.2,
+      "countryRiskPremium": 15.54,
+      "totalEquityRiskPremium": 19.77,
+      "corporateTaxRate": 19.78
+    },
+    {
+      "country": "Zambia",
+      "continent": "Africa",
+      "moodysRating": "Caa2",
+      "defaultSpread": 7.65,
+      "countryRiskPremium": 11.66,
+      "totalEquityRiskPremium": 15.89,
+      "corporateTaxRate": 30
+    },
+    {
+      "country": "Zimbabwe",
+      "continent": "Africa",
+      "moodysRating": "NR",
+      "defaultSpread": 7.65,
+      "countryRiskPremium": 11.66,
+      "totalEquityRiskPremium": 15.89,
+      "corporateTaxRate": 15.9
+    }
+  ]
+}

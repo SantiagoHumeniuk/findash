@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabase';
 import { logger } from '../../../lib/logger';
 import { errorToString } from '../../../utils/type-guards';
 import { RiskPremiumData, CachedRiskPremiumData } from '../types/risk-premium.types';
+import { DAMODARAN_COUNTRIES } from '../../../data/damodaran-country-risk';
 
 /**
  * Cache key for risk premium data in Supabase
@@ -103,11 +104,18 @@ export async function saveCacheData(data: RiskPremiumData[]): Promise<void> {
 }
 
 /**
- * Main function to fetch risk premium data with caching
- * Returns cached data as fallback if API fails
+ * Returns Damodaran's country risk table bundled with the app (the dataset FMP
+ * used to resell). It updates twice a year, so it needs no network call.
  */
 export function fetchRiskPremiumData(): Promise<RiskPremiumData[]> {
-  return Promise.reject(new Error(
-    'Yahoo Finance no publica primas de riesgo país. Esta vista no está disponible en el experimento Yahoo-only.',
+  return Promise.resolve(DAMODARAN_COUNTRIES.flatMap((entry) =>
+    entry.totalEquityRiskPremium === null
+      ? []
+      : [{
+        country: entry.country,
+        continent: entry.continent,
+        countryRiskPremium: entry.countryRiskPremium,
+        totalEquityRiskPremium: entry.totalEquityRiskPremium,
+      }]
   ));
 }

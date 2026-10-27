@@ -6,7 +6,6 @@ import type {
     AssetData,
     AssetKeyMetrics,
     AssetQuote,
-    AssetRating,
 } from '../../types/dashboard';
 import type { Config } from '../../types/config';
 import type { Profile } from '../../types/auth';
@@ -21,8 +20,22 @@ import {
     mapYahooPercentChange,
     mapYahooPeriodChange,
 } from './yahoo-finance-mappers';
+import {
+    buildAnalystEstimates,
+    buildFinDashDcf,
+    buildFinDashRating,
+    buildGradesConsensus,
+    buildGradeUpdates,
+    buildPeerValuations,
+    buildPriceTarget,
+    buildPriceTargetConsensus,
+    buildStockPriceChange,
+    buildYahooFinancials,
+} from './yahoo-fundamentals';
 
 const YAHOO_MARKET_INDEX_SYMBOLS = new Set(['SPY', 'QQQ', 'DIA', 'IWM']);
+/** Bump when createYahooAssetData adds fields so cached assets are rebuilt. */
+export const YAHOO_DATA_VERSION = 2;
 
 function getYahooMarketIndexName(symbol: string, fallback: string | null): string {
     const knownNames: Record<string, string> = {
@@ -82,6 +95,7 @@ export function createYahooAssetData(
     symbol: string,
     yahoo: YahooFinanceQuote,
     fetchedAt: string,
+    riskFreeRate: number | null = null,
 ): AssetData {
     const price = yahooValue(yahoo.price);
     const trailingPE = yahooValue(yahoo.trailingPE);
@@ -132,83 +146,86 @@ export function createYahooAssetData(
         industry: yahoo.companyProfile.industry ?? '',
         website: yahoo.companyProfile.website ?? '',
         description: yahoo.companyProfile.description ?? 'Datos limitados disponibles para este activo.',
-        ceo: '',
+        ceo: yahoo.companyProfile.ceo ?? '',
         sector: yahoo.companyProfile.sector ?? '',
         country: yahoo.companyProfile.country ?? '',
         fullTimeEmployees: yahoo.companyProfile.employees !== null
             ? String(yahoo.companyProfile.employees)
             : '',
-        phone: '',
-        address: '',
-        city: '',
-        state: '',
-        zip: '',
+        phone: yahoo.companyProfile.phone ?? '',
+        address: yahoo.companyProfile.address ?? '',
+        city: yahoo.companyProfile.city ?? '',
+        state: yahoo.companyProfile.state ?? '',
+        zip: yahoo.companyProfile.zip ?? '',
         image: '',
         ipoDate: '',
         defaultImage: true,
-        isEtf: YAHOO_MARKET_INDEX_SYMBOLS.has(symbol),
+        isEtf: yahoo.quoteType === 'ETF' || YAHOO_MARKET_INDEX_SYMBOLS.has(symbol),
         isActivelyTrading: true,
         isAdr: false,
-        isFund: false,
+        isFund: yahoo.quoteType === 'MUTUALFUND',
     };
 
+    const financials = buildYahooFinancials(symbol, yahoo, yahooQuote.marketCap > 0 ? yahooQuote.marketCap : null);
     const keyMetrics: AssetKeyMetrics = {
         symbol,
         marketCap: yahooQuote.marketCap,
-        enterpriseValueTTM: 0,
-        evToSalesTTM: 0,
-        evToOperatingCashFlowTTM: 0,
-        evToFreeCashFlowTTM: 0,
-        evToEBITDATTM: 0,
-        netDebtToEBITDATTM: 0,
-        currentRatioTTM: 0,
-        incomeQualityTTM: 0,
-        grahamNumberTTM: 0,
-        grahamNetNetTTM: 0,
-        taxBurdenTTM: 0,
-        interestBurdenTTM: 0,
-        workingCapitalTTM: 0,
-        investedCapitalTTM: 0,
-        returnOnAssetsTTM: 0,
-        operatingReturnOnAssetsTTM: 0,
-        returnOnTangibleAssetsTTM: 0,
-        returnOnEquityTTM: 0,
-        returnOnInvestedCapitalTTM: 0,
-        returnOnCapitalEmployedTTM: 0,
-        earningsYieldTTM: trailingPE > 0 ? 1 / trailingPE : 0,
-        freeCashFlowYieldTTM: 0,
-        capexToOperatingCashFlowTTM: 0,
-        capexToDepreciationTTM: 0,
-        capexToRevenueTTM: 0,
-        salesGeneralAndAdministrativeToRevenueTTM: 0,
-        researchAndDevelopementToRevenueTTM: 0,
-        stockBasedCompensationToRevenueTTM: 0,
-        intangiblesToTotalAssetsTTM: 0,
-        averageReceivablesTTM: 0,
-        averagePayablesTTM: 0,
-        averageInventoryTTM: 0,
-        daysOfSalesOutstandingTTM: 0,
-        daysOfPayablesOutstandingTTM: 0,
-        daysOfInventoryOutstandingTTM: 0,
-        operatingCycleTTM: 0,
-        cashConversionCycleTTM: 0,
-        freeCashFlowToEquityTTM: 0,
-        freeCashFlowToFirmTTM: 0,
-        tangibleAssetValueTTM: 0,
-        netCurrentAssetValueTTM: 0,
+        enterpriseValueTTM: null,
+        evToSalesTTM: null,
+        evToOperatingCashFlowTTM: null,
+        evToFreeCashFlowTTM: null,
+        evToEBITDATTM: null,
+        netDebtToEBITDATTM: null,
+        currentRatioTTM: null,
+        incomeQualityTTM: null,
+        grahamNumberTTM: null,
+        grahamNetNetTTM: null,
+        taxBurdenTTM: null,
+        interestBurdenTTM: null,
+        workingCapitalTTM: null,
+        investedCapitalTTM: null,
+        returnOnAssetsTTM: null,
+        operatingReturnOnAssetsTTM: null,
+        returnOnTangibleAssetsTTM: null,
+        returnOnEquityTTM: null,
+        returnOnInvestedCapitalTTM: null,
+        returnOnCapitalEmployedTTM: null,
+        earningsYieldTTM: null,
+        freeCashFlowYieldTTM: null,
+        capexToOperatingCashFlowTTM: null,
+        capexToDepreciationTTM: null,
+        capexToRevenueTTM: null,
+        salesGeneralAndAdministrativeToRevenueTTM: null,
+        researchAndDevelopementToRevenueTTM: null,
+        stockBasedCompensationToRevenueTTM: null,
+        intangiblesToTotalAssetsTTM: null,
+        averageReceivablesTTM: null,
+        averagePayablesTTM: null,
+        averageInventoryTTM: null,
+        daysOfSalesOutstandingTTM: null,
+        daysOfPayablesOutstandingTTM: null,
+        daysOfInventoryOutstandingTTM: null,
+        operatingCycleTTM: null,
+        cashConversionCycleTTM: null,
+        freeCashFlowToEquityTTM: null,
+        freeCashFlowToFirmTTM: null,
+        tangibleAssetValueTTM: null,
+        netCurrentAssetValueTTM: null,
+        ...financials.keyMetricsTTM,
     };
+    keyMetrics.earningsYieldTTM ??= trailingPE > 0 ? 1 / trailingPE : null;
+    keyMetrics.returnOnEquityTTM ??= yahoo.metrics['financialData.returnOnEquity'] ?? null;
+    keyMetrics.returnOnAssetsTTM ??= yahoo.metrics['financialData.returnOnAssets'] ?? null;
 
-    const emptyRating: AssetRating = {
+    const { dcf, dcfLevered } = buildFinDashDcf({
         symbol,
-        rating: '',
-        overallScore: 0,
-        discountedCashFlowScore: 0,
-        returnOnEquityScore: 0,
-        returnOnAssetsScore: 0,
-        debtToEquityScore: 0,
-        priceToEarningsScore: 0,
-        priceToBookScore: 0,
-    };
+        price,
+        beta: yahoo.beta.value,
+        riskFreeRate,
+        financials,
+        quote: yahoo,
+    });
+    const dcfValuePerShare = dcf[0]?.equityValuePerShare ?? (dcfLevered.dcf > 0 ? dcfLevered.dcf : null);
 
     return {
         symbol,
@@ -216,57 +233,30 @@ export function createYahooAssetData(
         keyMetrics,
         quote: yahooQuote,
         historicalReturns: mapYahooHistory(symbol, yahoo.history),
-        priceTarget: {
+        priceTarget: buildPriceTarget(symbol, yahoo.analyst),
+        dcf,
+        rating: buildFinDashRating(symbol, financials.ratios[0], dcfValuePerShare, price),
+        priceTargetConsensus: buildPriceTargetConsensus(symbol, yahoo.metrics),
+        keyMetricsYearly: financials.keyMetricsYearly,
+        dcfLevered,
+        stockPriceChange: buildStockPriceChange(
             symbol,
-            lastMonthCount: 0,
-            lastMonthAvgPriceTarget: 0,
-            lastQuarterCount: 0,
-            lastQuarterAvgPriceTarget: 0,
-            lastYearCount: 0,
-            lastYearAvgPriceTarget: 0,
-            allTimeCount: 0,
-            allTimeAvgPriceTarget: 0,
-            publishers: [],
-        },
-        dcf: [],
-        rating: emptyRating,
-        priceTargetConsensus: {
+            yahoo.history,
+            price,
+            dailyChange?.changePercent ?? yahoo.changePercent.value,
+        ),
+        ratios: financials.ratios,
+        analystEstimates: buildAnalystEstimates(symbol, yahoo.analyst),
+        gradesConsensus: buildGradesConsensus(
             symbol,
-            targetHigh: 0,
-            targetLow: 0,
-            targetConsensus: 0,
-            targetMedian: 0,
-        },
-        keyMetricsYearly: [],
-        dcfLevered: { symbol, date: '', dcf: 0, 'Stock Price': price },
-        stockPriceChange: {
-            symbol,
-            '1D': 0,
-            '5D': 0,
-            '1M': mapYahooPeriodChange(yahoo.history, 1) ?? 0,
-            '3M': 0,
-            '6M': 0,
-            ytd: 0,
-            '1Y': mapYahooPeriodChange(yahoo.history, 12) ?? 0,
-            '3Y': 0,
-            '5Y': 0,
-            '10Y': 0,
-            max: 0,
-        },
-        ratios: [],
-        analystEstimates: [],
-        gradesConsensus: {
-            symbol,
-            strongBuy: 0,
-            buy: 0,
-            hold: 0,
-            sell: 0,
-            strongSell: 0,
-            consensus: '',
-        },
-        peerValuations: [],
-        analystGradeUpdates: [],
+            yahoo.analyst,
+            yahoo.metrics['financialData.recommendationMean'] ?? null,
+        ),
+        peerValuations: buildPeerValuations(yahoo.peers),
+        analystGradeUpdates: buildGradeUpdates(symbol, yahoo.analyst),
         dataSource: 'Yahoo Finance',
+        yahooDataVersion: YAHOO_DATA_VERSION,
+        fundamentalsSource: yahoo.fundamentals.source,
         dataFetchedAt: fetchedAt,
         yahooMetrics: yahoo.metrics,
         yahooAttemptedAt: fetchedAt,
@@ -316,6 +306,7 @@ function hasUsableYahooData(quote: YahooFinanceQuote): boolean {
 function shouldRefreshYahooData(asset: AssetData, now: number): boolean {
     const attemptedAt = asset.yahooAttemptedAt ? Date.parse(asset.yahooAttemptedAt) : Number.NaN;
     const needsYahooData = asset.dataSource !== 'Yahoo Finance' ||
+        (asset.yahooDataVersion ?? 1) < YAHOO_DATA_VERSION ||
         !asset.yahooMetrics ||
         Object.keys(asset.yahooMetrics).length === 0 ||
         (asset.yahooError !== null && asset.yahooError !== undefined);
@@ -386,6 +377,7 @@ export async function fetchTickerData({
                         ticker.trim().toUpperCase(),
                         yahooQuote,
                         response.fetchedAt,
+                        response.riskFreeRate,
                     );
                     if (user?.id) await incrementApiCallCounter(user.id);
                     const { error: cacheError } = await supabase.from('asset_data_cache').upsert({
@@ -499,7 +491,7 @@ export async function fetchTickerData({
                 throw new Error(quote.error ?? `Yahoo Finance no devolvió una cotización válida para ${normalizedTicker}.`);
             }
 
-            const indexData = createYahooAssetData(normalizedTicker, quote, response.fetchedAt);
+            const indexData = createYahooAssetData(normalizedTicker, quote, response.fetchedAt, response.riskFreeRate);
             if (user?.id) await incrementApiCallCounter(user.id);
             const { error: cacheError } = await supabase.from('asset_data_cache').upsert({
                 symbol: normalizedTicker,
@@ -533,7 +525,7 @@ export async function fetchTickerData({
             throw new Error(quote?.error ?? `Yahoo Finance no devolvió una cotización válida para ${normalizedTicker}.`);
         }
 
-        const yahooAsset = createYahooAssetData(normalizedTicker, quote, response.fetchedAt);
+        const yahooAsset = createYahooAssetData(normalizedTicker, quote, response.fetchedAt, response.riskFreeRate);
         if (user?.id) await incrementApiCallCounter(user.id);
         const { error: cacheError } = await supabase.from('asset_data_cache').upsert({
             symbol: normalizedTicker,

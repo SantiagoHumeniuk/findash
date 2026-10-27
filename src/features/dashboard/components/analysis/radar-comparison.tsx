@@ -84,12 +84,15 @@ const normalizeForRadar = (value: number | null, key: string): number => {
 
 // --- Componente Principal ---
 export const RadarComparison = React.memo(function RadarComparison({ assets }: RadarComparisonProps) {
+    // An asset needs at least three resolvable axes to draw a meaningful shape.
+    const hasRadarCoverage = (asset: AssetData) =>
+        radarKeys.filter((key) => resolveValue(asset, key) !== null).length >= 3;
     const fallbackAssets = React.useMemo(
-        () => assets.filter(asset => asset.dataSource === 'Yahoo Finance'),
+        () => assets.filter(asset => !hasRadarCoverage(asset)),
         [assets]
     );
     const chartAssets = React.useMemo(
-        () => assets.filter(asset => asset.dataSource !== 'Yahoo Finance'),
+        () => assets.filter(hasRadarCoverage),
         [assets]
     );
 

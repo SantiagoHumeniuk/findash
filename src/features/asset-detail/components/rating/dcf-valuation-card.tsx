@@ -259,6 +259,13 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
             ))}
           </div>
         </details>
+        {asset.dataSource === 'Yahoo Finance' && (
+          <p className="mt-3 text-[10px] italic text-muted-foreground">
+            Modelos calculados por FinDash con datos de {asset.fundamentalsSource ?? 'Yahoo Finance'}
+            {asset.dcf.length > 0 ? `; DCF a ${asset.dcf.length} años con WACC ${asset.dcf[0].wacc.toFixed(1)}%` : ''}.
+            Es una estimación, no una recomendación.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

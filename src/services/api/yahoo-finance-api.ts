@@ -46,6 +46,12 @@ export interface YahooFinanceQuote {
     website: string | null;
     description: string | null;
     employees: number | null;
+    address?: string | null;
+    city?: string | null;
+    state?: string | null;
+    zip?: string | null;
+    phone?: string | null;
+    ceo?: string | null;
   };
   history: {
     date: string;
@@ -55,7 +61,87 @@ export interface YahooFinanceQuote {
     close: number;
     volume: number;
   }[];
+  quoteType: string | null;
+  dividendHistory: { date: string; amount: number }[];
+  fundamentals: YahooFundamentals;
+  analyst: YahooAnalystData;
+  peers: YahooPeerQuote[];
   error: string | null;
+}
+
+/** One fiscal period of financial statement values keyed by Yahoo field name (e.g. TotalRevenue). */
+export interface YahooStatementPeriod {
+  date: string;
+  currency: string | null;
+  values: Record<string, number>;
+}
+
+export interface YahooFundamentals {
+  source: 'Yahoo Finance' | 'SEC EDGAR' | null;
+  /** Annual statements, newest first, in a single reporting currency. */
+  annual: YahooStatementPeriod[];
+  /** Trailing twelve months for income statement and cash flow fields. */
+  trailing: Record<string, number>;
+  latestQuarterBalance: YahooStatementPeriod | null;
+}
+
+export interface YahooAnalystEstimate {
+  period: string;
+  endDate: string | null;
+  epsAvg: number | null;
+  epsLow: number | null;
+  epsHigh: number | null;
+  epsAnalysts: number | null;
+  revenueAvg: number | null;
+  revenueLow: number | null;
+  revenueHigh: number | null;
+  revenueAnalysts: number | null;
+}
+
+export interface YahooAnalystData {
+  recommendationTrend: {
+    period: string;
+    strongBuy: number;
+    buy: number;
+    hold: number;
+    sell: number;
+    strongSell: number;
+  }[];
+  gradeUpdates: {
+    date: string;
+    firm: string;
+    toGrade: string;
+    fromGrade: string;
+    action: string;
+    priceTargetAction: string | null;
+    currentPriceTarget: number | null;
+    priorPriceTarget: number | null;
+  }[];
+  earningsHistory: {
+    quarter: string;
+    epsActual: number | null;
+    epsEstimate: number | null;
+    surprisePercent: number | null;
+  }[];
+  estimates: YahooAnalystEstimate[];
+}
+
+export interface YahooPeerQuote {
+  symbol: string;
+  name: string | null;
+  price: number | null;
+  marketCap: number | null;
+  enterpriseValue: number | null;
+  trailingPE: number | null;
+  priceToBook: number | null;
+  priceToSales: number | null;
+  evToRevenue: number | null;
+  evToEbitda: number | null;
+  freeCashflow: number | null;
+  ebitda: number | null;
+  operatingMargins: number | null;
+  returnOnEquity: number | null;
+  debtToEquity: number | null;
 }
 
 /**
@@ -64,6 +150,8 @@ export interface YahooFinanceQuote {
 export interface YahooFinanceResponse {
   fetchedAt: string;
   quotes: YahooFinanceQuote[];
+  /** US 10-year Treasury yield as a fraction; only sent with full quotes. */
+  riskFreeRate?: number | null;
 }
 
 export interface YahooFinanceSearchResult {
@@ -99,6 +187,47 @@ export interface YahooFinanceDividendEvent {
   dividendDate: string;
   lastDividendValue: number | null;
   dividendYield: number | null;
+  frequency: string;
+}
+
+export interface YahooSectorSummary {
+  key: string;
+  name: string;
+  symbol: string | null;
+  companiesCount: number | null;
+  marketCap: number | null;
+  marketWeight: number | null;
+  dayChangePercent: number | null;
+  ytdReturn: number | null;
+  oneYearReturn: number | null;
+  threeYearReturn: number | null;
+  fiveYearReturn: number | null;
+  industries: {
+    key: string;
+    name: string;
+    symbol: string;
+    marketWeight: number | null;
+    dayChangePercent: number | null;
+    ytdReturn: number | null;
+  }[];
+}
+
+export interface YahooHistoryResponse {
+  symbol: string;
+  name: string | null;
+  currency: string | null;
+  history: YahooFinanceQuote['history'];
+  cachedAt: string | null;
+}
+
+export interface SecFiling {
+  symbol: string;
+  companyName: string;
+  form: string;
+  filingDate: string;
+  items: string;
+  description: string;
+  url: string;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -216,8 +345,155 @@ function parseYahooDividendEvents(value: unknown): YahooFinanceDividendEvent[] {
       dividendDate: dividendDate ?? '',
       lastDividendValue: getFiniteNumber(record.lastDividendValue),
       dividendYield: getFiniteNumber(record.dividendYield),
+      frequency: getString(record.frequency) ?? '',
     }];
   });
+}
+
+function getNumberRecord(value: unknown): Record<string, number> {
+  const record = asRecord(value);
+  if (!record) return {};
+  return Object.fromEntries(
+    Object.entries(record).filter((entry): entry is [string, number] => getFiniteNumber(entry[1]) !== null),
+  );
+}
+
+function parseStatementPeriod(value: unknown): YahooStatementPeriod | null {
+  const record = asRecord(value);
+  const date = getString(record?.date);
+  if (!record || !date || !Number.isFinite(Date.parse(date))) return null;
+  return { date, currency: getString(record.currency), values: getNumberRecord(record.values) };
+}
+
+const EMPTY_FUNDAMENTALS: YahooFundamentals = { source: null, annual: [], trailing: {}, latestQuarterBalance: null };
+
+function parseFundamentals(value: unknown): YahooFundamentals {
+  const record = asRecord(value);
+  if (!record) return EMPTY_FUNDAMENTALS;
+  const source = record.source === 'Yahoo Finance' || record.source === 'SEC EDGAR' ? record.source : null;
+  const annual = Array.isArray(record.annual)
+    ? record.annual.flatMap((period) => {
+      const parsed = parseStatementPeriod(period);
+      return parsed ? [parsed] : [];
+    }).sort((left, right) => right.date.localeCompare(left.date))
+    : [];
+  return {
+    source,
+    annual,
+    trailing: getNumberRecord(record.trailing),
+    latestQuarterBalance: parseStatementPeriod(record.latestQuarterBalance),
+  };
+}
+
+function parseRecords<T>(value: unknown, parse: (record: Record<string, unknown>) => T | null): T[] {
+  return Array.isArray(value)
+    ? value.flatMap((item) => {
+      const record = asRecord(item);
+      const parsed = record ? parse(record) : null;
+      return parsed ? [parsed] : [];
+    })
+    : [];
+}
+
+function parseAnalystData(value: unknown): YahooAnalystData {
+  const record = asRecord(value);
+  return {
+    recommendationTrend: parseRecords(record?.recommendationTrend, (item) => {
+      const period = getString(item.period);
+      return period
+        ? {
+          period,
+          strongBuy: getFiniteNumber(item.strongBuy) ?? 0,
+          buy: getFiniteNumber(item.buy) ?? 0,
+          hold: getFiniteNumber(item.hold) ?? 0,
+          sell: getFiniteNumber(item.sell) ?? 0,
+          strongSell: getFiniteNumber(item.strongSell) ?? 0,
+        }
+        : null;
+    }),
+    gradeUpdates: parseRecords(record?.gradeUpdates, (item) => {
+      const date = getString(item.date);
+      const firm = getString(item.firm);
+      return date && firm
+        ? {
+          date,
+          firm,
+          toGrade: getString(item.toGrade) ?? '',
+          fromGrade: getString(item.fromGrade) ?? '',
+          action: getString(item.action) ?? '',
+          priceTargetAction: getString(item.priceTargetAction),
+          currentPriceTarget: getFiniteNumber(item.currentPriceTarget),
+          priorPriceTarget: getFiniteNumber(item.priorPriceTarget),
+        }
+        : null;
+    }),
+    earningsHistory: parseRecords(record?.earningsHistory, (item) => {
+      const quarter = getString(item.quarter);
+      return quarter
+        ? {
+          quarter,
+          epsActual: getFiniteNumber(item.epsActual),
+          epsEstimate: getFiniteNumber(item.epsEstimate),
+          surprisePercent: getFiniteNumber(item.surprisePercent),
+        }
+        : null;
+    }),
+    estimates: parseRecords(record?.estimates, (item) => {
+      const period = getString(item.period);
+      return period
+        ? {
+          period,
+          endDate: getString(item.endDate),
+          epsAvg: getFiniteNumber(item.epsAvg),
+          epsLow: getFiniteNumber(item.epsLow),
+          epsHigh: getFiniteNumber(item.epsHigh),
+          epsAnalysts: getFiniteNumber(item.epsAnalysts),
+          revenueAvg: getFiniteNumber(item.revenueAvg),
+          revenueLow: getFiniteNumber(item.revenueLow),
+          revenueHigh: getFiniteNumber(item.revenueHigh),
+          revenueAnalysts: getFiniteNumber(item.revenueAnalysts),
+        }
+        : null;
+    }),
+  };
+}
+
+const PEER_NUMBER_FIELDS = [
+  'price', 'marketCap', 'enterpriseValue', 'trailingPE', 'priceToBook', 'priceToSales', 'evToRevenue',
+  'evToEbitda', 'freeCashflow', 'ebitda', 'operatingMargins', 'returnOnEquity', 'debtToEquity',
+] as const;
+
+function parsePeers(value: unknown): YahooPeerQuote[] {
+  return parseRecords(value, (item) => {
+    const symbol = getString(item.symbol);
+    if (!symbol) return null;
+    const numbers = Object.fromEntries(
+      PEER_NUMBER_FIELDS.map((field) => [field, getFiniteNumber(item[field])]),
+    ) as Record<(typeof PEER_NUMBER_FIELDS)[number], number | null>;
+    return { symbol, name: getString(item.name), ...numbers };
+  });
+}
+
+type YahooFinanceQuoteCore = Omit<YahooFinanceQuote, 'quoteType' | 'dividendHistory' | 'fundamentals' | 'analyst' | 'peers'>;
+
+/**
+ * Adds the statement, analyst and peer blocks. They are parsed leniently so the
+ * client keeps working against an older deployed proxy that does not send them.
+ */
+function withQuoteExtras(quote: YahooFinanceQuoteCore): YahooFinanceQuote {
+  const record = asRecord(quote);
+  return {
+    ...quote,
+    quoteType: getString(record?.quoteType),
+    dividendHistory: parseRecords(record?.dividendHistory, (item) => {
+      const date = getString(item.date);
+      const amount = getFiniteNumber(item.amount);
+      return date && amount !== null ? { date, amount } : null;
+    }),
+    fundamentals: parseFundamentals(record?.fundamentals),
+    analyst: parseAnalystData(record?.analyst),
+    peers: parsePeers(record?.peers),
+  };
 }
 
 function isMetric(value: unknown): value is YahooFinanceMetric {
@@ -230,7 +506,7 @@ function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === 'string';
 }
 
-function isYahooHistory(value: unknown): value is YahooFinanceQuote['history'] {
+function isYahooHistory(value: unknown): value is YahooFinanceQuoteCore['history'] {
   return Array.isArray(value) && value.every((item) => {
     if (typeof item !== 'object' || item === null) return false;
     return 'date' in item && typeof item.date === 'string' &&
@@ -241,7 +517,7 @@ function isYahooHistory(value: unknown): value is YahooFinanceQuote['history'] {
   });
 }
 
-function isYahooFinanceQuote(value: unknown): value is YahooFinanceQuote {
+function isYahooFinanceQuote(value: unknown): value is YahooFinanceQuoteCore {
   if (typeof value !== 'object' || value === null) return false;
   const companyProfile = 'companyProfile' in value && typeof value.companyProfile === 'object' && value.companyProfile !== null
     ? value.companyProfile
@@ -326,7 +602,9 @@ function isYahooFinanceQuote(value: unknown): value is YahooFinanceQuote {
   );
 }
 
-function isYahooFinanceResponse(value: unknown): value is YahooFinanceResponse {
+function isYahooFinanceResponse(
+  value: unknown,
+): value is { fetchedAt: string; quotes: YahooFinanceQuoteCore[] } {
   if (typeof value !== 'object' || value === null) return false;
   return (
     'fetchedAt' in value &&
@@ -367,7 +645,11 @@ async function fetchYahooQuotes(
   if (!isYahooFinanceResponse(data)) {
     throw new Error('La respuesta de cotizaciones está incompleta.');
   }
-  return data;
+  return {
+    fetchedAt: data.fetchedAt,
+    quotes: data.quotes.map(withQuoteExtras),
+    riskFreeRate: getFiniteNumber(asRecord(data)?.riskFreeRate),
+  };
 }
 
 /**
@@ -389,19 +671,20 @@ export async function fetchYahooFinanceQuotes(
 /**
  * Requests only current market snapshots, avoiding history and fundamentals calls.
  *
- * @param symbols - Symbols for the known-index ticker bar (maximum 15)
+ * @param symbols - Symbols for the ticker bar (maximum 20)
  * @returns Validated quote snapshots and their fetch time
  * @throws Error when the Supabase function fails or returns an invalid response
  */
 export async function fetchYahooMarketQuotes(
   symbols: string[],
 ): Promise<YahooFinanceResponse> {
-  if (symbols.length === 0 || symbols.length > 15) {
-    throw new Error('La consulta de cotizaciones de mercado admite entre 1 y 15 símbolos.');
+  if (symbols.length === 0 || symbols.length > 20) {
+    throw new Error('La consulta de cotizaciones de mercado admite entre 1 y 20 símbolos.');
   }
+  // Batches of 10 stay within the limit of the previously deployed proxy (15 symbols).
   const batches: string[][] = [];
-  for (let index = 0; index < symbols.length; index += 8) {
-    batches.push(symbols.slice(index, index + 8));
+  for (let index = 0; index < symbols.length; index += 10) {
+    batches.push(symbols.slice(index, index + 10));
   }
   const responses = await Promise.all(batches.map((batch) => fetchYahooQuotes(batch, true)));
   return {
@@ -483,4 +766,99 @@ export async function fetchYahooDividendCalendar(
     action: 'dividends',
     symbols: normalizedSymbols,
   }));
+}
+
+/**
+ * Fetches Yahoo's sector taxonomy with each sector's and industry's own index symbol.
+ */
+export async function fetchYahooSectors(): Promise<YahooSectorSummary[]> {
+  const records = asRecord(await invokeYahooAction({ action: 'sectors' }));
+  if (!Array.isArray(records?.sectors)) {
+    throw new Error('Yahoo Finance devolvió una respuesta de sectores inválida.');
+  }
+  return parseRecords(records.sectors, (sector) => {
+    const key = getString(sector.key);
+    if (!key) return null;
+    return {
+      key,
+      name: getString(sector.name) ?? key,
+      symbol: getString(sector.symbol),
+      companiesCount: getFiniteNumber(sector.companiesCount),
+      marketCap: getFiniteNumber(sector.marketCap),
+      marketWeight: getFiniteNumber(sector.marketWeight),
+      dayChangePercent: getFiniteNumber(sector.dayChangePercent),
+      ytdReturn: getFiniteNumber(sector.ytdReturn),
+      oneYearReturn: getFiniteNumber(sector.oneYearReturn),
+      threeYearReturn: getFiniteNumber(sector.threeYearReturn),
+      fiveYearReturn: getFiniteNumber(sector.fiveYearReturn),
+      industries: parseRecords(sector.industries, (industry) => {
+        const industryKey = getString(industry.key);
+        const symbol = getString(industry.symbol);
+        return industryKey && symbol
+          ? {
+            key: industryKey,
+            name: getString(industry.name) ?? industryKey,
+            symbol,
+            marketWeight: getFiniteNumber(industry.marketWeight),
+            dayChangePercent: getFiniteNumber(industry.dayChangePercent),
+            ytdReturn: getFiniteNumber(industry.ytdReturn),
+          }
+          : null;
+      }),
+    };
+  });
+}
+
+/**
+ * Fetches OHLC history for any Yahoo symbol, including sector and industry indexes (^YH...).
+ */
+export async function fetchYahooHistory(
+  symbol: string,
+  range: '1mo' | '3mo' | '6mo' | 'ytd' | '1y' | '2y' | '5y' | '10y' | 'max' = '1y',
+  interval: '1d' | '1wk' | '1mo' = '1d',
+): Promise<YahooHistoryResponse> {
+  const normalizedSymbol = symbol.trim().toUpperCase();
+  if (!/^[A-Z0-9.^=-]{1,15}$/.test(normalizedSymbol)) {
+    throw new Error('El símbolo solicitado no es válido.');
+  }
+  const record = asRecord(await invokeYahooAction({ action: 'history', symbol: normalizedSymbol, range, interval }));
+  if (!record || !isYahooHistory(record.history)) {
+    throw new Error('Yahoo Finance devolvió un historial inválido.');
+  }
+  return {
+    symbol: getString(record.symbol) ?? normalizedSymbol,
+    name: getString(record.name),
+    currency: getString(record.currency),
+    history: record.history,
+    cachedAt: getString(record.cachedAt),
+  };
+}
+
+/**
+ * Fetches recent SEC filings (8-K, 10-K, 10-Q) for a US-listed issuer.
+ */
+export async function fetchSecFilings(symbol: string, count = 20): Promise<SecFiling[]> {
+  const records = asRecord(await invokeYahooAction({
+    action: 'filings',
+    symbol: symbol.trim().toUpperCase(),
+    count: Math.floor(count),
+  }));
+  if (!Array.isArray(records?.filings)) {
+    throw new Error('La SEC devolvió una respuesta de presentaciones inválida.');
+  }
+  return parseRecords(records.filings, (filing) => {
+    const form = getString(filing.form);
+    const url = getString(filing.url);
+    const filingDate = getString(filing.filingDate);
+    if (!form || !url || !filingDate) return null;
+    return {
+      symbol: getString(filing.symbol) ?? symbol,
+      companyName: getString(filing.companyName) ?? symbol,
+      form,
+      filingDate,
+      items: getString(filing.items) ?? '',
+      description: getString(filing.description) ?? form,
+      url,
+    };
+  });
 }

@@ -27,16 +27,6 @@ export function AssetGradesTab({ asset, onRefreshAssetData, isRefreshing }: Asse
     }
   };
 
-  if (asset.dataSource === 'Yahoo Finance') {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="py-12 text-center text-muted-foreground">
-          Yahoo Finance no proporciona calificaciones ni objetivos de analistas para esta vista.
-        </CardContent>
-      </Card>
-    );
-  }
-
   // Validación básica
   if (!gradesConsensus && !priceTargetConsensus && !priceTarget && analystGradeUpdates.length === 0) {
     return (

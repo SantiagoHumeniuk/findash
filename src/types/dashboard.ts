@@ -23,6 +23,10 @@ export interface AssetData {
     peerValuations?: AssetPeerValuation[];
     analystGradeUpdates?: AssetAnalystGradeUpdate[];
     dataSource?: 'Yahoo Finance';
+    /** Shape version of Yahoo-built data; older cached rows are rebuilt. */
+    yahooDataVersion?: number;
+    /** Provider of the financial statements behind ratios, DCF and rating. */
+    fundamentalsSource?: 'Yahoo Finance' | 'SEC EDGAR' | null;
     dataFetchedAt?: string;
     yahooMetrics?: Record<string, number | null>;
     yahooAttemptedAt?: string;

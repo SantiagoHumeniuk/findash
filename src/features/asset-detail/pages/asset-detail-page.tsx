@@ -120,7 +120,7 @@ export default function AssetDetailPage() {
       </motion.div>
 
       {/* Valuation & Rating Cards */}
-      {asset.dataSource !== 'Yahoo Finance' && (
+      {!asset.profile.isEtf && (
         <div className="grid-cards-2">
           <motion.div variants={itemVariants}>
             <DCFValuationCard asset={asset} />

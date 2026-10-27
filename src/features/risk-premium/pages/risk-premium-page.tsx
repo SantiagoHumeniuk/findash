@@ -8,6 +8,7 @@ import { RiskPremiumFilters, RiskPremiumTable, RiskPremiumSkeleton } from '../co
 import { useRiskPremiumQuery } from '../hooks/use-risk-premium-query';
 import { ErrorScreen } from '../../../components/ui/error-screen';
 import { RiskPremiumViewMode } from '../types/risk-premium.types';
+import { DAMODARAN_SOURCE_URL, DAMODARAN_UPDATED_AT } from '../../../data/damodaran-country-risk';
 
 export default function RiskPremiumPage() {
   const [countryFilter, setCountryFilter] = useState('');
@@ -63,6 +64,14 @@ export default function RiskPremiumPage() {
             <p className="text-muted-foreground text-xs sm:text-sm">
               Consulta la prima de riesgo país y la prima total de acciones por
               país.
+            </p>
+            <p className="text-muted-foreground text-[11px] sm:text-xs mt-1">
+              Fuente:{' '}
+              <a href={DAMODARAN_SOURCE_URL} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                Aswath Damodaran (NYU Stern)
+              </a>
+              {DAMODARAN_UPDATED_AT ? `, actualizado el ${new Date(`${DAMODARAN_UPDATED_AT}T00:00:00`).toLocaleDateString('es-AR')}` : ''}.
+              Se publica dos veces por año.
             </p>
           </div>
         </div>
