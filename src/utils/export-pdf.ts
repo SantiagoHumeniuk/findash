@@ -1,7 +1,7 @@
 // src/utils/export-pdf.ts
 
 import type { AssetData } from '../types/dashboard';
-import type { Indicator, IndicatorConfig } from './financial';
+import { getIndicatorStatus, type Indicator, type IndicatorConfig } from './financial';
 // --- TIPOS Y INTERFACES ---
 type Theme = 'light' | 'dark' | 'system';
 
@@ -43,7 +43,8 @@ interface ExtendedJsPDF {
     rect(x: number, y: number, w: number, h: number, style: string): void;
     setFontSize(size: number): void;
     setTextColor(r: number, g: number, b: number): void;
-    text(text: string, x: number, y: number, options?: { align?: string; baseline?: string }): void;
+    text(text: string, x: number, y: number, options?: { align?: string; baseline?: string; angle?: number }): void;
+    addImage(imageData: string, format: string, x: number, y: number, width: number, height: number, alias?: string, compression?: 'NONE' | 'FAST' | 'MEDIUM' | 'SLOW', rotation?: number): void;
     setPage(page: number): void;
     save(fileName: string): void;
 }
@@ -84,8 +85,13 @@ const getThemeStyles = (theme: Theme) => {
     };
 };
 
-const getTrafficLightColor = (config: Indicator, value: number, theme: Theme): [number, number, number] | undefined => {
-    const { green, yellow, lowerIsBetter } = config;
+const getTrafficLightColor = (
+    key: string,
+    config: Indicator,
+    value: number,
+    asset: AssetData | undefined,
+    theme: Theme,
+): [number, number, number] | undefined => {
     const resolvedTheme = resolveTheme(theme);
     const isDark = resolvedTheme === 'dark';
     const colors = {
@@ -93,16 +99,51 @@ const getTrafficLightColor = (config: Indicator, value: number, theme: Theme): [
         yellow: isDark ? [234, 179, 8] as [number, number, number] : [202, 138, 4] as [number, number, number],
         red: isDark ? [239, 68, 68] as [number, number, number] : [220, 38, 38] as [number, number, number],
     };
-    if (lowerIsBetter) {
-        if (value <= green) return colors.green;
-        if (value <= yellow) return colors.yellow;
-        return colors.red;
-    } else {
-        if (value >= green) return colors.green;
-        if (value >= yellow) return colors.yellow;
-        return colors.red;
-    }
+    const status = getIndicatorStatus(key, config, value, asset);
+    return status === 'good' ? colors.green
+        : status === 'normal' ? colors.yellow
+            : status === 'bad' ? colors.red
+                : undefined;
 };
+
+interface WatermarkPdf {
+    internal: { getNumberOfPages(): number };
+    setPage(page: number): void;
+    setFontSize(size: number): void;
+    setTextColor(r: number, g: number, b: number): void;
+    text(text: string, x: number, y: number, options?: { align?: string; angle?: number }): void;
+    addImage(imageData: string, format: string, x: number, y: number, width: number, height: number, alias?: string, compression?: 'NONE' | 'FAST' | 'MEDIUM' | 'SLOW', rotation?: number): void;
+}
+
+async function createWatermarkLogo(): Promise<string> {
+    const response = await fetch('/logo.png');
+    if (!response.ok) throw new Error(`No se pudo cargar el logo para la marca de agua (${response.status}).`);
+    const image = await createImageBitmap(await response.blob());
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext('2d');
+    if (!context) {
+        image.close();
+        throw new Error('No se pudo preparar el logo para la marca de agua.');
+    }
+    context.globalAlpha = 0.14;
+    context.drawImage(image, 0, 0);
+    image.close();
+    return canvas.toDataURL('image/png');
+}
+
+async function addWatermarkToPages(pdf: WatermarkPdf, pageWidth: number, pageHeight: number): Promise<void> {
+    const logo = await createWatermarkLogo();
+    const pageCount = pdf.internal.getNumberOfPages();
+    for (let page = 1; page <= pageCount; page += 1) {
+        pdf.setPage(page);
+        pdf.addImage(logo, 'PNG', pageWidth / 2 - 26, pageHeight / 2 - 17, 34, 25, undefined, 'FAST', -20);
+        pdf.setFontSize(30);
+        pdf.setTextColor(232, 232, 232);
+        pdf.text('Findash', pageWidth / 2 + 16, pageHeight / 2 + 5, { align: 'center', angle: -20 });
+    }
+}
 
 const getCorrelationCellStyle = (value: number) => {
     const v = Math.min(1, Math.max(0, value));
@@ -183,7 +224,13 @@ export const exportToPdf = async ({ title, subtitle, sections, assets, indicator
                         const rawValue = cell.rawValue;
                         const value = typeof rawValue === 'number' ? rawValue : null;
                         if (value !== null) {
-                            const color = getTrafficLightColor(config, value, 'light');
+                            const color = getTrafficLightColor(
+                                metricKey,
+                                config,
+                                value,
+                                assets[colIndex - 1],
+                                'light',
+                            );
                             if (color) {
                                 return { content: cell.content, styles: { textColor: color } };
                             }
@@ -244,6 +291,8 @@ export const exportToPdf = async ({ title, subtitle, sections, assets, indicator
 
         finalY = doc.lastAutoTable?.finalY ?? finalY;
     });
+
+    await addWatermarkToPages(doc, doc.internal.pageSize.width, doc.internal.pageSize.height);
 
     // El footer se dibuja sobre el fondo correcto en todas las páginas
     const pageCount = doc.internal.getNumberOfPages();
@@ -605,6 +654,7 @@ export const exportPortfolioToPdf = async ({
   }
 
   const pageCount = pdf.internal.getNumberOfPages();
+  await addWatermarkToPages(pdf, pageWidth, pdf.internal.pageSize.getHeight());
   for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
     pdf.setPage(pageNumber);
     pdf.setFontSize(8);
