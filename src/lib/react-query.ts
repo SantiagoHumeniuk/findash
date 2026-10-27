@@ -99,6 +99,13 @@ if (typeof window !== 'undefined') {
     if (document.visibilityState === 'hidden') {
       // Cancelar todas las queries pendientes al cambiar de pestaña
       void queryClient.cancelQueries();
+    } else {
+      // Al volver, reanudar las queries activas que se cancelaron antes de recibir datos;
+      // con refetchOnWindowFocus desactivado quedarían vacías hasta remontar el componente.
+      void queryClient.refetchQueries({
+        type: 'active',
+        predicate: (query) => query.state.data === undefined && query.state.fetchStatus === 'idle',
+      });
     }
   });
 }
