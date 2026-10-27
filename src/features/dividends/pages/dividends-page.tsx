@@ -55,8 +55,8 @@ const DividendsPage: React.FC = () => {
   React.useEffect(() => {
     const fetchDividends = async () => {
       setLoading(true);
-      // v2 adds frequency and amount and covers the wider dividend universe.
-      const CACHE_KEY = 'yahoo_dividends_calendar_v2';
+      // v3: ex-dividend date column fixed; v2 added frequency, amount and the wider universe.
+      const CACHE_KEY = 'yahoo_dividends_calendar_v3';
       let cacheRow: AssetDataCacheRow | null = null;
       try {
         const { data: cached } = await supabase.from('asset_data_cache').select('data, last_updated_at').eq('symbol', CACHE_KEY).single();
@@ -74,10 +74,10 @@ const DividendsPage: React.FC = () => {
         }
         const today = new Date().toISOString().slice(0, 10);
         const dividends: Dividend[] = yahooEvents.flatMap((event) => {
-          const date = [event.exDividendDate, event.dividendDate]
-            .filter((candidate): candidate is string => Boolean(candidate) && candidate >= today)
-            .sort()[0];
-          if (!date) return [];
+          // Keep events whose ex-date or payment is still ahead; the date column is always the ex-date.
+          const isUpcoming = [event.exDividendDate, event.dividendDate].some((candidate) => candidate >= today);
+          const date = event.exDividendDate || event.dividendDate;
+          if (!isUpcoming || !date) return [];
           return [{
             symbol: event.symbol,
             date,

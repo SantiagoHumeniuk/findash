@@ -200,7 +200,7 @@ DividendsPage
   │   │   ├─ fetchYahooDividendCalendar() en lotes de 50 (el proxy cachea 12h)
   │   │   │   └─ fecha ex/pago, último dividendo, yield y frecuencia inferida
   │   │   │      de los pagos del último año
-  │   │   └─ Guarda el resultado en `yahoo_dividends_calendar_v2` (24h)
+  │   │   └─ Guarda el resultado en `yahoo_dividends_calendar_v3` (24h)
   │   └─ Filtra con isDividend() type guard
   ├─ useReactTable() → table instance
   │   ├─ sorting, columnFilters, pagination

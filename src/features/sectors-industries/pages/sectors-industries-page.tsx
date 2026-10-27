@@ -224,12 +224,12 @@ export default function SectorsIndustriesPage() {
                       <StatsCard
                         title="Máximo"
                         value={industryStats.max}
-                        subtitle="Mejor día"
+                        subtitle="Mejor semana"
                       />
                       <StatsCard
                         title="Mínimo"
                         value={industryStats.min}
-                        subtitle="Peor día"
+                        subtitle="Peor semana"
                       />
                     </div>
 
@@ -237,7 +237,7 @@ export default function SectorsIndustriesPage() {
                     <PerformanceChart
                       data={industryPerformance}
                       title={`Performance de ${selectedIndustry}`}
-                      description="Cambio promedio diario en el tiempo"
+                      description="Variación semanal del índice de Yahoo Finance"
                     />
 
                     {/* Performance Table */}
@@ -307,12 +307,12 @@ export default function SectorsIndustriesPage() {
                       <StatsCard
                         title="Máximo"
                         value={sectorStats.max}
-                        subtitle="Mejor día"
+                        subtitle="Mejor semana"
                       />
                       <StatsCard
                         title="Mínimo"
                         value={sectorStats.min}
-                        subtitle="Peor día"
+                        subtitle="Peor semana"
                       />
                     </div>
 
@@ -320,7 +320,7 @@ export default function SectorsIndustriesPage() {
                     <PerformanceChart
                       data={sectorPerformance}
                       title={`Performance de ${selectedSector}`}
-                      description="Cambio promedio diario en el tiempo"
+                      description="Variación semanal del índice de Yahoo Finance"
                     />
 
                     {/* Performance Table */}

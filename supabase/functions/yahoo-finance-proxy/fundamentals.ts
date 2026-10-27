@@ -18,6 +18,8 @@ export type Fundamentals = {
   trailing: Record<string, number>;
   /** Most recent quarterly balance sheet, fresher than the last annual one. */
   latestQuarterBalance: StatementPeriod | null;
+  /** Last quarters of income statement and cash flow, newest first. */
+  quarterly: StatementPeriod[];
 };
 
 export const INCOME_FIELDS = [
@@ -40,11 +42,18 @@ export const CASH_FLOW_FIELDS = [
   "RepurchaseOfCapitalStock", "DepreciationAndAmortization",
 ] as const;
 
+/** Quarterly income statement and cash flow lines shown as the quarterly trend. */
+export const QUARTERLY_FLOW_FIELDS = [
+  "TotalRevenue", "GrossProfit", "OperatingIncome", "EBITDA", "NetIncome", "DilutedEPS", "OperatingCashFlow",
+  "CapitalExpenditure", "FreeCashFlow",
+] as const;
+
 export const EMPTY_FUNDAMENTALS: Fundamentals = {
   source: null,
   annual: [],
   trailing: {},
   latestQuarterBalance: null,
+  quarterly: [],
 };
 
 type SeriesPoint = { date: string; currency: string | null; value: number };
@@ -98,7 +107,7 @@ export async function fetchYahooFundamentals(symbol: string): Promise<Fundamenta
   const types = [
     ...[...INCOME_FIELDS, ...BALANCE_FIELDS, ...CASH_FLOW_FIELDS].map((field) => `annual${field}`),
     ...[...INCOME_FIELDS, ...CASH_FLOW_FIELDS].map((field) => `trailing${field}`),
-    ...BALANCE_FIELDS.map((field) => `quarterly${field}`),
+    ...[...BALANCE_FIELDS, ...QUARTERLY_FLOW_FIELDS].map((field) => `quarterly${field}`),
   ];
   const now = Math.floor(Date.now() / 1000);
   const url = new URL(
@@ -118,14 +127,17 @@ export async function fetchYahooFundamentals(symbol: string): Promise<Fundamenta
       trailing[field] = latest.value;
     }
   }
-  const quarterly = groupByDate(series, "quarterly", BALANCE_FIELDS)
-    .filter((period) => !annual[0]?.currency || !period.currency || period.currency === annual[0].currency);
+  const sameCurrency = (period: StatementPeriod) =>
+    !annual[0]?.currency || !period.currency || period.currency === annual[0].currency;
+  const quarterlyBalance = groupByDate(series, "quarterly", BALANCE_FIELDS).filter(sameCurrency);
+  const quarterlyFlows = groupByDate(series, "quarterly", QUARTERLY_FLOW_FIELDS).filter(sameCurrency);
 
   return {
     source: annual.length > 0 || Object.keys(trailing).length > 0 ? "Yahoo Finance" : null,
     annual,
     trailing,
-    latestQuarterBalance: quarterly[0] ?? null,
+    latestQuarterBalance: quarterlyBalance[0] ?? null,
+    quarterly: quarterlyFlows.slice(0, 8),
   };
 }
 
@@ -247,6 +259,7 @@ export async function fetchSecFundamentals(symbol: string): Promise<Fundamentals
     annual,
     trailing: {},
     latestQuarterBalance: null,
+    quarterly: [],
   };
 }
 

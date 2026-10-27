@@ -5,6 +5,8 @@ import { useLocation } from 'react-router-dom';
 import { ArrowDown, ArrowUp, TrendingUp, BookOpen, Lightbulb } from 'lucide-react';
 import { fetchIndexLeaders } from '../../features/market-movers/services/market-movers-service';
 import type { MarketMover } from '../../features/market-movers/types';
+import { AssetLogo } from './asset-logo';
+import { useAssetLogos } from '../../hooks/use-asset-logos';
 
 // Tips educativos para mostrar cuando no hay activos o cargando
 const educationalTips = [
@@ -21,13 +23,14 @@ const educationalTips = [
 ];
 
 // Componente para un solo item del ticker.
-const TickerItem = memo(({ asset }: { asset: MarketMover }) => {
+const TickerItem = memo(({ asset, logo }: { asset: MarketMover; logo: string | null | undefined }) => {
     const isPositive = asset.changesPercentage >= 0;
     const colorClass = isPositive ? "text-green-500" : "text-red-500";
     const Icon = isPositive ? ArrowUp : ArrowDown;
 
     return (
         <div className="flex items-center flex-shrink-0 px-6 body-sm whitespace-nowrap">
+            <AssetLogo symbol={asset.symbol} src={logo} lookup={false} className="mr-2 size-5 text-[0.5rem]" />
             <span className="font-bold text-foreground">{asset.symbol}</span>
             <div className={`flex items-center ml-2 font-medium ${colorClass}`}>
                 <Icon className="w-4 h-4 mr-1" />
@@ -46,6 +49,7 @@ export default function ActivesBar() {
     const [loading, setLoading] = useState(true);
     const [currentTipIndex, setCurrentTipIndex] = useState(0);
     const location = useLocation();
+    const logos = useAssetLogos(activeAssets.map((asset) => asset.symbol));
 
     useEffect(() => {
         let isActive = true;
@@ -120,10 +124,10 @@ export default function ActivesBar() {
             <div className="absolute top-0 left-0 flex items-center h-full animate-scroll-infinite hover:pause-animation">
                 {/* Renderizamos el contenido duplicado para el efecto de bucle infinito */}
                 {items.map((asset, index) => (
-                    <TickerItem key={`${asset.symbol}-${index}`} asset={asset} />
+                    <TickerItem key={`${asset.symbol}-${index}`} asset={asset} logo={logos[asset.symbol]} />
                 ))}
                 {items.map((asset, index) => (
-                    <TickerItem key={`${asset.symbol}-duplicate-${index}`} asset={asset} />
+                    <TickerItem key={`${asset.symbol}-duplicate-${index}`} asset={asset} logo={logos[asset.symbol]} />
                 ))}
             </div>
             {/* Degradado en los bordes para un efecto de desvanecimiento suave */}

@@ -22,6 +22,18 @@ import {
 } from "./fundamentals.ts";
 import { fetchSectors } from "./sectors.ts";
 import { findPreviousSessionClose, inferDividendFrequency } from "./calc.ts";
+import {
+  CALENDAR_FIELDS,
+  type CalendarKind,
+  type Governance,
+  type NextEarnings,
+  type Ownership,
+  parseGovernance,
+  parseNextEarnings,
+  parseOwnership,
+  parseVisualizationRows,
+} from "./insights.ts";
+import { ensureLogo } from "./logos.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,6 +44,8 @@ const corsHeaders = {
 const modules = [
   "price", "summaryDetail", "defaultKeyStatistics", "financialData", "assetProfile", "earningsTrend",
   "calendarEvents", "recommendationTrend", "upgradeDowngradeHistory", "earningsHistory",
+  "majorHoldersBreakdown", "institutionOwnership", "fundOwnership", "insiderTransactions",
+  "netSharePurchaseActivity",
 ].join(",");
 const peerModules = "price,summaryDetail,defaultKeyStatistics,financialData";
 const symbolPattern = /^[A-Z0-9.^=-]{1,15}$/;
@@ -159,6 +173,10 @@ type YahooQuote = {
   fundamentals: Fundamentals;
   analyst: AnalystData;
   peers: PeerQuote[];
+  ownership: Ownership | null;
+  nextEarnings: NextEarnings | null;
+  governance: Governance | null;
+  logoUrl: string | null;
   error: string | null;
 };
 
@@ -236,6 +254,10 @@ function emptyQuote(symbol: string, error: string): YahooQuote {
     fundamentals: EMPTY_FUNDAMENTALS,
     analyst: EMPTY_ANALYST,
     peers: [],
+    ownership: null,
+    nextEarnings: null,
+    governance: null,
+    logoUrl: null,
     error,
   };
 }
@@ -423,6 +445,9 @@ function normalizeQuote(symbol: string, payload: unknown): YahooQuote {
       ceo: findChiefExecutive(companyProfile),
     },
     analyst: parseAnalystData(data),
+    ownership: parseOwnership(data),
+    nextEarnings: parseNextEarnings(data),
+    governance: parseGovernance(companyProfile),
     error: null,
   };
 }
@@ -611,7 +636,7 @@ async function fetchFundamentals(symbol: string, quoteType: string | null): Prom
     if (yahoo.annual.length >= 2 || !isSecConfigured()) return yahoo;
     const sec = await fetchSecFundamentals(symbol);
     return sec.annual.length > yahoo.annual.length
-      ? { ...sec, trailing: yahoo.trailing, latestQuarterBalance: yahoo.latestQuarterBalance }
+      ? { ...sec, trailing: yahoo.trailing, latestQuarterBalance: yahoo.latestQuarterBalance, quarterly: yahoo.quarterly }
       : yahoo;
   } catch (error) {
     console.error(`Fundamentals request failed for ${symbol}:`, error);
@@ -710,8 +735,65 @@ async function fetchQuote(symbol: string, session: YahooSession): Promise<YahooQ
     );
   const enriched = attachHistory(applyMarketSnapshot(quote, marketSnapshot), history);
   enriched.peers = peersResult.status === "fulfilled" ? peersResult.value : [];
-  enriched.fundamentals = await fetchFundamentals(symbol, enriched.quoteType);
+  const [fundamentals, logoUrl] = await Promise.all([
+    fetchFundamentals(symbol, enriched.quoteType),
+    enriched.quoteType === "EQUITY" || enriched.quoteType === "ETF"
+      ? ensureLogo(symbol, enriched.companyProfile.website).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+  enriched.fundamentals = fundamentals;
+  enriched.logoUrl = logoUrl;
   return enriched;
+}
+
+const CALENDAR_MAX_DAYS = 31;
+
+/** Economic releases or company earnings between two dates, from Yahoo's calendar pages. */
+async function fetchCalendar(
+  kind: CalendarKind,
+  from: string,
+  to: string,
+  country: string | null,
+  session: YahooSession,
+): Promise<{ total: number; rows: Record<string, unknown>[] }> {
+  const { entity, fields } = CALENDAR_FIELDS[kind];
+  const operands: unknown[] = [
+    { operator: "gte", operands: ["startdatetime", from] },
+    { operator: "lt", operands: ["startdatetime", to] },
+  ];
+  if (kind === "economic" && country) operands.push({ operator: "eq", operands: ["country_code", country] });
+  if (kind === "earnings") {
+    // Only large caps (≥ USD 10B): a week of all listings is ~1,800 companies.
+    operands.push({ operator: "eq", operands: ["region", "us"] });
+    operands.push({ operator: "gt", operands: ["intradaymarketcap", 10_000_000_000] });
+  }
+  const rows: Record<string, unknown>[] = [];
+  let total = 0;
+  // Yahoo pages at 250 rows; a month of US earnings can exceed that, so read up to 4 pages.
+  for (let offset = 0; offset < 1000; offset += 250) {
+    const body = JSON.stringify({
+      offset,
+      size: 250,
+      sortField: "startdatetime",
+      sortType: "ASC",
+      entityIdType: entity,
+      includeFields: fields,
+      query: { operator: "and", operands },
+    });
+    const response = await fetchWithRetry(
+      `https://query1.finance.yahoo.com/v1/finance/visualization?crumb=${encodeURIComponent(session.crumb)}&lang=en-US&region=US`,
+      { method: "POST", headers: { Cookie: session.cookie, "Content-Type": "application/json" }, body },
+    );
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new Error(`Yahoo Finance respondió HTTP ${response.status} al calendario`);
+    }
+    const page = parseVisualizationRows(await response.json());
+    total = page.total;
+    rows.push(...page.rows);
+    if (rows.length >= total || page.rows.length === 0) break;
+  }
+  return { total, rows };
 }
 
 async function fetchPublicYahooData(symbol: string, error: string): Promise<YahooQuote> {
@@ -937,6 +1019,45 @@ serve(async (request) => {
           history: chart.candles.map(({ timestamp: _timestamp, ...entry }) => entry),
         };
       });
+      return jsonResponse({ ...data, cachedAt });
+    }
+
+    if (action === "logos") {
+      const symbols = requestBody?.symbols;
+      if (!isValidSymbolList(symbols, 50)) {
+        return badRequest("Envía entre 1 y 50 símbolos válidos en mayúsculas");
+      }
+      const unique = [...new Set(symbols.map((symbol) => symbol.toUpperCase()))];
+      const urls = await mapWithConcurrency(unique, 5, async (symbol) => {
+        try {
+          return [symbol, await ensureLogo(symbol, null)] as const;
+        } catch (error) {
+          console.warn(`Logo lookup failed for ${symbol}:`, error);
+          return [symbol, null] as const;
+        }
+      });
+      return jsonResponse({ logos: Object.fromEntries(urls) });
+    }
+
+    if (action === "calendar") {
+      const kind = requestBody?.kind;
+      const from = getString(requestBody?.from) ?? "";
+      const to = getString(requestBody?.to) ?? "";
+      const country = getString(requestBody?.country)?.toUpperCase() ?? null;
+      const days = (Date.parse(to) - Date.parse(from)) / 86_400_000;
+      if (
+        (kind !== "economic" && kind !== "earnings") ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) ||
+        !(days > 0 && days <= CALENDAR_MAX_DAYS) ||
+        (country !== null && !/^[A-Z]{2}$/.test(country))
+      ) {
+        return badRequest(`Tipo de calendario, fechas (máximo ${CALENDAR_MAX_DAYS} días) o país no permitidos`);
+      }
+      const { data, cachedAt } = await withCache(
+        `yahoo:calendar:${kind}:${from}:${to}:${country ?? "all"}`,
+        30 * 60 * 1000,
+        async () => await fetchCalendar(kind, from, to, country, await getYahooSession()),
+      );
       return jsonResponse({ ...data, cachedAt });
     }
 

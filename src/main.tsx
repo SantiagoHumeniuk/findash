@@ -50,6 +50,9 @@ const RetirementCalculatorPage = React.lazy(() => import('./features/retirement/
 const WatchlistPage = React.lazy(() => import('./features/watchlist/pages/watchlist-page.tsx'));
 const InsightsPage = React.lazy(() => import('./features/insights/pages/insights-page.tsx'));
 const SectorsIndustriesPage = React.lazy(() => import('./features/sectors-industries/pages/sectors-industries-page.tsx'));
+const DividendsPage = React.lazy(() => import('./features/dividends/pages/dividends-page.tsx'));
+const EconomicCalendarPage = React.lazy(() => import('./features/economic-calendar/pages/EconomicCalendarPage.tsx'));
+const RiskPremiumPage = React.lazy(() => import('./features/risk-premium/pages/risk-premium-page.tsx'));
 const BlogListPage = React.lazy(() => import('./features/blog/pages/blog-list-page.tsx'));
 const BlogPostPage = React.lazy(() => import('./features/blog/pages/blog-post-page.tsx'));
 const CreateBlogPage = React.lazy(() => import('./features/blog/pages/create-blog-page.tsx'));
@@ -162,6 +165,36 @@ const router = createBrowserRouter([
                             <ErrorBoundary level="feature" featureName="Insights">
                                 <Suspense fallback={<SuspenseFallback type="page" message="Cargando insights..." />}>
                                     <InsightsPage />
+                                </Suspense>
+                            </ErrorBoundary>
+                        )
+                    },
+                    {
+                        path: "dividends",
+                        element: (
+                            <ErrorBoundary level="feature" featureName="Dividends">
+                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando dividendos..." />}>
+                                    <DividendsPage />
+                                </Suspense>
+                            </ErrorBoundary>
+                        )
+                    },
+                    {
+                        path: "economic-calendar",
+                        element: (
+                            <ErrorBoundary level="feature" featureName="Economic Calendar">
+                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando calendario..." />}>
+                                    <EconomicCalendarPage />
+                                </Suspense>
+                            </ErrorBoundary>
+                        )
+                    },
+                    {
+                        path: "risk-premium",
+                        element: (
+                            <ErrorBoundary level="feature" featureName="Risk Premium">
+                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando riesgo país..." />}>
+                                    <RiskPremiumPage />
                                 </Suspense>
                             </ErrorBoundary>
                         )

@@ -350,7 +350,24 @@
             "icon": "FactoryIcon",
             "requiresAuth": true
           },
-
+          {
+            "to": "/economic-calendar",
+            "label": "Calendario Económico",
+            "icon": "Calendar",
+            "requiresAuth": true
+          },
+          {
+            "to": "/dividends",
+            "label": "Dividendos",
+            "icon": "Divide",
+            "requiresAuth": true
+          },
+          {
+            "to": "/risk-premium",
+            "label": "Riesgo País",
+            "icon": "Globe",
+            "requiresAuth": true
+          },
           {
             "to": "/retirement-calculator",
             "label": "Calculadora de Retiro",
@@ -365,7 +382,6 @@
           }
         ]
       },
-
       {
         "label": "General",
         "items": [

@@ -95,8 +95,8 @@ export const PerformanceTable: React.FC<PerformanceTableProps> = ({
             <TableHeader>
               <TableRow>
                 <TableHead>Fecha</TableHead>
-                <TableHead>Bolsa</TableHead>
-                <TableHead className="text-right">Cambio Promedio</TableHead>
+                <TableHead>Índice</TableHead>
+                <TableHead className="text-right">Variación semanal</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

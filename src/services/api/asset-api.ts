@@ -35,7 +35,7 @@ import {
 
 const YAHOO_MARKET_INDEX_SYMBOLS = new Set(['SPY', 'QQQ', 'DIA', 'IWM']);
 /** Bump when createYahooAssetData adds fields so cached assets are rebuilt. */
-export const YAHOO_DATA_VERSION = 2;
+export const YAHOO_DATA_VERSION = 3;
 
 function getYahooMarketIndexName(symbol: string, fallback: string | null): string {
     const knownNames: Record<string, string> = {
@@ -52,7 +52,7 @@ function normalizeCachedYahooIndex(asset: AssetData): boolean {
 
     const symbol = asset.profile.symbol;
     const changes = {
-        image: '',
+        image: asset.profile.image ?? '',
         companyName: getYahooMarketIndexName(symbol, asset.profile.companyName),
         quoteName: getYahooMarketIndexName(symbol, asset.quote.name),
         isEtf: true,
@@ -157,9 +157,9 @@ export function createYahooAssetData(
         city: yahoo.companyProfile.city ?? '',
         state: yahoo.companyProfile.state ?? '',
         zip: yahoo.companyProfile.zip ?? '',
-        image: '',
+        image: yahoo.logoUrl ?? '',
         ipoDate: '',
-        defaultImage: true,
+        defaultImage: !yahoo.logoUrl,
         isEtf: yahoo.quoteType === 'ETF' || YAHOO_MARKET_INDEX_SYMBOLS.has(symbol),
         isActivelyTrading: true,
         isAdr: false,
@@ -257,6 +257,15 @@ export function createYahooAssetData(
         dataSource: 'Yahoo Finance',
         yahooDataVersion: YAHOO_DATA_VERSION,
         fundamentalsSource: yahoo.fundamentals.source,
+        yahooInsights: {
+            ownership: yahoo.ownership,
+            nextEarnings: yahoo.nextEarnings,
+            governance: yahoo.governance,
+            earningsHistory: yahoo.analyst.earningsHistory,
+            annualStatements: yahoo.fundamentals.annual,
+            quarterlyStatements: yahoo.fundamentals.quarterly,
+            dividendHistory: yahoo.dividendHistory,
+        },
         dataFetchedAt: fetchedAt,
         yahooMetrics: yahoo.metrics,
         yahooAttemptedAt: fetchedAt,
