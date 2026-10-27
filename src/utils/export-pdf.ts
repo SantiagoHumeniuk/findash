@@ -111,7 +111,7 @@ interface WatermarkPdf {
     setPage(page: number): void;
     setFontSize(size: number): void;
     setTextColor(r: number, g: number, b: number): void;
-    text(text: string, x: number, y: number, options?: { align?: string; angle?: number }): void;
+    text(text: string, x: number, y: number, options?: { align?: 'center' | 'right' | 'left' | 'justify'; angle?: number }): void;
     addImage(imageData: string, format: string, x: number, y: number, width: number, height: number, alias?: string, compression?: 'NONE' | 'FAST' | 'MEDIUM' | 'SLOW', rotation?: number): void;
 }
 
@@ -562,7 +562,8 @@ export const exportPortfolioToPdf = async ({
       const barWidth = (Math.abs(point.value) / maxMagnitude) * maxBarWidth;
       pdf.setTextColor(51, 65, 85);
       pdf.text(point.label.slice(0, 28), left - 4, y + 3, { align: 'right' });
-      pdf.setFillColor(...(point.value >= 0 ? [16, 185, 129] : [239, 68, 68]));
+      const barColor: [number, number, number] = point.value >= 0 ? [16, 185, 129] : [239, 68, 68];
+      pdf.setFillColor(...barColor);
       pdf.rect(point.value >= 0 ? zeroX : zeroX - barWidth, y, barWidth, 3, 'F');
       pdf.text(
         `${point.value >= 0 ? '+' : ''}${point.value.toFixed(2)}%`,
@@ -653,8 +654,10 @@ export const exportPortfolioToPdf = async ({
     }
   }
 
-  const pageCount = pdf.internal.getNumberOfPages();
-  await addWatermarkToPages(pdf, pageWidth, pdf.internal.pageSize.getHeight());
+  // jsPDF's typings omit internal.getNumberOfPages, although it exists at runtime.
+  const watermarkPdf = pdf as unknown as WatermarkPdf;
+  const pageCount = watermarkPdf.internal.getNumberOfPages();
+  await addWatermarkToPages(watermarkPdf, pageWidth, pdf.internal.pageSize.getHeight());
   for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
     pdf.setPage(pageNumber);
     pdf.setFontSize(8);

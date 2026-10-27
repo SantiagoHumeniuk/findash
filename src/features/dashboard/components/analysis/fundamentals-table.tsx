@@ -279,7 +279,7 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                                 // Estructura para el exportador PDF
                                 return {
                                     content: formatValue(config, rawValue, item.currency),
-                                    rawValue: rawValue ?? 'N/A'
+                                    rawValue: typeof rawValue === 'number' ? rawValue : 'N/A' as const
                                 };
                             })
                         ];

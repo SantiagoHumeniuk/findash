@@ -2,7 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { Skeleton } from '../ui/skeleton';
 import { TechLoader } from '../ui/tech-loader';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 
 type FallbackType = 'spinner' | 'skeleton' | 'page' | 'minimal';
 
@@ -11,7 +11,7 @@ interface SuspenseFallbackProps {
   message?: string;
 }
 
-const fadeInVariants = {
+const fadeInVariants: Variants = {
   hidden: { opacity: 0, scale: 0.97 },
   visible: {
     opacity: 1,
@@ -23,7 +23,7 @@ const fadeInVariants = {
   },
 };
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -34,7 +34,7 @@ const staggerContainer = {
   },
 };
 
-const staggerItem = {
+const staggerItem: Variants = {
   hidden: { opacity: 0, y: 12 },
   visible: {
     opacity: 1,

@@ -2,9 +2,9 @@
 
 import { Skeleton } from '../../../../components/ui/skeleton';
 import { Card, CardHeader } from '../../../../components/ui/card';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -15,7 +15,7 @@ const staggerContainer = {
   },
 };
 
-const staggerItem = {
+const staggerItem: Variants = {
   hidden: { opacity: 0, y: 16 },
   visible: {
     opacity: 1,

@@ -101,6 +101,7 @@ export function generateAdvisory(
   const yahooTargetPrice = asset.yahooMetrics?.['financialData.targetMeanPrice'];
   const yahooAnalystCount = asset.yahooMetrics?.['financialData.numberOfAnalystOpinions'] ?? 0;
   const yahooTargetUpside = yahooTargetPrice !== undefined &&
+    yahooTargetPrice !== null &&
     Number.isFinite(yahooTargetPrice) &&
     yahooTargetPrice > 0 &&
     asset.quote.price > 0

@@ -2,7 +2,7 @@
 
 import { Link, useParams } from 'react-router-dom';
 import { useAssetData } from '../../dashboard/hooks/use-asset-data';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { Button } from '../../../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import {
@@ -15,7 +15,7 @@ import {
   AssetDetailTabs,
 } from '../components';
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -26,7 +26,7 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 24, scale: 0.98, filter: "blur(6px)" },
   visible: {
     opacity: 1,
@@ -41,7 +41,7 @@ const itemVariants = {
   },
 };
 
-const heroVariants = {
+const heroVariants: Variants = {
   hidden: { opacity: 0, y: 30, scale: 0.96 },
   visible: {
     opacity: 1,

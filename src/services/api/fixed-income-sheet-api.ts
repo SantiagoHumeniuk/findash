@@ -87,7 +87,7 @@ export async function fetchFixedIncomeSheet(): Promise<FixedIncomeSheetResponse>
     typeof data.fetchedAt !== 'string' || !('contracts' in data) ||
     !Array.isArray(data.contracts) || !data.contracts.every(isContract) ||
     !('errors' in data) || !Array.isArray(data.errors) ||
-    !data.errors.every((item) => typeof item === 'string')) {
+    !data.errors.every((item: unknown) => typeof item === 'string')) {
     throw new Error('La respuesta de datos contractuales no es válida.');
   }
   if (data.contracts.length === 0) {

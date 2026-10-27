@@ -189,7 +189,7 @@ export function PortfolioStats({ holdings, totalPerformance, portfolioData, avgH
             {/* --- Fila 3: Riesgo --- */}
             <StatCard 
                 label="Beta Ponderado" 
-                value={formatNumber(metrics.portfolioBeta)} 
+                value={metrics.portfolioBeta !== null ? formatNumber(metrics.portfolioBeta) : 'N/D'} 
                 icon={Target}
                 helpText="Volatilidad de tu portafolio vs. el mercado. <1 es menos volátil, >1 es más volátil."
                 delay={0.4}

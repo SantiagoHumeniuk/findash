@@ -57,7 +57,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
         throw new Error(quote?.error ?? `No se recibió historial suficiente para ${symbol}.`);
       }
 
-      await incrementApiCallCounter(user.id);
+      if (user) await incrementApiCallCounter(user.id);
       return {
         histories: { [symbol]: history.map(({ date, close }) => ({ date, close })) },
         errors: {},
@@ -293,7 +293,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
           </div>
           {/* Los índices se consultan al seleccionarlos y respetan el límite diario del plan. */}
           <div className="w-full sm:w-[220px]">
-            <Select value={selectedBenchmark} onValueChange={setSelectedBenchmark}>
+            <Select value={selectedBenchmark} onValueChange={(value) => setSelectedBenchmark(value as typeof selectedBenchmark)}>
               <SelectTrigger className="w-full rounded-lg h-9 sm:h-10 text-xs sm:text-sm">
                 <SelectValue placeholder="Comparar con..." />
               </SelectTrigger>

@@ -52,6 +52,11 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: './src/test/setup.ts',
+    // Placeholder values so modules that build the Supabase client load without a local .env.
+    env: {
+      VITE_SUPABASE_URL: 'http://127.0.0.1:54321',
+      VITE_SUPABASE_PUBLISHABLE_KEY: 'test-publishable-key',
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

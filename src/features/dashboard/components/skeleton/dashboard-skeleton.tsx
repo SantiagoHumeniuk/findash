@@ -2,9 +2,9 @@
 
 import { Card, CardContent, CardHeader } from "../../../../components/ui/card";
 import { Skeleton } from "../../../../components/ui/skeleton";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 
-const containerVariants = {
+const containerVariants: Variants = {
     hidden: { opacity: 0 },
     show: {
         opacity: 1,
@@ -15,7 +15,7 @@ const containerVariants = {
     },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
     hidden: { opacity: 0, y: 16 },
     show: {
         opacity: 1,

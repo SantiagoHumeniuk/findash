@@ -112,7 +112,7 @@ function QuotesTable({
   const displayRows = React.useMemo(() => rows.flatMap((row) => {
     const { symbol, quote, contract } = row;
     const quotePrice = quote ? getMarketPrice(quote) : null;
-    const usableQuote = quotePrice !== null ? quote : null;
+    const usableQuote = quotePrice !== null ? quote ?? null : null;
     const currentPrice = quotePrice ?? contract?.workbookPrice ?? null;
     const calculatedYtm = contract
       ? calculateCashFlowYield(
@@ -258,7 +258,7 @@ function LecapCurveAndCalculator({
     const ticker = normalizeFixedIncomeTicker(contract.priceTicker, contract.currency);
     const quote = quotes.find((item) => item.symbol.toUpperCase() === ticker);
     const quotePrice = quote ? getMarketPrice(quote) : null;
-    const usableQuote = quotePrice !== null ? quote : null;
+    const usableQuote = quotePrice !== null ? quote ?? null : null;
     const marketPrice = quotePrice ?? contract.workbookPrice;
     if (marketPrice === null || contract.cashFlows.length === 0) return [];
     const marketYield = calculateCashFlowYield(usableQuote, contract.cashFlows, today, marketPrice) ??
@@ -271,7 +271,7 @@ function LecapCurveAndCalculator({
       : Number.NaN;
     const maturity = contractMaturity > Date.now() ? contract.maturityDate : lastFlow?.date;
     const maturityTime = maturity ? Date.parse(`${maturity.slice(0, 10)}T00:00:00Z`) : Number.NaN;
-    if (marketYield === null || !Number.isFinite(maturityTime)) return [];
+    if (marketYield == null || !Number.isFinite(maturityTime)) return [];
     const maturityDays = Math.ceil((maturityTime - Date.now()) / 86_400_000);
     if (maturityDays <= 0) return [];
     return [{ contract, quote: usableQuote, marketPrice, maturityDays, marketYield }];
@@ -392,7 +392,7 @@ function LecapCurveAndCalculator({
             <div className="grid content-start gap-3 sm:grid-cols-2">
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">TIR efectiva anual al precio de compra</p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">{purchaseYield !== null ? `${formatNumber(purchaseYield)}%` : 'No disponible'}</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums">{purchaseYield != null ? `${formatNumber(purchaseYield)}%` : 'No disponible'}</p>
                 <p className="mt-1 text-xs text-muted-foreground">TIR de mercado: {formatNumber(selected.marketYield)}%</p>
               </div>
               <div className="rounded-lg border p-3">

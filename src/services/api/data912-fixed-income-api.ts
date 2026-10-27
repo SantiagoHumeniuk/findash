@@ -32,8 +32,9 @@ function isQuote(value: unknown): value is Data912BondQuote {
   if (typeof value !== 'object' || value === null || !('symbol' in value) || typeof value.symbol !== 'string') {
     return false;
   }
+  const record = value as Record<string, unknown>;
   return ['q_bid', 'px_bid', 'px_ask', 'q_ask', 'v', 'q_op', 'c', 'pct_change'].every((key) =>
-    key in value && typeof value[key] === 'number' && Number.isFinite(value[key])
+    typeof record[key] === 'number' && Number.isFinite(record[key])
   );
 }
 

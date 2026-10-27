@@ -18,7 +18,7 @@ import {
     BrainCircuit
 } from "lucide-react";
 import { Skeleton } from "../../../../components/ui/skeleton";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useState } from "react";
 
 interface DashboardTabsProps {
@@ -26,7 +26,7 @@ interface DashboardTabsProps {
     isLoading: boolean;
 }
 
-const tabContentVariants = {
+const tabContentVariants: Variants = {
     hidden: {
         opacity: 0,
         y: 8,

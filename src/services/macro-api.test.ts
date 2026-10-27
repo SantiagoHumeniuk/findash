@@ -30,7 +30,7 @@ describe('UVA data proxy', () => {
 
   it('surfaces proxy errors and rejects malformed UVA values', async () => {
     invoke.mockResolvedValueOnce({ data: null, error: { message: 'proxy offline' } });
-    await expect(fetchUva()).rejects.toThrow('No se pudo consultar uva: proxy offline');
+    await expect(fetchUva()).rejects.toThrow('No se pudieron cargar los datos de uva.');
 
     invoke.mockResolvedValueOnce({ data: [{ fecha: '2026-10-08', valor: 'invalid' }], error: null });
     await expect(fetchUva()).rejects.toThrow('La API UVA devolvió datos incompletos o con formato desconocido');

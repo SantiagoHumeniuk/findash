@@ -441,8 +441,8 @@ export function classifyBusinessProfile(asset: AssetData, context: ValuationCont
   const sector = `${asset.profile?.sector ?? ''} ${asset.profile?.industry ?? ''}`;
   const isFinancial = /financial|bank|credit|fintech|payment|consumer finance/i.test(sector);
   const beta = asset.profile?.beta > 0 ? asset.profile.beta : null;
-  const netDebtToEbitda = asset.keyMetrics?.netDebtToEBITDATTM;
-  const roe = asset.keyMetrics?.returnOnEquityTTM;
+  const netDebtToEbitda = asset.keyMetrics?.netDebtToEBITDATTM ?? Number.NaN;
+  const roe = asset.keyMetrics?.returnOnEquityTTM ?? Number.NaN;
   const forwardGrowth = context.forwardEpsGrowthPct;
   const riskFactors: string[] = [];
   let severeRisk = false;
@@ -635,13 +635,13 @@ export function calculateBlendedFairValue(
     : [];
   const findNearestEstimate = (hasValue: (estimate: AssetAnalystEstimates) => boolean) =>
     sortedFutureEstimates.find(hasValue) ?? null;
-  const forwardEstimates = findNearestEstimate((estimate) => estimate.epsAvg > 0);
-  const forwardRevenueEstimates = findNearestEstimate((estimate) => estimate.revenueAvg > 0);
-  const forwardEbitdaEstimates = findNearestEstimate((estimate) => estimate.ebitdaAvg > 0);
-  const forwardEbitEstimates = findNearestEstimate((estimate) => estimate.ebitAvg > 0);
+  const forwardEstimates = findNearestEstimate((estimate) => (estimate.epsAvg ?? 0) > 0);
+  const forwardRevenueEstimates = findNearestEstimate((estimate) => (estimate.revenueAvg ?? 0) > 0);
+  const forwardEbitdaEstimates = findNearestEstimate((estimate) => (estimate.ebitdaAvg ?? 0) > 0);
+  const forwardEbitEstimates = findNearestEstimate((estimate) => (estimate.ebitAvg ?? 0) > 0);
   const currentEps = latestRatios?.netIncomePerShare;
   const rawForwardEpsGrowth = currentEps && currentEps > 0 && forwardEstimates
-    ? (forwardEstimates.epsAvg / currentEps) - 1
+    ? ((forwardEstimates.epsAvg ?? 0) / currentEps) - 1
     : null;
   const forwardEpsGrowthPct = rawForwardEpsGrowth !== null && Number.isFinite(rawForwardEpsGrowth)
     ? rawForwardEpsGrowth * 100
@@ -656,7 +656,7 @@ export function calculateBlendedFairValue(
   const rawDcfWacc = asset.dcf?.find((projection) => projection.wacc > 0)?.wacc;
   const dcfWacc = rawDcfWacc && rawDcfWacc > 1 ? rawDcfWacc / 100 : rawDcfWacc;
   const hasDcfWacc = Boolean(dcfWacc && dcfWacc > 0.02 && dcfWacc < 0.5);
-  const adjustedCostOfCapital = hasDcfWacc
+  const adjustedCostOfCapital = hasDcfWacc && dcfWacc
     ? dcfWacc + countryRiskPremium
     : adjustedCostOfEquity;
   const enterpriseDiscountLabel = hasDcfWacc ? 'WACC' : 'Ke (proxy)';
@@ -670,7 +670,7 @@ export function calculateBlendedFairValue(
     const years = forecastYears(forwardRevenueEstimates.date);
     const value = getDiscountedForecastPsValue(
       currentPrice,
-      forwardRevenueEstimates.revenueAvg,
+      forwardRevenueEstimates.revenueAvg ?? 0,
       fairPsBenchmark,
       currentMarketCap,
       years,
