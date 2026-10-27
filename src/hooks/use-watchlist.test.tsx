@@ -26,6 +26,19 @@ vi.mock('./use-auth', () => ({
   }),
 }));
 
+// Mock de límites del plan (usePlanLimits lee el ConfigProvider, ausente en estos tests)
+vi.mock('./use-plan-limits', () => ({
+  usePlanLimits: () => ({
+    current: 0,
+    limit: 100,
+    isAtLimit: false,
+    isNearLimit: false,
+    usagePercentage: 0,
+    currentPlan: 'basico',
+    limitMessage: '',
+  }),
+}));
+
 // Mock de logger
 vi.mock('../lib/logger', () => ({
   logger: {
