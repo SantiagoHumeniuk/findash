@@ -3,7 +3,8 @@
 import React, { useMemo, useState } from "react";
 import { AssetData } from "../../../../types/dashboard";
 import { Button } from "../../../../components/ui/button";
-import { ArrowDown, ArrowUp, Download, BarChart2, ChartCandlestick, ShoppingCart } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, BarChart2, ShoppingCart } from "lucide-react";
+import { AssetLogo } from "../../../../components/ui/asset-logo";
 import { exportToPdf } from "../../../../utils/export-pdf";
 import { toast } from "sonner";
 import { indicatorConfig } from "../../../../utils/financial";
@@ -53,46 +54,6 @@ const pctNode = (v: number | null) => {
         </span>
     );
 };
-
-function AssetLogo({
-    image,
-    companyName,
-    symbol,
-    className,
-}: {
-    image: string;
-    companyName: string;
-    symbol: string;
-    className: string;
-}) {
-    const [imageFailed, setImageFailed] = useState(!image);
-
-    React.useEffect(() => {
-        setImageFailed(!image);
-    }, [image]);
-
-    if (image && !imageFailed) {
-        return (
-            <img
-                src={image}
-                alt={`${companyName} logo`}
-                className={`${className} rounded-full bg-muted object-contain border`}
-                onError={() => setImageFailed(true)}
-            />
-        );
-    }
-
-    return (
-        <span
-            className={`${className} inline-flex items-center justify-center rounded-full bg-primary/10 text-primary border`}
-            role="img"
-            aria-label={`${symbol} index icon`}
-            title={companyName}
-        >
-            <ChartCandlestick className="h-4 w-4" aria-hidden="true" />
-        </span>
-    );
-}
 
 // --- Componente de Cabecera Ordenable ---
 const SortableTableHeader = ({
@@ -291,7 +252,7 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                                                     onMouseEnter={() => prefetchAssetIfNotCached(asset.symbol)}
                                                     onFocus={() => prefetchAssetIfNotCached(asset.symbol)}
                                                 >
-                                                    <AssetLogo image={asset.image} companyName={asset.companyName} symbol={asset.symbol} className="w-8 h-8" />
+                                                    <AssetLogo src={asset.image} name={asset.companyName} symbol={asset.symbol} className="size-8" />
                                                     <div>
                                                         <div className="flex items-center justify-between gap-2">
                                                             <div className="flex-1 min-w-0">
@@ -336,7 +297,7 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                                         onMouseEnter={() => prefetchAssetIfNotCached(asset.symbol)}
                                         onFocus={() => prefetchAssetIfNotCached(asset.symbol)}
                                     >
-                                        <AssetLogo image={asset.image} companyName={asset.companyName} symbol={asset.symbol} className="w-7 h-7 flex-shrink-0" />
+                                        <AssetLogo src={asset.image} name={asset.companyName} symbol={asset.symbol} className="size-7" />
                                         <div className="min-w-0 flex-1">
                                             <div className="text-sm flex items-center gap-1.5">
                                                 {asset.symbol}

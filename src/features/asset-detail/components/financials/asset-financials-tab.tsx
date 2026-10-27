@@ -9,8 +9,12 @@ import {
   Scale,
   PieChart,
   ArrowUpRight,
-  LineChart
+  LineChart,
+  CalendarClock,
+  FileSpreadsheet
 } from 'lucide-react';
+import { AssetEarningsSection } from '../insights/asset-earnings-section';
+import { AssetStatementsSection } from '../insights/asset-statements-section';
 
 interface AssetFinancialsTabProps {
   asset: AssetData;
@@ -219,6 +223,9 @@ export function AssetFinancialsTab({ asset }: AssetFinancialsTabProps) {
   const hasKeyMetrics = asset.keyMetricsYearly && asset.keyMetricsYearly.length > 0;
   const hasRatios = asset.ratios && asset.ratios.length > 0;
   const hasDCF = asset.dcf && asset.dcf.length > 0;
+  const insights = asset.yahooInsights;
+  const hasEarnings = Boolean(insights && (insights.nextEarnings?.date || insights.earningsHistory.length > 0 || insights.quarterlyStatements.length > 0));
+  const hasStatements = (insights?.annualStatements.length ?? 0) > 0;
 
   // MERGE DE DATOS: Combinar keyMetricsYearly y ratios para tener todos los campos disponibles
   // Esto resuelve el problema de métricas faltantes cuando están en el dataset "equivocado"
@@ -279,6 +286,18 @@ export function AssetFinancialsTab({ asset }: AssetFinancialsTabProps) {
             <PieChart className="w-4 h-4" />
             Dividendos/Caja
           </TabsTrigger>
+          {hasEarnings && (
+            <TabsTrigger value="earnings" className="gap-2 px-3">
+              <CalendarClock className="w-4 h-4" />
+              Resultados
+            </TabsTrigger>
+          )}
+          {hasStatements && (
+            <TabsTrigger value="statements" className="gap-2 px-3">
+              <FileSpreadsheet className="w-4 h-4" />
+              Estados
+            </TabsTrigger>
+          )}
           {hasDCF && (
             <TabsTrigger value="dcf" className="gap-2 px-3">
               <Calculator className="w-4 h-4" />
@@ -358,6 +377,18 @@ export function AssetFinancialsTab({ asset }: AssetFinancialsTabProps) {
           dateKey="date"
         />
       </TabsContent>
+
+      {hasEarnings && (
+        <TabsContent value="earnings" className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+          <AssetEarningsSection asset={asset} />
+        </TabsContent>
+      )}
+
+      {hasStatements && (
+        <TabsContent value="statements" className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+          <AssetStatementsSection asset={asset} />
+        </TabsContent>
+      )}
 
       {hasDCF && (
         <TabsContent value="dcf" className="space-y-4 animate-in fade-in slide-in-from-bottom-2">

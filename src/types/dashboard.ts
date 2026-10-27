@@ -1,6 +1,13 @@
 // src/types/dashboard.ts
 
 import { IndicatorConfig } from "../utils/financial";
+import type {
+    YahooAnalystData,
+    YahooGovernance,
+    YahooNextEarnings,
+    YahooOwnership,
+    YahooStatementPeriod,
+} from "../services/api/yahoo-finance-api";
 
 export interface AssetData {
     symbol: string;
@@ -27,11 +34,25 @@ export interface AssetData {
     yahooDataVersion?: number;
     /** Provider of the financial statements behind ratios, DCF and rating. */
     fundamentalsSource?: 'Yahoo Finance' | 'SEC EDGAR' | null;
+    /** Yahoo-only data with no FMP equivalent in the original model. */
+    yahooInsights?: AssetYahooInsights;
     dataFetchedAt?: string;
     yahooMetrics?: Record<string, number | null>;
     yahooAttemptedAt?: string;
     yahooQuoteAttemptedAt?: string;
     yahooError?: string | null;
+}
+
+export interface AssetYahooInsights {
+    ownership: YahooOwnership | null;
+    nextEarnings: YahooNextEarnings | null;
+    governance: YahooGovernance | null;
+    earningsHistory: YahooAnalystData['earningsHistory'];
+    /** Raw annual statements, newest first (Yahoo field names). */
+    annualStatements: YahooStatementPeriod[];
+    /** Quarterly income statement and cash flow, newest first. */
+    quarterlyStatements: YahooStatementPeriod[];
+    dividendHistory: { date: string; amount: number }[];
 }
 
 export interface AssetAnalystGradeUpdate {

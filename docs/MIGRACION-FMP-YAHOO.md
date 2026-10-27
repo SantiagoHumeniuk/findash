@@ -1,8 +1,7 @@
 # Migración de FMP a fuentes gratuitas (renta variable)
 
-**Rama:** `experiment/yahoo-finance-local` (commits locales, sin push).
 **Fecha:** 27 de octubre de 2026.
-**Estado:** código completo y verificado localmente; falta desplegar el proxy y probar la app contra Supabase real.
+**Estado:** en producción (PR #5 y siguiente). `fmp-proxy` sigue desplegado hasta confirmar que nadie lo usa.
 
 ## Resultado
 
@@ -29,11 +28,20 @@ a partir de esos datos y 2 con otras fuentes públicas (SEC EDGAR y Damodaran). 
 | `news/stock`, `news/general-latest`, `news/forex`, `news/crypto` | Noticias por símbolo y por categoría | Yahoo |
 | `news/press-releases` | Presentaciones 8-K/10-K/10-Q; los 8-K con ítem 2.02 se marcan como comunicados de resultados | SEC EDGAR (solo emisores de EE. UU.) |
 | `biggest-gainers/losers`, `most-actives` | Screeners predefinidos | Yahoo |
-| `revenue-product-segmentation`, `revenue-geographic-segmentation` | **Sin reemplazo.** EDGAR no expone segmentos en `companyfacts`; habría que leer el XBRL de cada 10-K | — |
+| `economic-calendar` | Indicadores por país y semana con valor real, consenso (cuando Yahoo lo publica) y anterior, más un calendario de resultados de empresas grandes | Yahoo (`v1/finance/visualization`) |
+| `image-stock` (logos) | Logo oficial por ticker, guardado una vez en el bucket público `asset-logos` de Supabase Storage | Parqet (por ticker) o favicon del sitio de la empresa |
+| `revenue-product-segmentation`, `revenue-geographic-segmentation` | **Sin reemplazo exacto.** Se muestra en su lugar la composición de los ingresos (costo, I+D, venta y administración, impuestos y resultado) por año | Calculado con los estados de Yahoo |
 | `fmp-articles` | **Sin reemplazo** (contenido propio de FMP) | — |
 
-El calendario macroeconómico tampoco tiene una fuente gratuita equivalente. FRED publica fechas
-de publicación con una API key gratuita, pero no trae consenso ni pronóstico.
+### Datos de Yahoo que FMP no daba en FinDash
+
+- **Accionistas:** % en manos de insiders e instituciones, 10 principales instituciones y fondos, últimas 15
+  operaciones de insiders y su saldo neto de compras de 6 meses (pestaña *Accionistas*).
+- **Resultados:** próxima fecha de reporte con EPS e ingresos esperados, EPS real vs. estimado de los últimos
+  4 trimestres y evolución trimestral de ingresos, márgenes, EPS y flujo de caja libre (*Fundamentales → Resultados*).
+- **Estados financieros completos** anuales: resultados, balance y flujo de efectivo (*Fundamentales → Estados*).
+- **Riesgo:** ventas en corto (% del free float, días para cubrir, variación mensual) y puntajes de
+  gobierno corporativo de ISS (*Perfil*).
 
 ## Diferencias que conviene conocer
 

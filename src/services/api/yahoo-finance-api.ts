@@ -66,6 +66,11 @@ export interface YahooFinanceQuote {
   fundamentals: YahooFundamentals;
   analyst: YahooAnalystData;
   peers: YahooPeerQuote[];
+  ownership: YahooOwnership | null;
+  nextEarnings: YahooNextEarnings | null;
+  governance: YahooGovernance | null;
+  /** Public URL of the company logo stored in Supabase Storage. */
+  logoUrl: string | null;
   error: string | null;
 }
 
@@ -83,6 +88,88 @@ export interface YahooFundamentals {
   /** Trailing twelve months for income statement and cash flow fields. */
   trailing: Record<string, number>;
   latestQuarterBalance: YahooStatementPeriod | null;
+  /** Quarterly income statement and cash flow, newest first. */
+  quarterly: YahooStatementPeriod[];
+}
+
+export interface YahooHolder {
+  name: string;
+  pctHeld: number | null;
+  shares: number | null;
+  value: number | null;
+  reportDate: string | null;
+}
+
+export interface YahooOwnership {
+  insidersPercent: number | null;
+  institutionsPercent: number | null;
+  institutionsFloatPercent: number | null;
+  institutionsCount: number | null;
+  topInstitutions: YahooHolder[];
+  topFunds: YahooHolder[];
+  insiderTransactions: {
+    name: string;
+    relation: string;
+    date: string | null;
+    text: string;
+    shares: number | null;
+    value: number | null;
+  }[];
+  netInsiderActivity: {
+    period: string | null;
+    buyCount: number | null;
+    buyShares: number | null;
+    sellCount: number | null;
+    sellShares: number | null;
+    netShares: number | null;
+    netPercentInsiderShares: number | null;
+  } | null;
+}
+
+export interface YahooNextEarnings {
+  date: string | null;
+  isEstimate: boolean;
+  epsAvg: number | null;
+  epsLow: number | null;
+  epsHigh: number | null;
+  revenueAvg: number | null;
+  revenueLow: number | null;
+  revenueHigh: number | null;
+  exDividendDate: string | null;
+  dividendDate: string | null;
+}
+
+/** ISS governance risk scores, 1 (low) to 10 (high). */
+export interface YahooGovernance {
+  overall: number | null;
+  audit: number | null;
+  board: number | null;
+  compensation: number | null;
+  shareholderRights: number | null;
+  asOf: string | null;
+}
+
+export interface YahooEconomicEvent {
+  event: string;
+  country: string;
+  date: string;
+  period: string | null;
+  actual: string | null;
+  consensus: string | null;
+  prior: string | null;
+  revisedPrior: string | null;
+}
+
+export interface YahooEarningsEvent {
+  symbol: string;
+  companyName: string;
+  date: string;
+  /** BMO (before open), AMC (after close), TAS/TNS (time not supplied). */
+  timing: string | null;
+  epsEstimate: number | null;
+  epsActual: number | null;
+  surprisePercent: number | null;
+  marketCap: number | null;
 }
 
 export interface YahooAnalystEstimate {
@@ -365,23 +452,33 @@ function parseStatementPeriod(value: unknown): YahooStatementPeriod | null {
   return { date, currency: getString(record.currency), values: getNumberRecord(record.values) };
 }
 
-const EMPTY_FUNDAMENTALS: YahooFundamentals = { source: null, annual: [], trailing: {}, latestQuarterBalance: null };
+const EMPTY_FUNDAMENTALS: YahooFundamentals = {
+  source: null,
+  annual: [],
+  trailing: {},
+  latestQuarterBalance: null,
+  quarterly: [],
+};
+
+function parseStatementPeriods(value: unknown): YahooStatementPeriod[] {
+  return Array.isArray(value)
+    ? value.flatMap((period) => {
+      const parsed = parseStatementPeriod(period);
+      return parsed ? [parsed] : [];
+    }).sort((left, right) => right.date.localeCompare(left.date))
+    : [];
+}
 
 function parseFundamentals(value: unknown): YahooFundamentals {
   const record = asRecord(value);
   if (!record) return EMPTY_FUNDAMENTALS;
   const source = record.source === 'Yahoo Finance' || record.source === 'SEC EDGAR' ? record.source : null;
-  const annual = Array.isArray(record.annual)
-    ? record.annual.flatMap((period) => {
-      const parsed = parseStatementPeriod(period);
-      return parsed ? [parsed] : [];
-    }).sort((left, right) => right.date.localeCompare(left.date))
-    : [];
   return {
     source,
-    annual,
+    annual: parseStatementPeriods(record.annual),
     trailing: getNumberRecord(record.trailing),
     latestQuarterBalance: parseStatementPeriod(record.latestQuarterBalance),
+    quarterly: parseStatementPeriods(record.quarterly),
   };
 }
 
@@ -474,7 +571,93 @@ function parsePeers(value: unknown): YahooPeerQuote[] {
   });
 }
 
-type YahooFinanceQuoteCore = Omit<YahooFinanceQuote, 'quoteType' | 'dividendHistory' | 'fundamentals' | 'analyst' | 'peers'>;
+function parseHolders(value: unknown): YahooHolder[] {
+  return parseRecords(value, (item) => {
+    const name = getString(item.name);
+    return name
+      ? {
+        name,
+        pctHeld: getFiniteNumber(item.pctHeld),
+        shares: getFiniteNumber(item.shares),
+        value: getFiniteNumber(item.value),
+        reportDate: getString(item.reportDate),
+      }
+      : null;
+  });
+}
+
+function parseOwnership(value: unknown): YahooOwnership | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const net = asRecord(record.netInsiderActivity);
+  return {
+    insidersPercent: getFiniteNumber(record.insidersPercent),
+    institutionsPercent: getFiniteNumber(record.institutionsPercent),
+    institutionsFloatPercent: getFiniteNumber(record.institutionsFloatPercent),
+    institutionsCount: getFiniteNumber(record.institutionsCount),
+    topInstitutions: parseHolders(record.topInstitutions),
+    topFunds: parseHolders(record.topFunds),
+    insiderTransactions: parseRecords(record.insiderTransactions, (item) => {
+      const name = getString(item.name);
+      return name
+        ? {
+          name,
+          relation: getString(item.relation) ?? '',
+          date: getString(item.date),
+          text: getString(item.text) ?? '',
+          shares: getFiniteNumber(item.shares),
+          value: getFiniteNumber(item.value),
+        }
+        : null;
+    }),
+    netInsiderActivity: net
+      ? {
+        period: getString(net.period),
+        buyCount: getFiniteNumber(net.buyCount),
+        buyShares: getFiniteNumber(net.buyShares),
+        sellCount: getFiniteNumber(net.sellCount),
+        sellShares: getFiniteNumber(net.sellShares),
+        netShares: getFiniteNumber(net.netShares),
+        netPercentInsiderShares: getFiniteNumber(net.netPercentInsiderShares),
+      }
+      : null,
+  };
+}
+
+function parseNextEarnings(value: unknown): YahooNextEarnings | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  return {
+    date: getString(record.date),
+    isEstimate: record.isEstimate === true,
+    epsAvg: getFiniteNumber(record.epsAvg),
+    epsLow: getFiniteNumber(record.epsLow),
+    epsHigh: getFiniteNumber(record.epsHigh),
+    revenueAvg: getFiniteNumber(record.revenueAvg),
+    revenueLow: getFiniteNumber(record.revenueLow),
+    revenueHigh: getFiniteNumber(record.revenueHigh),
+    exDividendDate: getString(record.exDividendDate),
+    dividendDate: getString(record.dividendDate),
+  };
+}
+
+function parseGovernance(value: unknown): YahooGovernance | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  return {
+    overall: getFiniteNumber(record.overall),
+    audit: getFiniteNumber(record.audit),
+    board: getFiniteNumber(record.board),
+    compensation: getFiniteNumber(record.compensation),
+    shareholderRights: getFiniteNumber(record.shareholderRights),
+    asOf: getString(record.asOf),
+  };
+}
+
+type YahooFinanceQuoteCore = Omit<
+  YahooFinanceQuote,
+  'quoteType' | 'dividendHistory' | 'fundamentals' | 'analyst' | 'peers' | 'ownership' | 'nextEarnings' | 'governance' | 'logoUrl'
+>;
 
 /**
  * Adds the statement, analyst and peer blocks. They are parsed leniently so the
@@ -493,6 +676,10 @@ function withQuoteExtras(quote: YahooFinanceQuoteCore): YahooFinanceQuote {
     fundamentals: parseFundamentals(record?.fundamentals),
     analyst: parseAnalystData(record?.analyst),
     peers: parsePeers(record?.peers),
+    ownership: parseOwnership(record?.ownership),
+    nextEarnings: parseNextEarnings(record?.nextEarnings),
+    governance: parseGovernance(record?.governance),
+    logoUrl: getString(record?.logoUrl),
   };
 }
 
@@ -832,6 +1019,81 @@ export async function fetchYahooHistory(
     history: record.history,
     cachedAt: getString(record.cachedAt),
   };
+}
+
+/**
+ * Resolves stored logo URLs for symbols (null when no logo exists), 50 per request.
+ */
+export async function fetchYahooLogos(symbols: string[]): Promise<Record<string, string | null>> {
+  const normalized = [...new Set(symbols.map((symbol) => symbol.trim().toUpperCase()))]
+    .filter((symbol) => /^[A-Z0-9.^=-]{1,15}$/.test(symbol));
+  const result: Record<string, string | null> = {};
+  for (let index = 0; index < normalized.length; index += 50) {
+    const logos = asRecord(asRecord(await invokeYahooAction({
+      action: 'logos',
+      symbols: normalized.slice(index, index + 50),
+    }))?.logos);
+    for (const [symbol, url] of Object.entries(logos ?? {})) {
+      result[symbol] = getString(url);
+    }
+  }
+  return result;
+}
+
+function getText(value: unknown): string | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return getString(value);
+}
+
+/**
+ * Economic releases between two ISO dates (at most 31 days), optionally for one country.
+ */
+export async function fetchYahooEconomicCalendar(
+  from: string,
+  to: string,
+  country: string | null = null,
+): Promise<YahooEconomicEvent[]> {
+  const record = asRecord(await invokeYahooAction({ action: 'calendar', kind: 'economic', from, to, country }));
+  if (!Array.isArray(record?.rows)) throw new Error('Yahoo Finance devolvió un calendario económico inválido.');
+  return parseRecords(record.rows, (row) => {
+    const event = getString(row.econ_release);
+    const date = getString(row.startdatetime);
+    if (!event || !date) return null;
+    return {
+      // Yahoo appends an asterisk to some release names.
+      event: event.replace(/\s*\*$/, '').trim(),
+      country: getString(row.country_code) ?? '',
+      date,
+      period: getString(row.period),
+      actual: getText(row.after_release_actual),
+      consensus: getText(row.consensus_estimate),
+      prior: getText(row.prior_release_actual),
+      revisedPrior: getText(row.originally_reported_actual),
+    };
+  });
+}
+
+/**
+ * Earnings releases of US-listed large caps (market cap ≥ USD 10B) between two ISO dates.
+ */
+export async function fetchYahooEarningsCalendar(from: string, to: string): Promise<YahooEarningsEvent[]> {
+  const record = asRecord(await invokeYahooAction({ action: 'calendar', kind: 'earnings', from, to }));
+  if (!Array.isArray(record?.rows)) throw new Error('Yahoo Finance devolvió un calendario de resultados inválido.');
+  return parseRecords(record.rows, (row) => {
+    const symbol = getString(row.ticker);
+    const date = getString(row.startdatetime);
+    if (!symbol || !date) return null;
+    return {
+      symbol,
+      companyName: getString(row.companyshortname) ?? symbol,
+      date,
+      timing: getString(row.startdatetimetype),
+      epsEstimate: getFiniteNumber(row.epsestimate),
+      epsActual: getFiniteNumber(row.epsactual),
+      surprisePercent: getFiniteNumber(row.epssurprisepct),
+      marketCap: getFiniteNumber(row.intradaymarketcap),
+    };
+  });
 }
 
 /**

@@ -5,12 +5,13 @@ import { AssetProfileTab } from './profile/asset-profile-tab';
 import { AssetFinancialsTab } from './financials/asset-financials-tab';
 import { motion } from 'framer-motion';
 import type { AssetData } from '../../../types/dashboard';
-import { BarChart3, Building2, DollarSign, Info, Newspaper } from 'lucide-react';
+import { BarChart3, Building2, DollarSign, Info, Newspaper, Users } from 'lucide-react';
 import { Card } from '../../../components/ui/card';
 import { HistoricalPerformanceChart } from '../../dashboard/components';
 import { AssetGradesTab } from './ratings/asset-grades-tab';
 import { AssetNewsTab } from './news/asset-news-tab';
 import { AssetFilingsCard } from './news/asset-filings-card';
+import { AssetOwnershipTab } from './insights/asset-ownership-tab';
 import { AssetFundamentalsTrends } from './fundamentals/asset-fundamentals-trends';
 
 /**
@@ -34,10 +35,14 @@ interface AssetDetailTabsProps {
  */
 export function AssetDetailTabs({ asset, onRefreshAssetData, isRefreshing }: AssetDetailTabsProps) {
   // ETFs and indexes have no company statements, so the tab is hidden for them.
-  const hasFinancials = asset.ratios.length > 0 || asset.keyMetricsYearly.length > 0 || asset.analystEstimates.length > 0;
+  const hasFinancials = asset.ratios.length > 0 || asset.keyMetricsYearly.length > 0 ||
+    asset.analystEstimates.length > 0 || (asset.yahooInsights?.annualStatements.length ?? 0) > 0;
+  const hasOwnership = Boolean(asset.yahooInsights?.ownership);
+  const tabCount = 5 + Number(hasFinancials) + Number(hasOwnership);
+  const desktopColumns: Record<number, string> = { 5: 'lg:grid-cols-5', 6: 'lg:grid-cols-6', 7: 'lg:grid-cols-7' };
   return (
     <Tabs defaultValue="profile" className="w-full">
-      <TabsList className={`grid w-full grid-cols-2 ${hasFinancials ? 'md:grid-cols-6' : 'md:grid-cols-5'} h-auto`}>
+      <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-4 ${desktopColumns[tabCount]} h-auto`}>
         <TabsTrigger value="profile" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
           <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Perfil</span>
@@ -55,6 +60,13 @@ export function AssetDetailTabs({ asset, onRefreshAssetData, isRefreshing }: Ass
             <span className="sm:hidden">Fund.</span>
           </TabsTrigger>
         )}
+        {hasOwnership && (
+          <TabsTrigger value="ownership" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Accionistas</span>
+            <span className="sm:hidden">Acc.</span>
+          </TabsTrigger>
+        )}
         <TabsTrigger value="news" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
           <Newspaper className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Noticias</span>
@@ -62,7 +74,7 @@ export function AssetDetailTabs({ asset, onRefreshAssetData, isRefreshing }: Ass
         </TabsTrigger>
         <TabsTrigger value="ratings" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
           <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          <span className="hidden sm:inline">Calificaciones de analistas</span>
+          <span className="hidden sm:inline">Analistas</span>
           <span className="sm:hidden">Ratings</span>
         </TabsTrigger>
         <TabsTrigger value="evolution" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
@@ -91,6 +103,12 @@ export function AssetDetailTabs({ asset, onRefreshAssetData, isRefreshing }: Ass
         {hasFinancials && (
           <TabsContent value="financials" className="mt-4 sm:mt-6">
             <AssetFinancialsTab asset={asset} />
+          </TabsContent>
+        )}
+
+        {hasOwnership && (
+          <TabsContent value="ownership" className="mt-4 sm:mt-6">
+            <AssetOwnershipTab asset={asset} />
           </TabsContent>
         )}
 

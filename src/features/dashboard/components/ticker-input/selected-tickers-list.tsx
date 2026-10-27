@@ -3,6 +3,8 @@
 import { AnimatePresence, motion, type Variants } from 'framer-motion';
 import { Button } from '../../../../components/ui/button';
 import { XIcon, TrendingUp } from 'lucide-react';
+import { AssetLogo } from '../../../../components/ui/asset-logo';
+import { useAssetLogos } from '../../../../hooks/use-asset-logos';
 
 interface SelectedTickersListProps {
   tickers: string[];
@@ -53,6 +55,7 @@ const tickerVariants: Variants = {
 };
 
 export function SelectedTickersList({ tickers, onRemoveTicker }: SelectedTickersListProps) {
+  const logos = useAssetLogos(tickers);
   if (tickers.length === 0) {
     return null;
   }
@@ -89,7 +92,8 @@ export function SelectedTickersList({ tickers, onRemoveTicker }: SelectedTickers
               layout: { type: "spring", stiffness: 500, damping: 30 },
             }}
           >
-            <div className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 text-sm font-medium rounded-full bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15 hover:border-primary/30 transition-colors shadow-sm">
+            <div className="flex items-center gap-1.5 pl-1.5 pr-1.5 py-1 text-sm font-medium rounded-full bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15 hover:border-primary/30 transition-colors shadow-sm">
+              <AssetLogo symbol={ticker} src={logos[ticker.toUpperCase()]} lookup={false} className="size-5 text-[0.5rem]" />
               <span className="tracking-wide">{ticker}</span>
               <Button
                 variant="ghost"

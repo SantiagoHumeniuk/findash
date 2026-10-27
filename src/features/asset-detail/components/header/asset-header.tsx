@@ -2,6 +2,7 @@
 
 import type { AssetData } from '../../../../types/dashboard';
 import { WatchlistToggleButton } from '../../../watchlist/components';
+import { AssetLogo } from '../../../../components/ui/asset-logo';
 
 /**
  * Props para el componente AssetHeader.
@@ -20,15 +21,11 @@ export function AssetHeader({ asset }: AssetHeaderProps) {
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
-      <img
+      <AssetLogo
+        symbol={profile.symbol}
+        name={profile.companyName}
         src={profile.image}
-        alt={profile.companyName}
-        className="w-16 h-16 sm:w-20 sm:h-20 md:w-30 md:h-30 rounded-lg border object-contain bg-background shadow-sm"
-        onError={(e) => {
-          const target = e.target as HTMLImageElement;
-          target.onerror = null;
-          target.src = '/placeholder.svg';
-        }}
+        className="size-16 sm:size-20 md:size-24 rounded-xl p-2 text-xl shadow-sm"
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2 sm:gap-4 mb-1.5 sm:mb-2">

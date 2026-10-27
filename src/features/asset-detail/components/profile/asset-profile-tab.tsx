@@ -13,6 +13,7 @@ import {
 import { CompanyInfoItem } from './company-info-item';
 import { formatLargeNumber } from '../../lib/asset-formatters';
 import type { AssetData } from '../../../../types/dashboard';
+import { AssetRiskCard } from '../insights/asset-risk-card';
 
 interface AssetProfileTabProps {
   asset: AssetData;
@@ -89,6 +90,8 @@ export function AssetProfileTab({ asset }: AssetProfileTabProps) {
           </div>
         </CardContent>
       </Card>
+
+      <AssetRiskCard asset={asset} />
     </div>
   );
 }

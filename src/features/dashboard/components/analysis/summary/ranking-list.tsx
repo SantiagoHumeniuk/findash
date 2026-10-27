@@ -2,6 +2,7 @@ import { Award, Trophy } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../../components/ui/card";
 import { AssetData } from "../../../../../types/dashboard";
 import { motion } from "framer-motion";
+import { AssetLogo } from "../../../../../components/ui/asset-logo";
 
 interface RankingListProps {
     // El objeto 'asset' dentro del array es de tipo AssetData completo
@@ -48,6 +49,11 @@ export default function RankingList({ rankedAssets }: RankingListProps) {
                                         }`}>
                                         {isWinner ? <Trophy className="w-4 h-4" /> : index + 1}
                                     </div>
+                                    <AssetLogo
+                                        symbol={item.asset.profile.symbol}
+                                        name={item.asset.profile.companyName}
+                                        src={item.asset.profile.image}
+                                    />
                                     <div className="min-w-0">
                                         <div className="font-bold text-sm truncate">
                                             {item.asset.profile.symbol}

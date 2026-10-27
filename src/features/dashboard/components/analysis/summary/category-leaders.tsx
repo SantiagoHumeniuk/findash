@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { AssetData } from "../../../../../types/dashboard";
 import { IndicatorConfig } from "../../../../../utils/financial";
 import { motion } from "framer-motion";
+import { AssetLogo } from "../../../../../components/ui/asset-logo";
 
 interface CategoryLeadersProps {
     categoryWinners: Record<string, { symbol: string; score: number; metrics: string[] }>;
@@ -129,7 +130,8 @@ export default function CategoryLeaders({ categoryWinners, categories, assets, i
                                         <span className="text-[10px] text-muted-foreground">Ganador</span>
                                     </div>
                                 </div>
-                                <div className="text-right">
+                                <div className="flex items-center gap-2 text-right">
+                                    <AssetLogo symbol={winner.symbol} name={winnerAsset?.profile.companyName} src={winnerAsset?.profile.image} className="size-7" />
                                     <div className="font-bold text-base text-primary">{winner.symbol}</div>
                                 </div>
                             </div>
