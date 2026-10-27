@@ -254,7 +254,7 @@ describe('sector and country comparable valuation', () => {
     expect(insight!.dcf).not.toBe(50);
   });
 
-  it('uses FMP country risk premium instead of the static fallback when available', () => {
+  it('uses the country risk premium dataset instead of the static fallback when available', () => {
     const result = calculateBlendedFairValue(makeTechnologyAsset('BR'), [{
       country: 'Brazil', continent: 'South America', countryRiskPremium: 6.5, totalEquityRiskPremium: 11.2,
     }]);
@@ -263,7 +263,7 @@ describe('sector and country comparable valuation', () => {
     expect(result.context.countryRiskPremiumPct).toBeCloseTo(6.5);
   });
 
-  it('keeps analyst targets as a low-weight reference and includes the advanced FMP DCF', () => {
+  it('keeps analyst targets as a low-weight reference and includes the advanced DCF', () => {
     const asset = makeTechnologyAsset('US');
     asset.priceTargetConsensus = {
       symbol: 'TECH', targetHigh: 130, targetLow: 95, targetConsensus: 112, targetMedian: 110,
@@ -278,7 +278,7 @@ describe('sector and country comparable valuation', () => {
     expect(advancedDcf?.value).toBe(125);
   });
 
-  it('uses median FMP peer multiples when at least three peers provide each ratio', () => {
+  it('uses median peer multiples when at least three peers provide each ratio', () => {
     const asset = makeTechnologyAsset('US');
     asset.peerValuations = [
       { symbol: 'P1', companyName: 'Peer One', price: 10, marketCap: 100, priceToEarningsRatio: 15, priceToBookRatio: 2, priceToSalesRatio: 2, priceToFreeCashFlowRatio: 20, ebitMargin: 0.1, evToEBITDA: 10, evToEBIT: 20, evToSales: 3 },

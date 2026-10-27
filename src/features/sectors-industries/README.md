@@ -110,10 +110,12 @@ Yahoo, junto con el momento de recepción de la respuesta.
 ### Datos del activo en modo Yahoo-only
 
 `fetchTickerData` consulta Yahoo Finance como proveedor único para cotizaciones,
-histórico y métricas fundamentales. La vista de sectores e industrias usa el
-histórico de ETFs sectoriales/industriales disponibles en Yahoo como aproximación
-de rendimiento; no representa el promedio de todas las compañías de esa categoría.
-Solo se listan categorías con un ETF proxy configurado.
+histórico y métricas fundamentales. La vista de sectores e industrias usa la
+clasificación de Yahoo (11 sectores y ~145 industrias, acción `sectors` del proxy)
+y el historial semanal de 5 años del índice propio de cada categoría (`^YH311` =
+Technology, `^YH31130020` = Semiconductors), que Yahoo calcula con las compañías
+que clasifica en ella. Es un agregado real de la categoría, no un ETF de referencia;
+la clasificación es la de Yahoo y puede diferir de GICS.
 
 ## Hooks Personalizados
 

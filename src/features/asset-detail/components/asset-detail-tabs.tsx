@@ -10,6 +10,7 @@ import { Card } from '../../../components/ui/card';
 import { HistoricalPerformanceChart } from '../../dashboard/components';
 import { AssetGradesTab } from './ratings/asset-grades-tab';
 import { AssetNewsTab } from './news/asset-news-tab';
+import { AssetFilingsCard } from './news/asset-filings-card';
 import { AssetFundamentalsTrends } from './fundamentals/asset-fundamentals-trends';
 
 /**
@@ -95,6 +96,7 @@ export function AssetDetailTabs({ asset, onRefreshAssetData, isRefreshing }: Ass
 
         <TabsContent value="news" className="mt-4 sm:mt-6">
           <AssetNewsTab symbol={asset.profile.symbol} />
+          {!asset.profile.isEtf && <AssetFilingsCard symbol={asset.profile.symbol} />}
         </TabsContent>
 
         <TabsContent value="ratings" className="mt-4 sm:mt-6">

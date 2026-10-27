@@ -65,7 +65,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<your-anon-key>
 
 The app also loads runtime config from `public/config.json` which controls:
 - `useMockData` flag for development
-- API endpoint paths (Supabase Edge Functions proxy FMP API)
+- Market data provider (`marketDataProvider: "yahoo-finance"`, served by the `yahoo-finance-proxy` Edge Function)
 - Role-based limits (API calls, portfolios per user role)
 - Free tier symbols list
 
@@ -266,9 +266,9 @@ if (!isInfoPageConfig(config.infoPage)) {
 **Never** call external APIs directly from the frontend. All interactions must be proxied through Supabase Edge Functions.
 
 ```typescript
-// src/services/api/asset-api.ts pattern
-const { data } = await supabase.functions.invoke('fmp-proxy', {
-  body: { endpointPath: `stable/profile?symbol=${ticker}` }
+// src/services/api/yahoo-finance-api.ts pattern
+const { data } = await supabase.functions.invoke('yahoo-finance-proxy', {
+  body: { symbols: [ticker] }, // or { action: 'search' | 'news' | 'screener' | 'dividends' | 'sectors' | 'history' | 'filings', ... }
 });
 ```
 
@@ -285,7 +285,9 @@ const { data } = await supabase.functions.invoke('fmp-proxy', {
 - `asset_data_cache` - Cached API responses (1hr TTL)
 
 ### External Dependencies
-- **FMP (Financial Modeling Prep):** Stock data API proxied through Supabase Edge Functions
+- **Yahoo Finance:** Quotes, statements, analysts, peers, news, screeners and sector indexes through `yahoo-finance-proxy` (unofficial endpoints, no API key). Ratios, DCF and rating are computed client-side in `src/services/api/yahoo-fundamentals.ts`.
+- **SEC EDGAR:** Statement fallback and filings for US issuers (needs the `SEC_USER_AGENT` secret).
+- **Damodaran:** Country risk premiums bundled in `src/data/damodaran-country-risk.json` (`node scripts/update-damodaran-risk.mjs`).
 - **Recharts:** All chart visualizations (historical, radar, correlation matrix)
 - **React Router v7:** Client-side routing with lazy loading
 - **Framer Motion:** Animations (minimal usage)

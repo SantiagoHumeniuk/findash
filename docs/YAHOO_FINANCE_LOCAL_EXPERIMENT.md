@@ -1,7 +1,7 @@
 # Yahoo Finance local experiment
 
-This is an isolated, uncommitted experiment on branch `experiment/yahoo-finance-local`
-in the sibling worktree:
+This work lives on the local branch `experiment/yahoo-finance-local` (committed, not
+pushed) in the sibling worktree:
 
 `C:\Users\User\OneDrive - Universidad Nacional de la Matanza\Escritorio\Personal\Findash-yahoo-finance-local`
 
@@ -42,9 +42,18 @@ These commands do not deploy or push anything. The local Edge Function makes the
 Yahoo Finance requests; FMP is not used by the app's active market-data flows.
 Yahoo Finance endpoints are unofficial and may throttle or change their responses.
 
-The Yahoo-only variant intentionally does not fabricate a country risk premium or
-economic calendar. Sector and industry performance uses configured ETF proxies,
-and missing Yahoo metrics should be treated as unavailable, not as real zeroes.
+Without Docker, the proxy alone can run with Deno (no Supabase cache):
+
+```powershell
+cd supabase/functions/yahoo-finance-proxy
+$env:SEC_USER_AGENT = "FinDash <contact email>"
+deno run --allow-net --allow-env index.ts   # http://localhost:8000
+deno test calc.test.ts
+```
+
+The economic calendar has no free equivalent and stays unavailable. Missing Yahoo
+metrics are `null` and shown as unavailable, not as real zeroes. See
+`docs/MIGRACION-FMP-YAHOO.md` for the full endpoint mapping and deployment steps.
 
 ## Return to the original version
 

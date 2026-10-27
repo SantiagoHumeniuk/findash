@@ -23,7 +23,15 @@ import { DateRange } from "react-day-picker";
 import { isDividend } from "../../../utils/type-guards";
 import { AssetDataCacheRow } from "../types/dividends.types";
 import { extractUniqueFrequencies } from "../lib/dividends.utils";
-import { fetchYahooDividendCalendar } from "../../../services/api/yahoo-finance-api";
+import { fetchYahooDividendCalendar, type YahooFinanceDividendEvent } from "../../../services/api/yahoo-finance-api";
+import { buildDividendSymbols } from "../lib/dividend-universe";
+
+const FREQUENCY_LABELS: Record<string, string> = {
+  monthly: "mensual",
+  quarterly: "trimestral",
+  "semi-annual": "semestral",
+  annual: "anual",
+};
 
 const DividendsPage: React.FC = () => {
   const [data, setData] = React.useState<Dividend[]>([]);
@@ -47,7 +55,8 @@ const DividendsPage: React.FC = () => {
   React.useEffect(() => {
     const fetchDividends = async () => {
       setLoading(true);
-      const CACHE_KEY = 'yahoo_dividends_calendar';
+      // v2 adds frequency and amount and covers the wider dividend universe.
+      const CACHE_KEY = 'yahoo_dividends_calendar_v2';
       let cacheRow: AssetDataCacheRow | null = null;
       try {
         const { data: cached } = await supabase.from('asset_data_cache').select('data, last_updated_at').eq('symbol', CACHE_KEY).single();
@@ -57,8 +66,12 @@ const DividendsPage: React.FC = () => {
           setData(arr.filter(isDividend));
           return;
         }
-        const symbols = config.plans.freeTierSymbols.slice(0, 50);
-        const yahooEvents = await fetchYahooDividendCalendar(symbols);
+        const symbols = buildDividendSymbols(config.plans.freeTierSymbols);
+        const yahooEvents: YahooFinanceDividendEvent[] = [];
+        // The proxy accepts 50 symbols per call; batches run one after another to avoid bursts.
+        for (let index = 0; index < symbols.length; index += 50) {
+          yahooEvents.push(...await fetchYahooDividendCalendar(symbols.slice(index, index + 50)));
+        }
         const today = new Date().toISOString().slice(0, 10);
         const dividends: Dividend[] = yahooEvents.flatMap((event) => {
           const date = [event.exDividendDate, event.dividendDate]
@@ -71,10 +84,10 @@ const DividendsPage: React.FC = () => {
             recordDate: "",
             paymentDate: event.dividendDate,
             declarationDate: "",
-            adjDividend: null,
-            dividend: null,
+            adjDividend: event.lastDividendValue,
+            dividend: event.lastDividendValue,
             yield: event.dividendYield === null ? null : event.dividendYield * 100,
-            frequency: "No disponible",
+            frequency: FREQUENCY_LABELS[event.frequency] ?? "No disponible",
           }];
         });
         setData(dividends);

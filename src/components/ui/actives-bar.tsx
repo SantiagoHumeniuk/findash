@@ -39,7 +39,7 @@ const TickerItem = memo(({ asset }: { asset: MarketMover }) => {
 TickerItem.displayName = 'TickerItem';
 
 /**
- * Barra superior con el rendimiento diario de grandes compañías del S&P 500.
+ * Barra superior con el rendimiento diario de los 20 principales componentes del SPY.
  */
 export default function ActivesBar() {
     const [activeAssets, setActiveAssets] = useState<MarketMover[]>([]);

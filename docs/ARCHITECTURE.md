@@ -59,19 +59,21 @@ Esta combinación ofrece la máxima flexibilidad. No es una librería de compone
 
 ## 4. Proveedores de datos financieros
 
-### Acciones: experimento Yahoo Finance-only
+### Acciones: Yahoo Finance (sin FMP)
 
-En esta rama de prueba, Yahoo Finance es el único proveedor de mercado y no se
-invoca FMP. El proxy sirve cotizaciones, histórico, métricas fundamentales cuando
-Yahoo las publica, búsqueda, noticias, screeners y eventos de dividendos. Los datos
-se normalizan en `src/services/api/` antes de llegar a las features.
+Yahoo Finance es el único proveedor de mercado para renta variable y no se invoca
+FMP. El proxy `yahoo-finance-proxy` sirve cotizaciones, histórico, estados
+financieros (`fundamentals-timeseries`, con SEC EDGAR como respaldo para emisores de
+EE. UU.), consenso y calificaciones de analistas, estimaciones, comparables,
+búsqueda, noticias, screeners, dividendos, sectores/industrias y presentaciones SEC.
+Comparte resultados entre usuarios en `asset_data_cache` (claves `yahoo:*`).
 
-La cobertura no es equivalente a FMP: Yahoo puede omitir métricas o limitar sus
-respuestas. Los datos ausentes deben mostrarse como no disponibles, nunca como
-valores inventados. Los rendimientos sectoriales e industriales usan ETF como
-proxies, no promedios completos del universo. Yahoo no ofrece una prima de riesgo
-país ni un calendario macroeconómico equivalente; esas vistas indican que los datos
-no están disponibles.
+Los ratios, métricas TTM y anuales, el DCF a 5 años y el scorecard se calculan en
+`src/services/api/yahoo-fundamentals.ts` con el mismo formato que antes devolvía
+FMP; cuando falta un dato de entrada la métrica es `null`, nunca `0`. Los sectores e
+industrias usan los índices propios de Yahoo (`^YH...`). La prima de riesgo país
+proviene de la tabla de Damodaran incluida en `src/data/`. El calendario
+macroeconómico y la segmentación de ingresos no tienen fuente gratuita equivalente.
 
 La búsqueda no usa una lista fija de símbolos: consulta las acciones (`EQUITY`)
 que devuelve Yahoo y permite ingresar manualmente cualquier símbolo bursátil

@@ -196,8 +196,11 @@ DividendsPage
   ├─ useEffect → fetchDividends()
   │   ├─ Intenta leer caché (24h TTL)
   │   ├─ Si no hay caché o está expirado:
-  │   │   ├─ fetchYahooDividendCalendar(config.plans.freeTierSymbols)
-  │   │   └─ Guarda respuestas Yahoo en caché separada
+  │   │   ├─ buildDividendSymbols(freeTierSymbols) → plan + DIVIDEND_UNIVERSE (~150)
+  │   │   ├─ fetchYahooDividendCalendar() en lotes de 50 (el proxy cachea 12h)
+  │   │   │   └─ fecha ex/pago, último dividendo, yield y frecuencia inferida
+  │   │   │      de los pagos del último año
+  │   │   └─ Guarda el resultado en `yahoo_dividends_calendar_v2` (24h)
   │   └─ Filtra con isDividend() type guard
   ├─ useReactTable() → table instance
   │   ├─ sorting, columnFilters, pagination

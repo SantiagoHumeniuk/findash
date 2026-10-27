@@ -52,6 +52,8 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: './src/test/setup.ts',
+    // Edge Function tests run under Deno (`deno test`), not Vitest.
+    exclude: ['**/node_modules/**', '**/dist/**', 'supabase/functions/**'],
     // Placeholder values so modules that build the Supabase client load without a local .env.
     env: {
       VITE_SUPABASE_URL: 'http://127.0.0.1:54321',

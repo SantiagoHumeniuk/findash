@@ -3,9 +3,9 @@ import type { YahooFinanceQuote } from '../../../services/api/yahoo-finance-api'
 import { mapYahooMarketMover, S_AND_P_500_LEADERS } from './market-movers-service';
 
 describe('Yahoo market leaders', () => {
-  it('uses fifteen unique S&P 500 leaders in display order', () => {
-    expect(S_AND_P_500_LEADERS).toHaveLength(15);
-    expect(new Set(S_AND_P_500_LEADERS).size).toBe(15);
+  it('uses the twenty largest unique SPY holdings in display order', () => {
+    expect(S_AND_P_500_LEADERS).toHaveLength(20);
+    expect(new Set(S_AND_P_500_LEADERS).size).toBe(20);
     expect(S_AND_P_500_LEADERS.slice(0, 3)).toEqual(['NVDA', 'MSFT', 'AAPL']);
   });
 

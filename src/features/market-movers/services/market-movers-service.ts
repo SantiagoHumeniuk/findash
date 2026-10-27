@@ -7,9 +7,10 @@ import {
 } from '../../../services/api/yahoo-finance-api';
 import { mapYahooDailyChange } from '../../../services/api/yahoo-finance-mappers';
 
+/** The 20 largest SPY holdings in weight order (GOOGL and GOOG are both share classes). */
 export const S_AND_P_500_LEADERS = [
-    'NVDA', 'MSFT', 'AAPL', 'AMZN', 'GOOGL', 'AVGO', 'META', 'BRK-B',
-    'TSLA', 'LLY', 'JPM', 'WMT', 'ORCL', 'V', 'MA',
+    'NVDA', 'MSFT', 'AAPL', 'AMZN', 'GOOGL', 'AVGO', 'META', 'BRK-B', 'GOOG', 'TSLA',
+    'LLY', 'JPM', 'WMT', 'XOM', 'V', 'MA', 'ORCL', 'COST', 'JNJ', 'NFLX',
 ] as const;
 
 export function mapYahooMarketMover(quote: YahooFinanceQuote): MarketMover | null {
@@ -36,7 +37,8 @@ function mapYahooScreenerMover(mover: YahooFinanceMarketMover): MarketMover {
 }
 
 /**
- * Loads a stable set of widely held S&P 500 leaders from Yahoo's market snapshot.
+ * Loads the 20 largest SPY holdings from Yahoo's market snapshot. The proxy
+ * computes the daily change against the previous session's daily candle.
  */
 export async function fetchIndexLeaders(): Promise<MarketMover[]> {
     const response = await fetchYahooMarketQuotes([...S_AND_P_500_LEADERS]);
