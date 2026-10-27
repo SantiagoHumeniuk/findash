@@ -223,6 +223,7 @@ export function AssetFinancialsTab({ asset }: AssetFinancialsTabProps) {
   // MERGE DE DATOS: Combinar keyMetricsYearly y ratios para tener todos los campos disponibles
   // Esto resuelve el problema de métricas faltantes cuando están en el dataset "equivocado"
   const mergedFinancials = useMemo(() => {
+    if (asset.dataSource === 'Yahoo Finance') return [];
     if (!hasKeyMetrics && !hasRatios) return [];
 
     // Si falta alguno, devolver el que existe
@@ -248,11 +249,11 @@ export function AssetFinancialsTab({ asset }: AssetFinancialsTabProps) {
         ...(match ?? {})
       };
     });
-  }, [asset.keyMetricsYearly, asset.ratios, hasKeyMetrics, hasRatios]);
-
+  }, [asset.dataSource, asset.keyMetricsYearly, asset.ratios, hasKeyMetrics, hasRatios]);
 
   return (
-    <Tabs defaultValue={hasEstimates ? "estimates" : "valuation"} className="w-full space-y-6">
+    <div className="space-y-6">
+      <Tabs defaultValue={hasEstimates ? "estimates" : "valuation"} className="w-full space-y-6">
 
       {/* Scroll horizontal para tabs en móvil */}
       <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -378,6 +379,7 @@ export function AssetFinancialsTab({ asset }: AssetFinancialsTabProps) {
           />
         </TabsContent>
       )}
-    </Tabs>
+      </Tabs>
+    </div>
   );
 }

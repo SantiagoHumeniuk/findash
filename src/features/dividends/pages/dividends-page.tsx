@@ -22,7 +22,8 @@ import {
 import { DateRange } from "react-day-picker";
 import { isDividend } from "../../../utils/type-guards";
 import { AssetDataCacheRow } from "../types/dividends.types";
-import { extractUniqueFrequencies, validateConfig, getDividendsEndpoint } from "../lib/dividends.utils";
+import { extractUniqueFrequencies } from "../lib/dividends.utils";
+import { fetchYahooDividendCalendar } from "../../../services/api/yahoo-finance-api";
 
 const DividendsPage: React.FC = () => {
   const [data, setData] = React.useState<Dividend[]>([]);
@@ -46,39 +47,56 @@ const DividendsPage: React.FC = () => {
   React.useEffect(() => {
     const fetchDividends = async () => {
       setLoading(true);
-      const CACHE_KEY = 'dividends_calendar';
+      const CACHE_KEY = 'yahoo_dividends_calendar';
+      let cacheRow: AssetDataCacheRow | null = null;
       try {
         const { data: cached } = await supabase.from('asset_data_cache').select('data, last_updated_at').eq('symbol', CACHE_KEY).single();
-        const cacheRow = cached as AssetDataCacheRow | null;
+        cacheRow = cached as AssetDataCacheRow | null;
         if (cacheRow && new Date(cacheRow.last_updated_at) > new Date(Date.now() - 24 * 60 * 60 * 1000)) {
           const arr = Array.isArray(cacheRow.data) ? cacheRow.data : [];
           setData(arr.filter(isDividend));
           return;
         }
-        // Validate config and get endpoint
-        if (!validateConfig(config)) {
-          throw new Error("Configuración inválida");
-        }
-        const endpointPath = getDividendsEndpoint(config);
-        const invokeResult = await supabase.functions.invoke('fmp-proxy', { body: { endpointPath } });
-        const invokeResultObj = invokeResult as unknown as Record<string, unknown>;
-        const apiData = invokeResultObj.data;
-        const apiError = invokeResultObj.error;
-        if (Array.isArray(apiData)) {
-          setData(apiData.filter(isDividend));
-          void supabase.from('asset_data_cache').upsert({ symbol: CACHE_KEY, data: apiData, last_updated_at: new Date().toISOString() });
-        } else if (cacheRow) {
-          const arr = Array.isArray(cacheRow.data) ? cacheRow.data : [];
-          setData(arr.filter(isDividend));
-          // toast.warning("Datos desactualizados.");
-        } else {
-          throw new Error(typeof apiError === 'string' ? apiError : "No se pudieron obtener los dividendos.");
+        const symbols = config.plans.freeTierSymbols.slice(0, 50);
+        const yahooEvents = await fetchYahooDividendCalendar(symbols);
+        const today = new Date().toISOString().slice(0, 10);
+        const dividends: Dividend[] = yahooEvents.flatMap((event) => {
+          const date = [event.exDividendDate, event.dividendDate]
+            .filter((candidate): candidate is string => Boolean(candidate) && candidate >= today)
+            .sort()[0];
+          if (!date) return [];
+          return [{
+            symbol: event.symbol,
+            date,
+            recordDate: "",
+            paymentDate: event.dividendDate,
+            declarationDate: "",
+            adjDividend: null,
+            dividend: null,
+            yield: event.dividendYield === null ? null : event.dividendYield * 100,
+            frequency: "No disponible",
+          }];
+        });
+        setData(dividends);
+        const { error: cacheError } = await supabase.from('asset_data_cache').upsert({
+          symbol: CACHE_KEY,
+          data: dividends,
+          last_updated_at: new Date().toISOString(),
+        });
+        if (cacheError) {
+          void logger.warn("YAHOO_DIVIDENDS_CACHE_WRITE_FAILED", cacheError.message);
         }
       } catch (error) {
         const err = error as { message?: string };
-        toast.error("Error al obtener los dividendos.");
-        void logger.error("DIVIDENDS_FETCH_FAILED", err.message ?? String(error));
-        setData([]);
+        if (cacheRow) {
+          const arr = Array.isArray(cacheRow.data) ? cacheRow.data : [];
+          setData(arr.filter(isDividend));
+          toast.warning("Yahoo Finance no respondió; se muestran los últimos dividendos guardados.");
+        } else {
+          toast.error("Error al obtener los dividendos de Yahoo Finance.");
+          setData([]);
+        }
+        void logger.error("YAHOO_DIVIDENDS_FETCH_FAILED", err.message ?? String(error));
       } finally {
         setLoading(false);
       }

@@ -10,7 +10,7 @@ import { useMemo } from 'react';
  * Calcula el valor histórico del portafolio basado en la estrategia "Buy and Hold" con las tenencias actuales.
  */
 export function usePortfolioHistory(holdings: Holding[]) {
-    // La carga del portafolio ya incluye AssetData; no volver a consultar FMP/Yahoo por cada holding.
+    // The portfolio load already includes each Yahoo Finance AssetData snapshot.
     const portfolioHistory = useMemo(() => {
         if (holdings.length === 0) return [];
 
@@ -28,7 +28,7 @@ export function usePortfolioHistory(holdings: Holding[]) {
             const rawHistory = holding.assetData?.historicalReturns ?? [];
 
             // 1. Ordenar DESC (Más reciente a más antiguo) para consistencia
-            // FMP suele devolver DESC.
+            // Normalize history so the newest values appear first.
             const sortedHistory = [...rawHistory].sort((a, b) =>
                 new Date(b.date).getTime() - new Date(a.date).getTime()
             );

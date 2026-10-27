@@ -16,29 +16,6 @@ export const RISK_PREMIUM_CACHE_KEY = 'market_risk_premium';
 export const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Extracts the FMP proxy endpoint from config object
- */
-export function extractFmpProxyEndpoint(raw: unknown): string {
-  if (!raw || typeof raw !== 'object') return '';
-
-  const api = (raw as { api?: unknown }).api;
-  if (!api || typeof api !== 'object') return '';
-
-  const fmpProxyEndpoints = (api as { fmpProxyEndpoints?: unknown }).fmpProxyEndpoints;
-  if (!fmpProxyEndpoints || typeof fmpProxyEndpoints !== 'object') return '';
-
-  const marketRiskPremium = (
-    fmpProxyEndpoints as { marketRiskPremium?: unknown }
-  ).marketRiskPremium;
-
-  if (typeof marketRiskPremium === 'string') {
-    return marketRiskPremium;
-  }
-
-  return '';
-}
-
-/**
  * Gets the color class for risk premium based on value
  * - Green: <= 5%
  * - Yellow: <= 10%
@@ -110,34 +87,6 @@ export async function fetchCachedData(): Promise<CachedRiskPremiumData | null> {
 }
 
 /**
- * Fetches fresh risk premium data from FMP API via Supabase Edge Function
- */
-export async function fetchFreshData(endpoint: string): Promise<RiskPremiumData[]> {
-  try {
-    const invokeResult = await supabase.functions.invoke('fmp-proxy', {
-      body: { endpointPath: endpoint },
-    });
-
-    const apiData: RiskPremiumData[] | null =
-      invokeResult && 'data' in invokeResult
-        ? (invokeResult.data as RiskPremiumData[] | null)
-        : null;
-
-    const apiError: unknown =
-      invokeResult && 'error' in invokeResult ? invokeResult.error : null;
-
-    if (apiError) {
-      throw new Error(errorToString(apiError));
-    }
-
-    return apiData ?? [];
-  } catch (error) {
-    void logger.error('RISK_PREMIUM_API_FETCH_FAILED', errorToString(error));
-    throw error;
-  }
-}
-
-/**
  * Saves risk premium data to Supabase cache
  */
 export async function saveCacheData(data: RiskPremiumData[]): Promise<void> {
@@ -157,41 +106,8 @@ export async function saveCacheData(data: RiskPremiumData[]): Promise<void> {
  * Main function to fetch risk premium data with caching
  * Returns cached data as fallback if API fails
  */
-export async function fetchRiskPremiumData(): Promise<RiskPremiumData[]> {
-  // Check cache first
-  const cached = await fetchCachedData();
-
-  if (cached && isCacheValid(cached.last_updated_at)) {
-    return cached.data || [];
-  }
-
-  // Cache miss or expired - try to fetch fresh data
-  try {
-    // Get config from public/config.json
-    const configResponse = await fetch('/config.json');
-    const config: unknown = await configResponse.json();
-    
-    const endpoint = extractFmpProxyEndpoint(config);
-    if (!endpoint) {
-      throw new Error('No se encontró el endpoint de riesgo país en la configuración.');
-    }
-
-    const freshData = await fetchFreshData(endpoint);
-    const sortedData = sortDataByCountry(freshData);
-
-    // Save to cache (fire and forget)
-    void saveCacheData(sortedData);
-
-    return sortedData;
-  } catch (error) {
-    // If API fails, return cached data even if expired
-    void logger.warn('RISK_PREMIUM_API_FAILED_USING_CACHE', errorToString(error));
-    
-    if (cached?.data) {
-      return cached.data;
-    }
-
-    // No cache available - throw error
-    throw error;
-  }
+export function fetchRiskPremiumData(): Promise<RiskPremiumData[]> {
+  return Promise.reject(new Error(
+    'Yahoo Finance no publica primas de riesgo país. Esta vista no está disponible en el experimento Yahoo-only.',
+  ));
 }

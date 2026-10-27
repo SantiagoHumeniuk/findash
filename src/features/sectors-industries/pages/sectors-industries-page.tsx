@@ -108,12 +108,14 @@ export default function SectorsIndustriesPage() {
 
   const {
     data: industryPerformance,
-    isLoading: industryPerfLoading
+    isLoading: industryPerfLoading,
+    error: industryPerfError,
   } = useIndustryPerformance(selectedIndustry);
 
   const {
     data: sectorPerformance,
-    isLoading: sectorPerfLoading
+    isLoading: sectorPerfLoading,
+    error: sectorPerfError,
   } = useSectorPerformance(selectedSector);
 
   // Set default selections when data loads
@@ -199,7 +201,11 @@ export default function SectorsIndustriesPage() {
             {/* Show content only if an industry is selected */}
             {selectedIndustry && (
               <>
-                {industryPerfLoading ? (
+                {industryPerfError ? (
+                  <div role="alert" className="rounded-md border border-destructive/40 p-4 text-sm text-destructive">
+                    No se pudo cargar el gráfico de performance de la industria: {industryPerfError.message}
+                  </div>
+                ) : industryPerfLoading ? (
                   <PerformanceLoadingSkeleton />
                 ) : industryPerformance && industryStats ? (
                   <>
@@ -278,7 +284,11 @@ export default function SectorsIndustriesPage() {
             {/* Show content only if a sector is selected */}
             {selectedSector && (
               <>
-                {sectorPerfLoading ? (
+                {sectorPerfError ? (
+                  <div role="alert" className="rounded-md border border-destructive/40 p-4 text-sm text-destructive">
+                    No se pudo cargar el gráfico de performance del sector: {sectorPerfError.message}
+                  </div>
+                ) : sectorPerfLoading ? (
                   <PerformanceLoadingSkeleton />
                 ) : sectorPerformance && sectorStats ? (
                   <>

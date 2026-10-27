@@ -10,10 +10,16 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../../components/ui/tooltip";
 import { Download, HelpCircle, LayoutGrid } from "lucide-react";
-import { Indicator, indicatorConfig } from "../../../../utils/financial";
+import {
+    getIndicatorStatus,
+    getIndicatorStatusClass,
+    Indicator,
+    indicatorConfig,
+} from "../../../../utils/financial";
 import { exportToPdf } from "../../../../utils/export-pdf";
 import { useTheme } from "../../../../components/ui/theme-provider";
 import { usePlanFeature } from "../../../../hooks/use-plan-feature";
+import { toast } from "sonner";
 
 // --- Props del Componente ---
 interface FundamentalsTableProps {
@@ -66,6 +72,7 @@ const yahooMetricFields: Record<string, string[]> = {
     priceToBook: ['keyStatistics.priceToBook'],
     priceToSales: ['summaryDetail.priceToSalesTrailing12Months'],
     evToEbitda: ['keyStatistics.enterpriseToEbitda'],
+    evToSales: ['keyStatistics.enterpriseToRevenue'],
     grossMargin: ['financialData.grossMargins'],
     operatingMargin: ['financialData.operatingMargins'],
     roe: ['financialData.returnOnEquity'],
@@ -74,9 +81,76 @@ const yahooMetricFields: Record<string, string[]> = {
     currentRatio: ['financialData.currentRatio'],
     dividendYield: ['summaryDetail.dividendYield'],
     payout_ratio: ['keyStatistics.payoutRatio'],
+    dividendPerShare: ['summaryDetail.trailingAnnualDividendRate'],
     beta: ['summaryDetail.beta'],
     marketCap: ['price.marketCap'],
+    sma50: ['summaryDetail.fiftyDayAverage'],
+    sma200: ['summaryDetail.twoHundredDayAverage'],
 };
+
+function getYahooComputeContext(asset: AssetData): Record<string, number> {
+    const metrics = asset.yahooMetrics ?? {};
+    const context: Record<string, number> = {};
+    const aliases: Record<string, string> = {
+        volume: 'price.regularMarketVolume',
+        averageVolume: 'summaryDetail.averageVolume',
+        priceAvg50: 'summaryDetail.fiftyDayAverage',
+        priceAvg200: 'summaryDetail.twoHundredDayAverage',
+        lastDividend: 'summaryDetail.trailingAnnualDividendRate',
+        priceToFreeCashFlowsRatioTTM: 'keyStatistics.priceToFreeCashflow',
+        totalDebt: 'financialData.totalDebt',
+        totalCash: 'financialData.totalCash',
+        ebitda: 'financialData.ebitda',
+    };
+
+    for (const [field, key] of Object.entries(aliases)) {
+        const value = metrics[key];
+        if (typeof value === 'number' && Number.isFinite(value)) context[field] = value;
+    }
+    if (asset.quote.price > 0 && Number.isFinite(asset.quote.price)) {
+        context.price = asset.quote.price;
+    }
+
+    const marketCap = metrics['price.marketCap'];
+    const freeCashFlow = metrics['financialData.freeCashflow'];
+    if (
+        typeof marketCap === 'number' &&
+        Number.isFinite(marketCap) &&
+        marketCap > 0 &&
+        typeof freeCashFlow === 'number' &&
+        Number.isFinite(freeCashFlow) &&
+        freeCashFlow > 0
+    ) {
+        context.priceToFreeCashFlowsRatioTTM = marketCap / freeCashFlow;
+    }
+
+    const totalDebt = metrics['financialData.totalDebt'];
+    const totalCash = metrics['financialData.totalCash'];
+    const ebitda = metrics['financialData.ebitda'];
+    if (
+        typeof totalDebt === 'number' &&
+        Number.isFinite(totalDebt) &&
+        typeof totalCash === 'number' &&
+        Number.isFinite(totalCash) &&
+        typeof ebitda === 'number' &&
+        Number.isFinite(ebitda) &&
+        ebitda > 0
+    ) {
+        context.netDebtToEBITDA = (totalDebt - totalCash) / ebitda;
+    }
+
+    return context;
+}
+
+function getLegacyComputeContext(asset: AssetData): Record<string, number> {
+    const context: Record<string, number> = {};
+    for (const source of [asset.profile, asset.quote, asset.keyMetrics]) {
+        for (const [field, value] of Object.entries(source)) {
+            if (typeof value === 'number' && Number.isFinite(value)) context[field] = value;
+        }
+    }
+    return context;
+}
 
 function resolveIndicatorValue(asset: AssetData, key: string): number | null {
     const config = indicatorConfig[key];
@@ -88,22 +162,7 @@ function resolveIndicatorValue(asset: AssetData, key: string): number | null {
         .find((candidate): candidate is number =>
             typeof candidate === 'number' && Number.isFinite(candidate)
         );
-    if (yahooValue !== undefined) {
-        value = yahooValue;
-    } else if (asset.dataSource === 'Yahoo Finance') {
-        const yahooQuoteValues: Record<string, number | undefined> = {
-            PER: asset.quote.pe,
-            forwardPER: asset.quote.forwardPE,
-            epsTTM: asset.quote.trailingEPS,
-            epsForward: asset.quote.forwardEPS,
-            targetPrice: asset.priceTargetConsensus.targetConsensus,
-            analystCount: asset.priceTarget.lastMonthCount,
-            marketCap: asset.quote.marketCap,
-            beta: asset.profile.beta,
-        };
-        const quoteValue = yahooQuoteValues[key];
-        if (typeof quoteValue === 'number' && Number.isFinite(quoteValue)) value = quoteValue;
-    }
+    if (yahooValue !== undefined) value = yahooValue;
 
     // 1. Buscar valor directo en los campos API definidos
     // Prioridad de búsqueda: KeyMetrics (TTM) -> Quote (Tiempo real) -> Profile (Estático) -> Rating
@@ -126,15 +185,10 @@ function resolveIndicatorValue(asset: AssetData, key: string): number | null {
     }
 
     // 2. Si no se encuentra y hay función de cálculo (compute), intentar calcular
-    if (value === null && config.compute && asset.dataSource !== 'Yahoo Finance') {
-        // Construimos un objeto 'raw' plano combinando las fuentes principales
-        // Esto permite que las fórmulas como (yearHigh - price) / yearHigh funcionen
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const rawContext: any = {
-            ...(asset.profile as any), // eslint-disable-line @typescript-eslint/no-explicit-any
-            ...(asset.quote as any), // eslint-disable-line @typescript-eslint/no-explicit-any
-            ...(asset.keyMetrics as any), // eslint-disable-line @typescript-eslint/no-explicit-any
-        };
+    if (value === null && config.compute) {
+        const rawContext = asset.dataSource === 'Yahoo Finance'
+            ? getYahooComputeContext(asset)
+            : getLegacyComputeContext(asset);
         const computed = config.compute(rawContext);
         if (computed !== null && Number.isFinite(computed)) {
             value = computed;
@@ -166,21 +220,6 @@ const formatValue = (config: Indicator, value: number | null, currency?: string)
     return value.toFixed(2);
 };
 
-const getTrafficLightClass = (config: Indicator, value: number | null): string => {
-    if (value === null || value === undefined) return "text-muted-foreground";
-    if (config.displayOnly) return "text-foreground";
-    const { green, yellow, lowerIsBetter } = config;
-    if (lowerIsBetter) {
-        if (value <= green) return 'text-green-600 dark:text-green-400';
-        if (value <= yellow) return 'text-yellow-600 dark:text-yellow-500';
-        return 'text-red-600 dark:text-red-500';
-    } else {
-        if (value >= green) return 'text-green-600 dark:text-green-400';
-        if (value >= yellow) return 'text-yellow-600 dark:text-yellow-500';
-        return 'text-red-600 dark:text-red-500';
-    }
-};
-
 // --- Componente Principal ---
 export const FundamentalsTable = React.memo(function FundamentalsTable({ assets }: FundamentalsTableProps) {
     const [hideNA, setHideNA] = useState(true);
@@ -199,6 +238,7 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
             return {
                 symbol: asset.profile.symbol,
                 currency: asset.profile.currency,
+                asset,
                 values
             };
         });
@@ -265,6 +305,9 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
             assets,
             theme: theme,
             indicatorConfig: indicatorConfig,
+        }).catch((error: unknown) => {
+            console.error('Error durante la exportación a PDF:', error);
+            toast.error(`Error al exportar el PDF: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         });
     };
 
@@ -362,7 +405,7 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                                                                 </div>
                                                             </TableCell>
                                                             {tableData.map((item) => (
-                                                                <TableCell key={item.symbol} className={`text-center font-semibold text-xs sm:text-sm ${getTrafficLightClass(config, item.values[key])}`}>
+                                                                <TableCell key={item.symbol} className={`text-center font-semibold text-xs sm:text-sm ${getIndicatorStatusClass(getIndicatorStatus(key, config, item.values[key], item.asset))}`}>
                                                                     {formatValue(config, item.values[key], item.currency)}
                                                                 </TableCell>
                                                             ))}
@@ -377,6 +420,13 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                         )
                     ))}
                 </Accordion>
+                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground" aria-label="Leyenda de calidad de indicadores">
+                    <span className="font-medium text-foreground">Lectura orientativa:</span>
+                    <span className="text-green-600 dark:text-green-400">Bueno</span>
+                    <span className="text-yellow-600 dark:text-yellow-500">Intermedio</span>
+                    <span className="text-red-600 dark:text-red-500">Desfavorable</span>
+                    <span>Los múltiplos se ajustan por sector/industria; las métricas sin interpretación direccional quedan neutras.</span>
+                </div>
             </CardContent>
         </Card>
     );

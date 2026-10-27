@@ -5,12 +5,9 @@ import { useAssetData } from '../../dashboard/hooks/use-asset-data';
 import { motion } from 'framer-motion';
 import { Button } from '../../../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { Card, CardContent } from '../../../components/ui/card';
-import { CardHeader, CardTitle } from '../../../components/ui/card';
 import {
   AssetDetailSkeleton,
   AssetHeader,
-  AssetKeyMetrics,
   LoadingError,
   NotFoundError,
   DCFValuationCard,
@@ -93,10 +90,6 @@ export default function AssetDetailPage() {
     return <NotFoundError symbol={symbol ?? 'UNKNOWN'} />;
   }
 
-  const yahooMetrics = Object.entries(asset.yahooMetrics ?? {})
-    .filter(([, value]) => value !== null && Number.isFinite(value))
-    .sort(([left], [right]) => left.localeCompare(right));
-
   // Main content
   return (
     <motion.div
@@ -125,35 +118,6 @@ export default function AssetDetailPage() {
       <motion.div variants={heroVariants}>
         <AssetHeader asset={asset} />
       </motion.div>
-
-      {/* Key Metrics */}
-      <motion.div variants={itemVariants}>
-        <AssetKeyMetrics asset={asset} />
-      </motion.div>
-
-      {yahooMetrics.length > 0 && (
-        <motion.div variants={itemVariants}>
-          <Card className="border-blue-500/20">
-            <CardHeader>
-              <CardTitle className="text-lg">Métricas complementarias</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {yahooMetrics.map(([key, value]) => (
-                  <div key={key} className="min-w-0 rounded-md border p-3">
-                    <p className="truncate text-xs text-muted-foreground" title={key}>
-                      {key.replaceAll('.', ' · ').replace(/([a-z])([A-Z])/g, '$1 $2')}
-                    </p>
-                    <p className="break-all font-medium tabular-nums">
-                      {new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 }).format(value)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
 
       {/* Valuation & Rating Cards */}
       {asset.dataSource !== 'Yahoo Finance' && (

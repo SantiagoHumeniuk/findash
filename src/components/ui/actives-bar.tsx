@@ -3,19 +3,8 @@
 import { useEffect, useState, memo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ArrowDown, ArrowUp, TrendingUp, BookOpen, Lightbulb } from 'lucide-react';
-import { fetchGainers, fetchLosers, fetchActives } from '../../features/market-movers/services/market-movers-service';
+import { fetchIndexLeaders } from '../../features/market-movers/services/market-movers-service';
 import type { MarketMover } from '../../features/market-movers/types';
-
-// Lista de símbolos populares para priorizar en la visualización
-const KNOWN_SYMBOLS = [
-    "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "BRK-B", "LLY", "AVGO", "TSM", "NVO", "V",
-    "JPM", "WMT", "XOM", "MA", "UNH", "PG", "JNJ", "COST", "HD", "MRK", "ABBV", "CVX", "CRM", "BAC",
-    "AMD", "NFLX", "PEP", "KO", "DIS", "ADBE", "MCD", "CSCO", "TM", "ASML", "ORCL", "NKE", "WFC",
-    "QCOM", "ACN", "IBM", "GE", "VZ", "CAT", "INTC", "UBER", "ABNB", "PYPL", "INTU", "AMGN", "TXN",
-    "SONY", "PFE", "BA", "SBUX", "HON", "AMAT", "NOW", "GS", "MS", "RTX", "BKNG", "T", "C", "BLK",
-    "DE", "MELI", "SHOP", "SPOT", "F", "GM", "AXP", "UPS", "PM", "PLTR", "COIN", "BABA", "PDD",
-    "SHEL", "SPY", "QQQ", "DIA", "GLD", "VOO", "SMH"
-];
 
 // Tips educativos para mostrar cuando no hay activos o cargando
 const educationalTips = [
@@ -50,8 +39,7 @@ const TickerItem = memo(({ asset }: { asset: MarketMover }) => {
 TickerItem.displayName = 'TickerItem';
 
 /**
- * Barra superior que muestra un carrusel infinito con el rendimiento diario de activos.
- * Prioriza activos conocidos y complementa con los mayores movimientos del mercado.
+ * Barra superior con el rendimiento diario de grandes compañías del S&P 500.
  */
 export default function ActivesBar() {
     const [activeAssets, setActiveAssets] = useState<MarketMover[]>([]);
@@ -60,49 +48,23 @@ export default function ActivesBar() {
     const location = useLocation();
 
     useEffect(() => {
+        let isActive = true;
         const loadAssets = async () => {
-            setLoading(true);
             try {
-                // 1. Cargar datos de múltiples fuentes en paralelo
-                const [gainers, losers, actives] = await Promise.all([
-                    fetchGainers(),
-                    fetchLosers(),
-                    fetchActives()
-                ]);
-
-                // 2. Unificar y eliminar duplicados
-                const allAssets = [...gainers, ...losers, ...actives];
-                const uniqueMap = new Map<string, MarketMover>();
-
-                allAssets.forEach(asset => {
-                    if (!uniqueMap.has(asset.symbol)) {
-                        uniqueMap.set(asset.symbol, asset);
-                    }
-                });
-
-                const uniqueAssets = Array.from(uniqueMap.values());
-
-                // 3. Estrategia de Priorización
-                // A. Encontrar los símbolos "famosos" en los resultados
-                const knownAssets = uniqueAssets.filter(a => KNOWN_SYMBOLS.includes(a.symbol));
-
-                // B. Tomar el resto de activos
-                const otherAssets = uniqueAssets.filter(a => !KNOWN_SYMBOLS.includes(a.symbol));
-
-                // C. Ordenar los "otros" por volatilidad absoluta (para mostrar cosas interesantes)
-                otherAssets.sort((a, b) => Math.abs(b.changesPercentage) - Math.abs(a.changesPercentage));
-
-                // 4. Construir lista final: Conocidos primero + Top 20 del resto para rellenar
-                const finalAssets = [...knownAssets, ...otherAssets.slice(0, 25)];
-
-                setActiveAssets(finalAssets);
+                const leaders = await fetchIndexLeaders();
+                if (isActive) setActiveAssets(leaders);
             } catch (error) {
                 console.error("Error loading market actives:", error);
             } finally {
-                setLoading(false);
+                if (isActive) setLoading(false);
             }
         };
         void loadAssets();
+        const interval = window.setInterval(() => void loadAssets(), 5 * 60 * 1000);
+        return () => {
+            isActive = false;
+            window.clearInterval(interval);
+        };
     }, []);
 
     // Rotar tips cada 8 segundos cuando no hay activos

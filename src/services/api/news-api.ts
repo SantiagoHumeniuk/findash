@@ -1,117 +1,85 @@
-// src/services/api/news-api.ts
-
-import { supabase } from '../../lib/supabase';
 import { logger } from '../../lib/logger';
 import type { Config } from '../../types/config';
 import type { StockNewsItem, UnifiedNewsItem, NewsCategory } from '../../types/news';
+import { fetchYahooNews, type YahooFinanceNewsItem } from './yahoo-finance-api';
+
+function toStockNewsItem(article: YahooFinanceNewsItem, fallbackSymbol = ''): StockNewsItem {
+  const publishedDate = article.publishedAt
+    ? new Date(article.publishedAt * 1000).toISOString()
+    : '';
+  return {
+    symbol: article.relatedTickers[0] ?? fallbackSymbol,
+    publishedDate,
+    title: article.title,
+    image: article.image,
+    site: article.publisher,
+    text: '',
+    url: article.url,
+    publisher: article.publisher,
+    tickers: article.relatedTickers.join(','),
+  };
+}
 
 /**
- * Busca noticias específicas de un activo usando la API de FMP (vía proxy).
+ * Fetches news for one symbol from Yahoo Finance.
  */
 export async function fetchStockNews(
-    symbol: string,
-    config: Config,
-    page = 0,
-    limit = 20
+  symbol: string,
+  _config: Config,
+  page = 0,
+  limit = 20,
 ): Promise<StockNewsItem[]> {
-    const { stockNews } = config.api.fmpProxyEndpoints;
-    // FMP usa normalmente 'v3/stock_news'
-    const endpoint = stockNews;
-
-    // FMP usa 'tickers' para noticias específicas
-    const queryParams = `symbols=${symbol}&page=${page}&limit=${limit}`;
-    const fullPath = `${endpoint}?${queryParams}`;
-
-    try {
-        const { data, error } = await supabase.functions.invoke('fmp-proxy', {
-            body: { endpointPath: fullPath }
-        });
-
-        if (error) throw error;
-        if (!data || !Array.isArray(data)) return [];
-
-        return data;
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Error fetching news';
-        void logger.error('NEWS_FETCH_ERROR', `Failed to fetch news for ${symbol}`, { error: msg });
-        return [];
-    }
+  try {
+    const count = Math.min((page + 1) * limit, 50);
+    const articles = await fetchYahooNews(symbol.trim().toUpperCase(), count);
+    return articles.slice(page * limit, (page + 1) * limit)
+      .map((article) => toStockNewsItem(article, symbol.toUpperCase()));
+  } catch (error) {
+    void logger.error('YAHOO_STOCK_NEWS_FAILED', `Failed to fetch news for ${symbol}`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return [];
+  }
 }
 
 /**
- * Obtiene noticias por categoría unificada.
+ * Fetches the Yahoo Finance news feed for supported news categories.
  */
 export async function fetchNewsByCategory(
-    category: NewsCategory,
-    config: Config,
-    page = 0,
-    limit = 20,
-    searchQuery?: string
+  category: NewsCategory,
+  _config: Config,
+  page = 0,
+  limit = 20,
+  searchQuery?: string,
 ): Promise<UnifiedNewsItem[]> {
-    const baseEndpoints: Record<NewsCategory, string> = {
-        'general': config.api.fmpProxyEndpoints.generalNews,
-        'stock': config.api.fmpProxyEndpoints.stockNews,
-        'crypto': config.api.fmpProxyEndpoints.cryptoNews,
-        'forex': config.api.fmpProxyEndpoints.forexNews,
-        'press-releases': config.api.fmpProxyEndpoints.pressReleases,
-        'fmp-articles': config.api.fmpProxyEndpoints.fmpArticles
-    };
-
-    let endpointPath = baseEndpoints[category];
-
-    if (!endpointPath) {
-        return [];
-    }
-
-    let queryParams = `page=${page}&limit=${limit}`;
-    const searchableCategories: NewsCategory[] = ['stock', 'crypto', 'forex', 'press-releases'];
-
-    if (searchQuery && searchQuery.trim() !== '' && searchableCategories.includes(category)) {
-        // Modo Búsqueda
-        queryParams += `&symbols=${encodeURIComponent(searchQuery.toUpperCase())}`;
-    } else {
-        // Modo Feed (General)
-        if (searchableCategories.includes(category)) {
-            endpointPath += '-latest'; // Convención: endpoint base + '-latest' para feed general
-        }
-    }
-
-    try {
-        const { data, error } = await supabase.functions.invoke('fmp-proxy', {
-            body: { endpointPath: `${endpointPath}?${queryParams}` }
-        });
-
-        if (error) throw error;
-        if (!data || !Array.isArray(data)) return [];
-
-        return data.map((item: Record<string, unknown>) => mapToUnifiedItem(item, category));
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Error fetching category news';
-        void logger.error('NEWS_FETCH_ERROR', `Failed to fetch ${category} news`, { error: msg });
-        return [];
-    }
-}
-
-function mapToUnifiedItem(raw: Record<string, unknown>, category: NewsCategory): UnifiedNewsItem {
-    const isFmpArticle = category === 'fmp-articles';
-    const dateStr = (isFmpArticle ? raw.date : raw.publishedDate) as string;
-
-    // Fallback image if missing
-    let image = raw.image as string | undefined;
-    if (!image && raw.symbol) {
-        image = `https://images.financialmodelingprep.com/symbol/${raw.symbol as string}.jpg`;
-    }
-
-    return {
-        id: (raw.url as string | undefined) ?? (raw.link as string | undefined) ?? `${dateStr}-${raw.title as string}`,
-        title: raw.title as string,
-        date: dateStr,
-        url: ((raw.url as string | undefined) ?? (raw.link as string | undefined)) ?? '',
-        image: image,
-        source: (raw.site as string | undefined) ?? (raw.publisher as string | undefined) ?? '',
-        summary: (raw.text as string | undefined) ?? (raw.content as string | undefined) ?? '',
-        symbol: ((raw.symbol as string | undefined) ?? ((raw.tickers as string | undefined)?.split(':')[1])) ?? undefined,
+  const normalizedSearchQuery = searchQuery?.trim();
+  const query = normalizedSearchQuery ? normalizedSearchQuery : (
+    category === 'crypto' ? 'cryptocurrency' :
+      category === 'forex' ? 'foreign exchange' :
+        category === 'stock' ? 'stock market' :
+          'financial markets'
+  );
+  try {
+    const count = Math.min((page + 1) * limit, 50);
+    const articles = await fetchYahooNews(query, count);
+    return articles.slice(page * limit, (page + 1) * limit).map((article, index) => {
+      const item = toStockNewsItem(article);
+      return {
+        id: item.url || `${item.publishedDate}-${item.title}-${index}`,
+        title: item.title,
+        date: item.publishedDate,
+        url: item.url,
+        image: item.image,
+        source: item.site,
+        summary: item.text,
+        symbol: item.symbol.length > 0 ? item.symbol : undefined,
         category,
-        grade: raw.newGrade as string | undefined
-    };
+      };
+    });
+  } catch (error) {
+    void logger.error('YAHOO_NEWS_FETCH_FAILED', `Failed to fetch ${category} news`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return [];
+  }
 }

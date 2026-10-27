@@ -11,7 +11,6 @@ import {
   FileText
 } from 'lucide-react';
 import { CompanyInfoItem } from './company-info-item';
-import { RevenueSegmentationCharts } from './revenue-segmentation-charts';
 import { formatLargeNumber } from '../../lib/asset-formatters';
 import type { AssetData } from '../../../../types/dashboard';
 
@@ -90,9 +89,6 @@ export function AssetProfileTab({ asset }: AssetProfileTabProps) {
           </div>
         </CardContent>
       </Card>
-
-      {/* Gráficos de Segmentación (Ingresos) */}
-      <RevenueSegmentationCharts asset={asset} />
     </div>
   );
 }

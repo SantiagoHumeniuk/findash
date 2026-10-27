@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const yahooUserAgent = "Mozilla/5.0 (compatible; Financytics/1.0)";
-const modules = "price,summaryDetail,defaultKeyStatistics,financialData,assetProfile,earningsTrend";
+const modules = "price,summaryDetail,defaultKeyStatistics,financialData,assetProfile,earningsTrend,calendarEvents";
 
 type YahooMetric = {
   value: number | null;
@@ -171,6 +171,14 @@ function normalizeQuote(symbol: string, payload: unknown): YahooQuote {
       return [{ ...earnings, ...revenue }];
     })
     : [];
+  const marketPrice = getMetric(price, "regularMarketPrice").value;
+  const previousClose = getMetric(price, "regularMarketPreviousClose").value;
+  const dailyChange = marketPrice !== null && previousClose !== null && previousClose > 0
+    ? {
+      change: marketPrice - previousClose,
+      changePercent: ((marketPrice - previousClose) / previousClose) * 100,
+    }
+    : null;
 
   return {
     symbol,
@@ -186,8 +194,8 @@ function normalizeQuote(symbol: string, payload: unknown): YahooQuote {
     beta: getMetric(summaryDetail, "beta"),
     lastDividend: getMetric(summaryDetail, "dividendRate"),
     marketCap: getMetric(price, "marketCap"),
-    change: getMetric(price, "regularMarketChange"),
-    changePercent: getMetric(price, "regularMarketChangePercent"),
+    change: dailyChange ? { value: dailyChange.change } : getMetric(price, "regularMarketChange"),
+    changePercent: dailyChange ? { value: dailyChange.changePercent } : getMetric(price, "regularMarketChangePercent"),
     volume: getMetric(price, "regularMarketVolume"),
     averageVolume: getMetric(summaryDetail, "averageVolume"),
     dayLow: getMetric(price, "regularMarketDayLow"),
@@ -208,6 +216,7 @@ function normalizeQuote(symbol: string, payload: unknown): YahooQuote {
       ...getRawMetrics(keyStatistics, "keyStatistics."),
       ...getRawMetrics(financialData, "financialData."),
       ...getRawMetrics(companyProfile, "assetProfile."),
+      ...getRawMetrics(asRecord(data.calendarEvents), "calendarEvents."),
       ...Object.assign({}, ...trendMetrics),
     },
     companyProfile: {
@@ -295,10 +304,9 @@ async function fetchMarketSnapshot(symbol: string): Promise<YahooMarketSnapshot 
     exchange: getString(meta.fullExchangeName) ?? getString(meta.exchangeName),
     price,
     change: price !== null && previousClose !== null ? price - previousClose : null,
-    changePercent: getNumber(meta.regularMarketChangePercent) ??
-      (price !== null && previousClose !== null && previousClose > 0
-        ? ((price - previousClose) / previousClose) * 100
-        : null),
+    changePercent: price !== null && previousClose !== null && previousClose > 0
+      ? ((price - previousClose) / previousClose) * 100
+      : null,
     volume: getNumber(meta.regularMarketVolume),
     dayLow: getNumber(meta.regularMarketDayLow),
     dayHigh: getNumber(meta.regularMarketDayHigh),
@@ -315,7 +323,7 @@ async function fetchMarketSnapshot(symbol: string): Promise<YahooMarketSnapshot 
 function applyMarketSnapshot(quote: YahooQuote, snapshot: YahooMarketSnapshot | null): YahooQuote {
   if (!snapshot) return quote;
   const snapshotIsNewer = snapshot.marketTimestamp !== null &&
-    (quote.marketTimestamp === null || snapshot.marketTimestamp > quote.marketTimestamp);
+    (quote.marketTimestamp === null || snapshot.marketTimestamp >= quote.marketTimestamp);
   if (snapshotIsNewer || quote.price.value === null) {
     quote.name = snapshot.name ?? quote.name;
     quote.currency = snapshot.currency ?? quote.currency;
@@ -368,6 +376,14 @@ async function fetchHistory(symbol: string): Promise<YahooQuote["history"]> {
       volume: getNumber(volumes[index]) ?? 0,
     }];
   });
+}
+
+async function fetchMarketQuote(symbol: string): Promise<YahooQuote> {
+  const snapshot = await fetchMarketSnapshot(symbol);
+  if (!snapshot || snapshot.price === null || snapshot.price <= 0) {
+    return emptyQuote(symbol, "Yahoo Finance no devolvió una cotización válida");
+  }
+  return applyMarketSnapshot(emptyQuote(symbol, ""), snapshot);
 }
 
 async function fetchPublicYahooData(symbol: string, error: string): Promise<YahooQuote> {
@@ -431,6 +447,7 @@ async function fetchQuote(symbol: string, cookie: string, crumb: string): Promis
   if (historyResult.status === "rejected") {
     console.error(`Yahoo history request failed for ${symbol}:`, historyResult.reason);
   }
+
   if (snapshotResult.status === "rejected") {
     console.error(`Yahoo chart quote request failed for ${symbol}:`, snapshotResult.reason);
   }
@@ -466,6 +483,125 @@ async function fetchQuote(symbol: string, cookie: string, crumb: string): Promis
   return attachHistory(quote, history);
 }
 
+async function fetchYahooEndpoint(url: URL): Promise<unknown> {
+  const response = await fetch(url, { headers: { "User-Agent": yahooUserAgent } });
+  if (!response.ok) {
+    throw new Error(`Yahoo Finance respondió HTTP ${response.status}`);
+  }
+  const payload: unknown = await response.json();
+  return payload;
+}
+
+async function fetchSearch(query: string, count: number): Promise<unknown[]> {
+  const url = new URL("https://query1.finance.yahoo.com/v1/finance/search");
+  url.searchParams.set("q", query);
+  url.searchParams.set("quotesCount", String(count));
+  url.searchParams.set("newsCount", "0");
+  const payload = asRecord(await fetchYahooEndpoint(url));
+  return Array.isArray(payload?.quotes) ? payload.quotes : [];
+}
+
+async function fetchNews(query: string, count: number): Promise<unknown[]> {
+  const url = new URL("https://query1.finance.yahoo.com/v1/finance/search");
+  url.searchParams.set("q", query);
+  url.searchParams.set("quotesCount", "0");
+  url.searchParams.set("newsCount", String(count));
+  const payload = asRecord(await fetchYahooEndpoint(url));
+  return Array.isArray(payload?.news) ? payload.news : [];
+}
+
+async function fetchScreener(
+  screenId: "day_gainers" | "day_losers" | "most_actives",
+  count: number,
+): Promise<unknown[]> {
+  const url = new URL("https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved");
+  url.searchParams.set("scrIds", screenId);
+  url.searchParams.set("count", String(count));
+  url.searchParams.set("formatted", "false");
+  const payload = asRecord(await fetchYahooEndpoint(url));
+  const finance = asRecord(payload?.finance);
+  const result = Array.isArray(finance?.result) ? asRecord(finance.result[0]) : null;
+  return Array.isArray(result?.quotes) ? result.quotes : [];
+}
+
+function normalizeSearchResult(value: unknown): Record<string, unknown> | null {
+  const quote = asRecord(value);
+  const symbol = getString(quote?.symbol);
+  if (!quote || !symbol) return null;
+  return {
+    symbol,
+    name: getString(quote.longname) ?? getString(quote.shortname) ?? symbol,
+    currency: getString(quote.currency) ?? "",
+    exchange: getString(quote.exchange) ?? "",
+    exchangeName: getString(quote.exchDisp) ?? getString(quote.exchange) ?? "",
+    quoteType: getString(quote.quoteType) ?? "",
+  };
+}
+
+function normalizeNewsResult(value: unknown): Record<string, unknown> | null {
+  const article = asRecord(value);
+  const title = getString(article?.title);
+  const url = getString(article?.link);
+  if (!article || !title || !url) return null;
+  const thumbnail = asRecord(article.thumbnail);
+  const resolutions = Array.isArray(thumbnail?.resolutions) ? thumbnail.resolutions : [];
+  const image = resolutions
+    .map((resolution) => getString(asRecord(resolution)?.url))
+    .find((candidate): candidate is string => candidate !== null) ?? "";
+  const relatedTickers = Array.isArray(article.relatedTickers)
+    ? article.relatedTickers.flatMap((ticker) => {
+      const symbol = getString(asRecord(ticker)?.symbol);
+      return symbol ? [symbol] : [];
+    })
+    : [];
+  return {
+    title,
+    url,
+    publisher: getString(article.publisher) ?? "Yahoo Finance",
+    publishedAt: getNumber(article.providerPublishTime),
+    image,
+    relatedTickers,
+  };
+}
+
+async function fetchYahooDividendEvent(
+  symbol: string,
+  session: { cookie: string; crumb: string },
+): Promise<Record<string, unknown> | null> {
+  const url = new URL(`https://query1.finance.yahoo.com/v10/finance/quoteSummary/${symbol}`);
+  url.searchParams.set("modules", "calendarEvents,summaryDetail");
+  url.searchParams.set("crumb", session.crumb);
+  const response = await fetch(url, {
+    headers: { Cookie: session.cookie, "User-Agent": yahooUserAgent },
+  });
+  if (!response.ok) {
+    throw new Error(`Yahoo Finance respondió HTTP ${response.status} para ${symbol}`);
+  }
+  const payload: unknown = await response.json();
+  const root = asRecord(payload);
+  const summary = asRecord(root?.quoteSummary);
+  const results = Array.isArray(summary?.result) ? asRecord(summary.result[0]) : null;
+  const calendarEvents = asRecord(results?.calendarEvents);
+  const summaryDetail = asRecord(results?.summaryDetail);
+  if (!calendarEvents || !summaryDetail) return null;
+
+  const exDividendDate = getMetric(calendarEvents, "exDividendDate").value;
+  const dividendDate = getMetric(calendarEvents, "dividendDate").value;
+  if (exDividendDate === null && dividendDate === null) return null;
+
+  const lastDividendValue = getMetric(summaryDetail, "lastDividendValue").value;
+  const dividendYield = getMetric(summaryDetail, "dividendYield").value;
+  const toDate = (timestamp: number | null): string =>
+    timestamp === null ? "" : new Date(timestamp * 1000).toISOString().slice(0, 10);
+  return {
+    symbol,
+    exDividendDate: toDate(exDividendDate),
+    dividendDate: toDate(dividendDate),
+    lastDividendValue,
+    dividendYield,
+  };
+}
+
 serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -476,11 +612,109 @@ serve(async (request) => {
 
   try {
     const body: unknown = await request.json();
-    const symbols = asRecord(body)?.symbols;
+    const requestBody = asRecord(body);
+    const action = requestBody?.action;
+    if (action === "dividends") {
+      const symbols = requestBody?.symbols;
+      if (
+        !Array.isArray(symbols) ||
+        symbols.length === 0 ||
+        symbols.length > 50 ||
+        symbols.some((symbol) =>
+          typeof symbol !== "string" || !/^[A-Z0-9.^=-]{1,15}$/.test(symbol)
+        )
+      ) {
+        return Response.json({ error: "Envía entre 1 y 50 símbolos bursátiles válidos en mayúsculas" }, {
+          status: 400,
+          headers: corsHeaders,
+        });
+      }
+
+      const session = await getYahooSession();
+      const normalizedSymbols = [...new Set(symbols.map((symbol) => symbol.toUpperCase()))];
+      const dividends: Record<string, unknown>[] = [];
+      for (let index = 0; index < normalizedSymbols.length; index += 5) {
+        const batch = normalizedSymbols.slice(index, index + 5);
+        const results = await Promise.all(batch.map((symbol) => fetchYahooDividendEvent(symbol, session)));
+        dividends.push(...results.flatMap((result) => result ? [result] : []));
+      }
+      return Response.json({ dividends }, { headers: corsHeaders });
+    }
+
+    if (action === "search" || action === "news" || action === "screener") {
+      const query = typeof requestBody?.query === "string" ? requestBody.query.trim() : "";
+      const count = getNumber(requestBody?.count) ?? 20;
+      if (!Number.isInteger(count) || count < 1 || count > 50) {
+        return Response.json({ error: "La cantidad solicitada debe estar entre 1 y 50" }, {
+          status: 400,
+          headers: corsHeaders,
+        });
+      }
+
+      if (action === "search") {
+        if (query.length < 1 || query.length > 80) {
+          return Response.json({ error: "La búsqueda debe tener entre 1 y 80 caracteres" }, {
+            status: 400,
+            headers: corsHeaders,
+          });
+        }
+        const results = await fetchSearch(query, count);
+        const quotes = results.flatMap((item) => {
+          const normalized = normalizeSearchResult(item);
+          return normalized ? [normalized] : [];
+        });
+        return Response.json({ quotes }, { headers: corsHeaders });
+      }
+
+      if (action === "news") {
+        if (query.length < 1 || query.length > 120) {
+          return Response.json({ error: "La búsqueda de noticias debe tener entre 1 y 120 caracteres" }, {
+            status: 400,
+            headers: corsHeaders,
+          });
+        }
+        const results = await fetchNews(query, count);
+        const news = results.flatMap((item) => {
+          const normalized = normalizeNewsResult(item);
+          return normalized ? [normalized] : [];
+        });
+        return Response.json({ news }, { headers: corsHeaders });
+      }
+
+      const screenId = requestBody?.screenId;
+      if (screenId !== "day_gainers" && screenId !== "day_losers" && screenId !== "most_actives") {
+        return Response.json({ error: "Tipo de screener de Yahoo Finance no permitido" }, {
+          status: 400,
+          headers: corsHeaders,
+        });
+      }
+      const results = await fetchScreener(screenId, count);
+      const movers = results.flatMap((item) => {
+        const quote = asRecord(item);
+        const symbol = getString(quote?.symbol);
+        const price = getNumber(quote?.regularMarketPrice);
+        const change = getNumber(quote?.regularMarketChange);
+        const changePercent = getNumber(quote?.regularMarketChangePercent);
+        if (!quote || !symbol || price === null) return [];
+        return [{
+          symbol,
+          name: getString(quote.longName) ?? getString(quote.shortName) ?? symbol,
+          price,
+          change: change ?? 0,
+          changePercent: changePercent ?? 0,
+          volume: getNumber(quote.regularMarketVolume) ?? 0,
+        }];
+      });
+      return Response.json({ movers }, { headers: corsHeaders });
+    }
+
+    const symbols = requestBody?.symbols;
+    const marketDataOnly = requestBody?.marketDataOnly === true;
     if (
       !Array.isArray(symbols) ||
       symbols.length === 0 ||
-      symbols.length > 8 ||
+      symbols.length > (marketDataOnly ? 15 : 8) ||
+      ("marketDataOnly" in (requestBody ?? {}) && typeof requestBody?.marketDataOnly !== "boolean") ||
       symbols.some((symbol) =>
         typeof symbol !== "string" || !/^[A-Z0-9.^=-]{1,15}$/.test(symbol)
       )
@@ -492,6 +726,14 @@ serve(async (request) => {
     }
 
     const normalizedSymbols = [...new Set(symbols.map((symbol) => symbol.toUpperCase()))];
+    if (marketDataOnly) {
+      const quotes = await Promise.all(normalizedSymbols.map(fetchMarketQuote));
+      return Response.json(
+        { fetchedAt: new Date().toISOString(), quotes },
+        { headers: { ...corsHeaders, "Cache-Control": "no-store" } },
+      );
+    }
+
     let session: { cookie: string; crumb: string } | null = null;
     let sessionError: string | null = null;
     try {

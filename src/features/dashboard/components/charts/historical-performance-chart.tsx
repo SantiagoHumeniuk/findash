@@ -38,7 +38,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
   );
 
   const benchmarkQuery = useQuery({
-    queryKey: ['historical-benchmark', user?.id, profile?.id],
+    queryKey: ['historical-benchmark', selectedBenchmark, user?.id, profile?.id],
     enabled: selectedBenchmark !== 'none' && !!user && !!profile,
     staleTime: 60 * 60 * 1000,
     retry: 1,
@@ -47,27 +47,21 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
         throw new Error('Se alcanzó el límite diario de consultas del plan o no se pudo verificar el uso.');
       }
 
-      const response = await fetchYahooFinanceQuotes(['SPY', 'QQQ']);
-      const histories: BenchmarkHistory['histories'] = {};
-      const errors: BenchmarkHistory['errors'] = {};
-      for (const symbol of ['SPY', 'QQQ'] as const) {
-        const quote = response.quotes.find((item) => item.symbol === symbol);
-        const history = quote?.history.filter((point) =>
-          Number.isFinite(Date.parse(point.date)) && Number.isFinite(point.close) && point.close > 0
-        ) ?? [];
-        if (history.length >= 2) {
-          histories[symbol] = history.map(({ date, close }) => ({ date, close }));
-        } else {
-          errors[symbol] = 'No se recibió historial suficiente';
-        }
+      const symbol = selectedBenchmark;
+      const response = await fetchYahooFinanceQuotes([symbol]);
+      const quote = response.quotes.find((item) => item.symbol === symbol);
+      const history = quote?.history.filter((point) =>
+        Number.isFinite(Date.parse(point.date)) && Number.isFinite(point.close) && point.close > 0
+      ) ?? [];
+      if (history.length < 2) {
+        throw new Error(quote?.error ?? `No se recibió historial suficiente para ${symbol}.`);
       }
 
-      if (!histories.SPY && !histories.QQQ) {
-        throw new Error(Object.entries(errors).map(([symbol, message]) => `${symbol}: ${message}`).join('. ') ||
-          'No se recibió historial de los índices.');
-      }
       await incrementApiCallCounter(user.id);
-      return { histories, errors };
+      return {
+        histories: { [symbol]: history.map(({ date, close }) => ({ date, close })) },
+        errors: {},
+      };
     },
   });
 
@@ -138,13 +132,11 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
     const sortedDates = [...allDates].sort((left, right) => left.localeCompare(right));
     const seriesSymbols = Object.keys(histories);
     const firstAvailableDate = (history: { date: string; close: number }[]) => history[0]?.date;
-    const comparisonStart = selectedBenchmark !== 'none'
-      ? [selectedBenchmark, ...seriesSymbols.filter(symbol => symbol !== 'SPY' && symbol !== 'QQQ')]
-          .map(symbol => histories[symbol] && firstAvailableDate(histories[symbol]))
-          .filter((date): date is string => !!date)
-          .sort()
-          .at(-1)
-      : undefined;
+    const comparisonStart = seriesSymbols
+      .map(symbol => histories[symbol] && firstAvailableDate(histories[symbol]))
+      .filter((date): date is string => !!date)
+      .sort()
+      .at(-1);
     const activeDates = comparisonStart
       ? sortedDates.filter(date => date >= comparisonStart)
       : sortedDates;
@@ -186,16 +178,10 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
       finalChartData = finalChartData.filter(row => row.originalDate >= startDateString);
     }
 
-    if (selectedBenchmark !== 'none') {
-      const comparableSymbols = assets
-        .map(asset => asset.profile.symbol)
-        .filter(symbol => !['SPY', 'QQQ'].includes(symbol) && histories[symbol]);
-      finalChartData = finalChartData.filter(row =>
-        typeof row[selectedBenchmark] === 'number' &&
-        comparableSymbols.every(symbol => typeof row[symbol] === 'number')
-      );
-      finalChartData = normalizeHistoricalPerformance(finalChartData, seriesSymbols);
-    }
+    finalChartData = finalChartData.filter(row =>
+      seriesSymbols.every(symbol => typeof row[symbol] === 'number' && Number.isFinite(row[symbol]))
+    );
+    finalChartData = normalizeHistoricalPerformance(finalChartData, seriesSymbols);
 
     const config: ChartConfigLocal = {};
     assets.forEach((asset, index) => {
@@ -239,9 +225,9 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
 
     if (minVal === Infinity) return [0, 100];
 
-    // Añadir un poco de padding (10%) arriba y abajo para que no toque los bordes
+    // Keep zero in view so gains and losses are both easy to compare.
     const padding = Math.max((maxVal - minVal) * 0.1, 0.5);
-    return [Math.floor(Math.max(0, minVal - padding)), Math.ceil(maxVal + padding)];
+    return [Math.floor(minVal - padding), Math.ceil(maxVal + padding)];
   }, [chartData, visibleAssets]);
 
   if (assets.length === 0) {
@@ -265,13 +251,9 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
             <div>
               <CardTitle className="text-lg sm:text-xl">Rendimiento Histórico</CardTitle>
               <CardDescription className="text-xs sm:text-sm">
-                {selectedBenchmark === 'none'
-                  ? assets.some(asset => asset.profile.symbol === 'PORTFOLIO')
-                    ? 'Evolución del valor histórico reconstruido con tus tenencias actuales.'
-                    : 'Evolución del precio de cierre de los activos.'
-                  : assets.some(asset => asset.profile.symbol === 'PORTFOLIO')
-                    ? 'Cotizaciones reales en porcentaje; el portafolio se reconstruye con las tenencias actuales, no con cambios históricos de composición.'
-                    : 'Rendimiento porcentual acumulado desde el inicio del período seleccionado.'}
+                {assets.some(asset => asset.profile.symbol === 'PORTFOLIO')
+                  ? 'Rendimiento porcentual acumulado; el portafolio se reconstruye con tus tenencias actuales.'
+                  : 'Rendimiento porcentual acumulado desde el inicio común del período.'}
               </CardDescription>
             </div>
           </div>
@@ -324,7 +306,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
           </div>
         </div>
         {selectedBenchmark !== 'none' && benchmarkQuery.isLoading && (
-          <p className="text-xs text-muted-foreground" role="status">Consultando historial real de SPY y QQQ...</p>
+          <p className="text-xs text-muted-foreground" role="status">Consultando historial real de {selectedBenchmark}...</p>
         )}
         {selectedBenchmark !== 'none' && benchmarkQuery.isError && (
           <p className="text-xs text-destructive" role="alert">{benchmarkQuery.error.message}</p>
@@ -354,9 +336,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
             />
             <YAxis
               domain={yDomain as [number, number]}
-              tickFormatter={(value) => selectedBenchmark === 'none'
-                ? `$${Math.round(Number(value))}`
-                : `${Number(value).toFixed(1)}%`}
+              tickFormatter={(value) => `${Number(value).toFixed(1)}%`}
               tickLine={false}
               axisLine={false}
               width={50}
@@ -395,9 +375,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
                               <span className="text-xs font-medium text-muted-foreground">{displayName}:</span>
                             </div>
                             <span className="font-bold text-xs">
-                              {value !== null
-                                ? selectedBenchmark === 'none' ? `$${value.toFixed(2)}` : `${value.toFixed(2)}%`
-                                : ''}
+                              {value !== null ? `${value.toFixed(2)}%` : ''}
                             </span>
                           </div>
                         );

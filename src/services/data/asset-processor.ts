@@ -89,7 +89,7 @@ export function processAssetData(
     const historicalSorted = [...historicalData]
         .map(h => ({
             ...h,
-            // Prioridad: adjClose > close. FMP a veces llama a adjClose 'adjClose'
+            // Prefer adjusted close when the provider includes it.
             close: Number((h as {adjClose?: unknown}).adjClose ?? h.close)
         }))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

@@ -75,33 +75,3 @@ export const capitalizeFrequency = (frequency: unknown): string => {
 export const extractUniqueFrequencies = (dividends: Dividend[]): string[] => {
   return Array.from(new Set(dividends.map((d) => d.frequency).filter(Boolean)));
 };
-
-/**
- * Valida la estructura de configuración necesaria para fetch de dividendos
- */
-export const validateConfig = (config: unknown): boolean => {
-  if (!config || typeof config !== "object" || config === null) return false;
-
-  const configObj = config as Record<string, unknown>;
-  if (!("api" in configObj) || typeof configObj.api !== "object" || configObj.api === null) {
-    return false;
-  }
-
-  const apiObj = configObj.api as Record<string, unknown>;
-  if (!("fmpProxyEndpoints" in apiObj) || typeof apiObj.fmpProxyEndpoints !== "object") {
-    return false;
-  }
-
-  const endpoints = apiObj.fmpProxyEndpoints as Record<string, unknown>;
-  return typeof endpoints.dividendsCalendar === "string";
-};
-
-/**
- * Obtiene el endpoint de dividendos desde la configuración
- */
-export const getDividendsEndpoint = (config: unknown): string => {
-  const configObj = config as Record<string, unknown>;
-  const apiObj = configObj.api as Record<string, unknown>;
-  const endpoints = apiObj.fmpProxyEndpoints as Record<string, unknown>;
-  return endpoints.dividendsCalendar as string;
-};

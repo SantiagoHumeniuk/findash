@@ -1,7 +1,5 @@
 // src/features/asset-detail/components/header/asset-header.tsx
 
-import { TrendingDown, TrendingUp } from 'lucide-react';
-import { formatPrice, formatPercentage } from '../../lib/asset-formatters';
 import type { AssetData } from '../../../../types/dashboard';
 import { WatchlistToggleButton } from '../../../watchlist/components';
 
@@ -18,13 +16,7 @@ interface AssetHeaderProps {
  * Incluye logo, nombre, símbolo, bolsa, precio actual y cambio del día.
  */
 export function AssetHeader({ asset }: AssetHeaderProps) {
-  const { profile, quote } = asset;
-
-  // Extraemos datos de las secciones correspondientes con fallbacks seguros
-  const price = quote?.price ?? 0;
-  const changePercentage = quote?.changePercentage ?? 0;
-  const isPositiveChange = changePercentage >= 0;
-  const changeColor = isPositiveChange ? 'text-green-500' : 'text-red-500';
+  const { profile } = asset;
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
@@ -49,19 +41,6 @@ export function AssetHeader({ asset }: AssetHeaderProps) {
             </p>
           </div>
           <WatchlistToggleButton symbol={profile.symbol} variant="outline" size="sm" />
-        </div>
-        <div className="flex items-baseline gap-2 sm:gap-4 flex-wrap">
-          <span className="text-2xl sm:text-3xl md:text-4xl font-bold">
-            {formatPrice(price)}
-          </span>
-          <span className={`flex items-center gap-1 text-base sm:text-lg md:text-xl font-semibold ${changeColor}`}>
-            {isPositiveChange ? (
-              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
-            ) : (
-              <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5" />
-            )}
-            {formatPercentage(Math.abs(changePercentage))}
-          </span>
         </div>
       </div>
     </div>

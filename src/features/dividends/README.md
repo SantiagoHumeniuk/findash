@@ -189,17 +189,15 @@ interface AssetDataCacheRow {
 
 ```
 DividendsPage
-  ├─ useConfig() → Config (API endpoints)
+  ├─ useConfig() → Config (available symbols)
   ├─ useState → data: Dividend[]
   ├─ useState → loading: boolean
   ├─ useState → filters (symbol, dateRange, frequency)
   ├─ useEffect → fetchDividends()
   │   ├─ Intenta leer caché (24h TTL)
   │   ├─ Si no hay caché o está expirado:
-  │   │   ├─ validateConfig(config)
-  │   │   ├─ getDividendsEndpoint(config)
-  │   │   ├─ supabase.functions.invoke('fmp-proxy')
-  │   │   └─ Guarda en caché
+  │   │   ├─ fetchYahooDividendCalendar(config.plans.freeTierSymbols)
+  │   │   └─ Guarda respuestas Yahoo en caché separada
   │   └─ Filtra con isDividend() type guard
   ├─ useReactTable() → table instance
   │   ├─ sorting, columnFilters, pagination

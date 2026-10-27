@@ -6,6 +6,10 @@ The **Risk Premium** feature displays country risk premium data for global marke
 
 This feature follows the **Feature-Sliced Design (FSD)** architecture, utilizing reusable components from the `dividends` feature (DataTable) and implementing its own filtering and display logic.
 
+> **Yahoo-only experiment:** Yahoo Finance does not publish country risk-premium data.
+> This view intentionally reports that it is unavailable instead of using stale or
+> fabricated values.
+
 ---
 
 ## 🎯 Purpose
@@ -151,21 +155,6 @@ if (loading) {
 
 ### File: `lib/risk-premium.utils.ts`
 
-#### 1. **extractFmpProxyEndpoint**
-Extracts the FMP API endpoint from config object.
-
-```typescript
-extractFmpProxyEndpoint(raw: unknown): string
-```
-
-**Example:**
-```typescript
-const endpoint = extractFmpProxyEndpoint(config);
-// Returns: "market_risk_premium"
-```
-
----
-
 #### 2. **getRiskColorClass**
 Gets Tailwind color class based on risk premium value.
 
@@ -273,18 +262,9 @@ if (cached && isCacheValid(cached.last_updated_at)) {
 
 ---
 
-#### 8. **fetchFreshData**
-Fetches fresh risk premium data from FMP API via Supabase Edge Function.
-
-```typescript
-fetchFreshData(endpoint: string): Promise<RiskPremiumData[]>
-```
-
-**Example:**
-```typescript
-const data = await fetchFreshData("market_risk_premium");
-// Returns array of country risk data
-```
+#### Risk premium data
+`fetchRiskPremiumData()` rejects with an explanatory error in the Yahoo-only
+experiment because no equivalent country-risk dataset is available from Yahoo Finance.
 
 ---
 
@@ -304,24 +284,14 @@ await saveCacheData(freshData);
 ---
 
 #### 10. **fetchRiskPremiumData**
-Main function to fetch risk premium data with caching strategy.
+Reports that Yahoo Finance does not provide country risk-premium data.
 
 ```typescript
-fetchRiskPremiumData(config: unknown): Promise<RiskPremiumData[]>
+fetchRiskPremiumData(): Promise<RiskPremiumData[]>
 ```
 
-**Flow:**
-1. Check cache first
-2. If cache valid → return cached data
-3. If cache invalid → fetch fresh data
-4. Save fresh data to cache
-5. Return fresh data
-
-**Example:**
-```typescript
-const data = await fetchRiskPremiumData(config);
-// Returns sorted array of risk premium data
-```
+The function rejects with an explanatory error; cached data from the previous
+provider is intentionally not returned in this experiment.
 
 ---
 
@@ -480,10 +450,10 @@ Is Cache Valid (< 24h)?
     ↙         ↘
   Yes          No
    ↓            ↓
-Return       Fetch Fresh
-Cached    →  from FMP API
+Return       No equivalent
+Cached    →  Yahoo dataset
 Data           ↓
-            Sort by Country
+            Show explicit error
                ↓
             Save to Cache
                ↓
@@ -594,7 +564,7 @@ Data           ↓
 **Solution**: Verify Tailwind dark mode classes are properly configured
 
 ### Issue: Empty table
-**Solution**: Check API endpoint in config and FMP proxy edge function
+**Solution**: The Yahoo-only provider has no equivalent country-risk dataset.
 
 ---
 
@@ -648,8 +618,7 @@ Total Equity Risk Premium = Base Market Risk Premium + Country Risk Premium
 
 ### With External Services
 - **Supabase**: Caching layer (`asset_data_cache` table)
-- **FMP API**: Risk premium data source (via proxy edge function)
-- **Config**: API endpoints configuration
+- **Yahoo Finance**: Does not provide country risk-premium data
 
 ---
 

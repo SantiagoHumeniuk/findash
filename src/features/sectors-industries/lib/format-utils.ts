@@ -37,16 +37,15 @@ export function getPercentageColor(value: number): string {
  * @returns Formatted date string
  */
 export function formatDate(dateString: string): string {
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  } catch {
-    return dateString;
-  }
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(dateString)
+    ? `${dateString}T12:00:00`
+    : dateString);
+  if (!Number.isFinite(date.getTime())) return dateString;
+  return date.toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
 }
 
 /**
@@ -64,8 +63,11 @@ export function calculateStats(data: { averageChange: number; date: string }[]) 
   const min = Math.min(...values);
   const max = Math.max(...values);
   const average = values.reduce((a, b) => a + b, 0) / values.length;
-  const latest = data[0]?.averageChange ?? 0;
-  const latestDate = data[0]?.date ?? '';
+  const latestRecord = data.reduce((latest, item) =>
+    Date.parse(item.date) > Date.parse(latest.date) ? item : latest
+  );
+  const latest = latestRecord.averageChange;
+  const latestDate = latestRecord.date;
 
   return { min, max, average, latest, latestDate };
 }

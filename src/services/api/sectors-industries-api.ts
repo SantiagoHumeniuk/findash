@@ -1,115 +1,94 @@
-// src/services/api/sectors-industries-api.ts
-
-import { supabase } from '../../lib/supabase';
-import type { 
-  Industry, 
-  Sector, 
-  HistoricalIndustryPerformance, 
-  HistoricalSectorPerformance 
+import {
+  fetchYahooFinanceQuotes,
+} from './yahoo-finance-api';
+import type {
+  Industry,
+  Sector,
+  HistoricalIndustryPerformance,
+  HistoricalSectorPerformance,
 } from '../../features/sectors-industries/types';
 
+const SECTOR_ETFS: Record<string, string> = {
+  'Communication Services': 'XLC',
+  'Consumer Cyclical': 'XLY',
+  'Consumer Defensive': 'XLP',
+  Energy: 'XLE',
+  'Financial Services': 'XLF',
+  Healthcare: 'XLV',
+  Industrials: 'XLI',
+  'Basic Materials': 'XLB',
+  'Real Estate': 'XLRE',
+  Technology: 'XLK',
+  Utilities: 'XLU',
+};
+
+const INDUSTRY_ETFS: Record<string, string> = {
+  'Aerospace & Defense': 'ITA',
+  Banks: 'KBE',
+  Biotechnology: 'XBI',
+  'Medical Devices': 'IHI',
+  'Oil & Gas Exploration & Production': 'XOP',
+  Retail: 'XRT',
+  Semiconductors: 'SOXX',
+  Software: 'IGV',
+};
+
 /**
- * Fetches the list of available industries from the FMP API via Supabase Edge Function.
- * 
- * @returns Promise resolving to an array of industries
- * @throws Error if the API call fails or returns invalid data
+ * Lists sectors with Yahoo Finance ETF proxies.
  */
-export async function fetchAvailableIndustries(): Promise<Industry[]> {
-  const { data, error } = await supabase.functions.invoke('fmp-proxy', {
-    body: { 
-      endpointPath: 'stable/available-industries'
-    }
-  });
-
-  if (error) {
-    console.error('Error fetching available industries:', error);
-    throw new Error('Failed to fetch available industries');
-  }
-
-  if (!Array.isArray(data)) {
-    throw new Error('Invalid data format received from industries endpoint');
-  }
-
-  return data as Industry[];
+export function fetchAvailableSectors(): Promise<Sector[]> {
+  return Promise.resolve(Object.keys(SECTOR_ETFS).sort().map((sector) => ({ sector })));
 }
 
 /**
- * Fetches the list of available sectors from the FMP API via Supabase Edge Function.
- * 
- * @returns Promise resolving to an array of sectors
- * @throws Error if the API call fails or returns invalid data
+ * Lists industries with Yahoo Finance ETF proxies.
  */
-export async function fetchAvailableSectors(): Promise<Sector[]> {
-  const { data, error } = await supabase.functions.invoke('fmp-proxy', {
-    body: { 
-      endpointPath: 'stable/available-sectors'
-    }
+export function fetchAvailableIndustries(): Promise<Industry[]> {
+  return Promise.resolve(Object.keys(INDUSTRY_ETFS).sort().map((industry) => ({ industry })));
+}
+
+async function fetchEtfPerformance(
+  symbol: string | undefined,
+): Promise<{ date: string; exchange: string; averageChange: number }[]> {
+  if (!symbol) {
+    throw new Error('Yahoo Finance no tiene un ETF de referencia configurado para esta categoría.');
+  }
+  const response = await fetchYahooFinanceQuotes([symbol]);
+  const quote = response.quotes.find((item) => item.symbol === symbol);
+  if (!quote || quote.history.length === 0) {
+    throw new Error(`Yahoo Finance no devolvió historial para el ETF ${symbol}`);
+  }
+
+  const history = [...quote.history].sort((left, right) => left.date.localeCompare(right.date));
+  return history.map((entry, index) => {
+    const previousClose = history[index - 1]?.close;
+    const averageChange = previousClose && previousClose !== 0
+      ? ((entry.close - previousClose) / previousClose) * 100
+      : 0;
+    return {
+      date: entry.date,
+      exchange: `Yahoo Finance ETF ${symbol}`,
+      averageChange,
+    };
   });
-
-  if (error) {
-    console.error('Error fetching available sectors:', error);
-    throw new Error('Failed to fetch available sectors');
-  }
-
-  if (!Array.isArray(data)) {
-    throw new Error('Invalid data format received from sectors endpoint');
-  }
-
-  return data as Sector[];
 }
 
 /**
- * Fetches historical performance data for a specific industry.
- * 
- * @param industry - Name of the industry to fetch performance for
- * @returns Promise resolving to an array of historical performance data
- * @throws Error if the API call fails or returns invalid data
+ * Returns historical ETF performance as a proxy for the requested industry.
  */
 export async function fetchIndustryPerformance(
-  industry: string
+  industry: string,
 ): Promise<HistoricalIndustryPerformance[]> {
-  const { data, error } = await supabase.functions.invoke('fmp-proxy', {
-    body: { 
-      endpointPath: `stable/historical-industry-performance?industry=${encodeURIComponent(industry)}`
-    }
-  });
-
-  if (error) {
-    console.error(`Error fetching performance for industry ${industry}:`, error);
-    throw new Error(`Failed to fetch performance for industry: ${industry}`);
-  }
-
-  if (!Array.isArray(data)) {
-    throw new Error('Invalid data format received from industry performance endpoint');
-  }
-
-  return data as HistoricalIndustryPerformance[];
+  const performance = await fetchEtfPerformance(INDUSTRY_ETFS[industry]);
+  return performance.map((item) => ({ ...item, industry }));
 }
 
 /**
- * Fetches historical performance data for a specific sector.
- * 
- * @param sector - Name of the sector to fetch performance for
- * @returns Promise resolving to an array of historical performance data
- * @throws Error if the API call fails or returns invalid data
+ * Returns historical ETF performance as a proxy for the requested sector.
  */
 export async function fetchSectorPerformance(
-  sector: string
+  sector: string,
 ): Promise<HistoricalSectorPerformance[]> {
-  const { data, error } = await supabase.functions.invoke('fmp-proxy', {
-    body: { 
-      endpointPath: `stable/historical-sector-performance?sector=${encodeURIComponent(sector)}`
-    }
-  });
-
-  if (error) {
-    console.error(`Error fetching performance for sector ${sector}:`, error);
-    throw new Error(`Failed to fetch performance for sector: ${sector}`);
-  }
-
-  if (!Array.isArray(data)) {
-    throw new Error('Invalid data format received from sector performance endpoint');
-  }
-
-  return data as HistoricalSectorPerformance[];
+  const performance = await fetchEtfPerformance(SECTOR_ETFS[sector]);
+  return performance.map((item) => ({ ...item, sector }));
 }

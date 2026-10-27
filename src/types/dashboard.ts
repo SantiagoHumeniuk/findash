@@ -11,8 +11,8 @@ export interface AssetData {
     priceTarget: AssetPriceTarget;
     dcf: AssetDCF[];
     rating: AssetRating;
-    geography: AssetGeography;
-    production: AssetProduction;
+    geography?: AssetGeography;
+    production?: AssetProduction;
     priceTargetConsensus: AssetPriceTargetConsensus;
     keyMetricsYearly: AssetKeyMetricsYearly[];
     dcfLevered: AssetDCFLevered;
@@ -22,10 +22,11 @@ export interface AssetData {
     gradesConsensus: AssetGradesConsensus;
     peerValuations?: AssetPeerValuation[];
     analystGradeUpdates?: AssetAnalystGradeUpdate[];
-    dataSource?: 'FMP' | 'Yahoo Finance' | 'FMP + Yahoo Finance';
+    dataSource?: 'Yahoo Finance';
     dataFetchedAt?: string;
     yahooMetrics?: Record<string, number | null>;
     yahooAttemptedAt?: string;
+    yahooQuoteAttemptedAt?: string;
     yahooError?: string | null;
 }
 

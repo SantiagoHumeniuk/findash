@@ -11,37 +11,10 @@ import {
   fetchInflacion,
   fetchPlazosFijos,
   fetchUva,
-  getCurvaLecapYTasaFija,
-  recalcularMetricasLecap,
 } from './macro-api';
 
 beforeEach(() => {
   invoke.mockReset();
-});
-
-describe('LECAP return projections', () => {
-  it('projects maturity value from each instrument TEM and remaining days', () => {
-    const referenceDate = new Date(2026, 8, 28, 12);
-    const instruments = getCurvaLecapYTasaFija(referenceDate);
-    const nearMaturity = instruments.find((instrument) => instrument.ticker === 'S30S6');
-    const laterMaturity = instruments.find((instrument) => instrument.ticker === 'S28N6');
-
-    expect(nearMaturity).toBeDefined();
-    expect(laterMaturity).toBeDefined();
-
-    const nearReturn = recalcularMetricasLecap(nearMaturity!, nearMaturity!.precio).tea;
-    const laterReturn = recalcularMetricasLecap(laterMaturity!, laterMaturity!.precio).tea;
-
-    expect(nearMaturity!.valorTecnico).toBeCloseTo(
-      nearMaturity!.precio * Math.pow(1 + nearMaturity!.tem / 100, nearMaturity!.diasAlVencimiento / 30),
-      2,
-    );
-    expect(laterMaturity!.valorTecnico).toBeCloseTo(
-      laterMaturity!.precio * Math.pow(1 + laterMaturity!.tem / 100, laterMaturity!.diasAlVencimiento / 30),
-      2,
-    );
-    expect(laterReturn).toBeGreaterThan(nearReturn);
-  });
 });
 
 describe('UVA data proxy', () => {

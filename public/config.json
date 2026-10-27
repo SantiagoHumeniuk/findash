@@ -1,5 +1,5 @@
 {
-  "useMockData": true,
+  "useMockData": false,
   "app": {
     "name": "FinDash",
     "version": "3.0",
@@ -12,41 +12,7 @@
     }
   },
   "api": {
-    "fmpProxyEndpoints": {
-      "profile": "stable/profile",
-      "keyMetrics": "stable/key-metrics-ttm",
-      "quote": "stable/quote",
-      "historical": "stable/historical-price-eod/full",
-      "priceTarget": "stable/price-target-summary",
-      "priceTargetConsensus": "stable/price-target-consensus",
-      "newsPriceTarget": "stable/price-target-latest-news",
-      "newsGrades": "stable/grades-latest-news",
-      "stockGrades": "stable/grades",
-      "dividendsCalendar": "stable/dividends-calendar",
-      "marketRiskPremium": "stable/market-risk-premium",
-      "dcf": "stable/custom-discounted-cash-flow",
-      "rating": "stable/ratings-snapshot",
-      "revenueGeographic": "stable/revenue-geographic-segmentation",
-      "revenueProduct": "stable/revenue-product-segmentation",
-      "stockNews": "stable/news/stock",
-      "fmpArticles": "stable/fmp-articles",
-      "generalNews": "stable/news/general-latest",
-      "pressReleases": "stable/news/press-releases",
-      "forexNews": "stable/news/forex",
-      "cryptoNews": "stable/news/crypto",
-      "availableIndustries": "stable/available-industries",
-      "availableSectors": "stable/available-sectors",
-      "historicalIndustryPerformance": "stable/historical-industry-performance",
-      "historicalSectorPerformance": "stable/historical-sector-performance",
-      "gradesConsensus": "stable/grades-consensus",
-      "analystEstimates": "stable/analyst-estimates",
-      "ratios": "stable/ratios",
-      "ratiosTtm": "stable/ratios-ttm",
-      "stockPeers": "stable/stock-peers",
-      "keyMetricsYear": "stable/key-metrics",
-      "leveredDiscountedCashFlow": "stable/levered-discounted-cash-flow",
-      "stockPriceChange": "stable/stock-price-change"
-    }
+    "marketDataProvider": "yahoo-finance"
   },
   "plans": {
     "roleLimits": {

@@ -10,6 +10,7 @@ import { Download, GitCompareArrows } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../../components/ui/dropdown-menu";
 import { Button } from "../../../../components/ui/button";
 import { exportToPdf } from "../../../../utils/export-pdf";
+import { toast } from "sonner";
 import { indicatorConfig } from "../../../../utils/financial";
 import { useTheme } from "../../../../components/ui/theme-provider";
 import { usePlanFeature } from "../../../../hooks/use-plan-feature";
@@ -154,6 +155,9 @@ export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets 
             assets,
             theme,
             indicatorConfig,
+        }).catch((error: unknown) => {
+            console.error('Error durante la exportación a PDF:', error);
+            toast.error(`Error al exportar el PDF: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         });
     };
 

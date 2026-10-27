@@ -18,7 +18,7 @@ export interface NewsItem {
 }
 
 /**
- * Representa una noticia general de un activo (FMP Stock News API).
+ * Represents a stock news article returned by Yahoo Finance.
  */
 export interface StockNewsItem {
   symbol: string;
@@ -29,11 +29,11 @@ export interface StockNewsItem {
   text: string;
   url: string;
   publisher?: string;
-  tickers?: string; // Para FMP Articles
-  content?: string; // Para FMP Articles
+  tickers?: string;
+  content?: string;
 }
 
-export type NewsCategory = 'general' | 'stock' | 'crypto' | 'forex' | 'press-releases' | 'fmp-articles';
+export type NewsCategory = 'general' | 'stock' | 'crypto' | 'forex';
 
 // Tipo unificado para usar en la UI
 export interface UnifiedNewsItem {

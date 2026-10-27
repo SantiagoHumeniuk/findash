@@ -18,7 +18,6 @@ import { PageHeader } from "../../../components/ui/page-header";
 import { TickerAddForm } from "../components/ticker-input/ticker-add-form";
 import { SelectedTickersList } from "../components/ticker-input/selected-tickers-list";
 import { DashboardTabs } from "../components/tabs/dashboard-tabs";
-import { DashboardSkeleton } from "../components/skeleton/dashboard-skeleton";
 import { AssetData } from "../../../types/dashboard";
 import { ErrorBoundary } from "../../../components/error-boundary";
 import { PortfolioSelector } from "../../portfolio/components/portfolio-selector";
@@ -87,9 +86,10 @@ function DashboardPageContent() {
                     });
                 },
                 // Configuración de Caché Agresiva para evitar recargas al cambiar tabs
-                staleTime: 1000 * 60 * 10, // 10 minutos
+                staleTime: 1000 * 60, // 1 minuto
                 gcTime: 1000 * 60 * 30, // 30 minutos
                 retry: 2,
+                refetchInterval: 1000 * 60 * 2,
                 refetchOnWindowFocus: false,
                 refetchOnReconnect: false,
                 refetchOnMount: false, // Importante: no recargar al volver a la página si está en caché
@@ -126,27 +126,25 @@ function DashboardPageContent() {
     }, [failedTickers, removeTicker]);
 
     const isLoading = assetQueries.some(query => query.isLoading);
-    // Solo mostramos loading inicial si no hay NINGÚN activo cargado
-    const isInitialLoading = isLoading && assets.length === 0;
-
-    const handleRefresh = useCallback(() => {
+    const handleRefresh = useCallback(async () => {
         if (selectedTickers.length === 0) return;
         toast.info('Actualizando datos...', { duration: 1500 });
 
-        // Invalidar cache de Supabase (lógica optimista)
-        void supabase
+        const { error } = await supabase
             .from('asset_data_cache')
             .update({ last_updated_at: new Date(0).toISOString() })
             .in('symbol', selectedTickers)
-            .then(({ error }) => { if (error) console.error(error); });
+        if (error) {
+            console.error('Error invalidating the asset cache:', error);
+            toast.error('No se pudo iniciar la actualización de los activos.');
+            return;
+        }
 
-        void queryClient.invalidateQueries({ queryKey: ['assetData'] });
-        void queryClient.invalidateQueries({ queryKey: ['cacheFreshness'] });
+        await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['assetData'] }),
+            queryClient.invalidateQueries({ queryKey: ['cacheFreshness'] }),
+        ]);
     }, [selectedTickers, queryClient]);
-
-    if (isInitialLoading) {
-        return <DashboardSkeleton />;
-    }
 
     return (
         <motion.div 
@@ -219,7 +217,7 @@ function DashboardPageContent() {
                 <motion.div variants={itemVariants} className="stack-6">
                     <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-3 mb-4">
                         <Button
-                            onClick={handleRefresh}
+                            onClick={() => void handleRefresh()}
                             disabled={isLoading}
                             variant="outline"
                             size="sm"

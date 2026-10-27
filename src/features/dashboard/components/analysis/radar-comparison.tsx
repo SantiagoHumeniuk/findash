@@ -139,7 +139,7 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
                     if (isPercent) {
                         // Si el valor crudo es pequeño (ej 0.05) y esperamos %, lo multiplicamos
                         // Pero ojo, si ya viene como 5.0, no lo multiplicamos.
-                        // Asumimos que FMP devuelve decimales (0.05) para ratios.
+                        // Ratio metrics are normalized to decimal values before display.
                         originalFormatted = (rawValue * 100).toFixed(2) + '%';
                     } else {
                         originalFormatted = rawValue.toFixed(2);

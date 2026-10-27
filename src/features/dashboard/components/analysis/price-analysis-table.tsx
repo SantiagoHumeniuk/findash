@@ -3,8 +3,9 @@
 import React, { useMemo, useState } from "react";
 import { AssetData } from "../../../../types/dashboard";
 import { Button } from "../../../../components/ui/button";
-import { ArrowDown, ArrowUp, Download, BarChart2, ShoppingCart } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, BarChart2, ChartCandlestick, ShoppingCart } from "lucide-react";
 import { exportToPdf } from "../../../../utils/export-pdf";
+import { toast } from "sonner";
 import { indicatorConfig } from "../../../../utils/financial";
 import { computeSharpe, computeStdDevPct } from "../../../../utils/financial-formulas";
 import { useTheme } from "../../../../components/ui/theme-provider";
@@ -16,6 +17,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../../components/ui/tooltip";
 import { usePrefetchAsset } from "../../../../hooks/use-prefetch-asset";
 import { usePlanFeature } from "../../../../hooks/use-plan-feature";
+import { mapYahooPeriodChange } from "../../../../services/api/yahoo-finance-mappers";
 
 // --- Tipos Auxiliares ---
 interface PreparedAssetRow {
@@ -51,6 +53,46 @@ const pctNode = (v: number | null) => {
         </span>
     );
 };
+
+function AssetLogo({
+    image,
+    companyName,
+    symbol,
+    className,
+}: {
+    image: string;
+    companyName: string;
+    symbol: string;
+    className: string;
+}) {
+    const [imageFailed, setImageFailed] = useState(!image);
+
+    React.useEffect(() => {
+        setImageFailed(!image);
+    }, [image]);
+
+    if (image && !imageFailed) {
+        return (
+            <img
+                src={image}
+                alt={`${companyName} logo`}
+                className={`${className} rounded-full bg-muted object-contain border`}
+                onError={() => setImageFailed(true)}
+            />
+        );
+    }
+
+    return (
+        <span
+            className={`${className} inline-flex items-center justify-center rounded-full bg-primary/10 text-primary border`}
+            role="img"
+            aria-label={`${symbol} index icon`}
+            title={companyName}
+        >
+            <ChartCandlestick className="h-4 w-4" aria-hidden="true" />
+        </span>
+    );
+}
 
 // --- Componente de Cabecera Ordenable ---
 const SortableTableHeader = ({
@@ -112,8 +154,12 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                 image: asset.profile.image,
                 currentPrice: latestPrice,
                 dayChange: asset.quote?.changePercentage ?? null,
-                monthChange: asset.dataSource === 'Yahoo Finance' ? null : asset.stockPriceChange["1M"] ?? null,
-                yearChange: asset.dataSource === 'Yahoo Finance' ? null : asset.stockPriceChange["1Y"] ?? null,
+                monthChange: asset.dataSource === 'Yahoo Finance'
+                    ? mapYahooPeriodChange(history, 1) ?? asset.stockPriceChange["1M"] ?? null
+                    : asset.stockPriceChange["1M"] ?? null,
+                yearChange: asset.dataSource === 'Yahoo Finance'
+                    ? mapYahooPeriodChange(history, 12) ?? asset.stockPriceChange["1Y"] ?? null
+                    : asset.stockPriceChange["1Y"] ?? null,
                 stdDev,
                 sharpeRatio,
                 lastMonthAvgPriceTarget: asset.priceTarget?.lastMonthAvgPriceTarget ?? null,
@@ -178,6 +224,9 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
             assets: assetsForExport,
             theme,
             indicatorConfig,
+        }).catch((error: unknown) => {
+            console.error('Error durante la exportación a PDF:', error);
+            toast.error(`Error al exportar el PDF: ${error instanceof Error ? error.message : 'Error desconocido'}`);
         });
     };
 
@@ -242,7 +291,7 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                                                     onMouseEnter={() => prefetchAssetIfNotCached(asset.symbol)}
                                                     onFocus={() => prefetchAssetIfNotCached(asset.symbol)}
                                                 >
-                                                    <img src={asset.image} alt={asset.companyName} className="w-8 h-8 rounded-full bg-muted object-contain border" />
+                                                    <AssetLogo image={asset.image} companyName={asset.companyName} symbol={asset.symbol} className="w-8 h-8" />
                                                     <div>
                                                         <div className="flex items-center justify-between gap-2">
                                                             <div className="flex-1 min-w-0">
@@ -287,7 +336,7 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                                         onMouseEnter={() => prefetchAssetIfNotCached(asset.symbol)}
                                         onFocus={() => prefetchAssetIfNotCached(asset.symbol)}
                                     >
-                                        <img src={asset.image} className="w-7 h-7 rounded-full bg-muted object-contain border flex-shrink-0" />
+                                        <AssetLogo image={asset.image} companyName={asset.companyName} symbol={asset.symbol} className="w-7 h-7 flex-shrink-0" />
                                         <div className="min-w-0 flex-1">
                                             <div className="text-sm flex items-center gap-1.5">
                                                 {asset.symbol}
