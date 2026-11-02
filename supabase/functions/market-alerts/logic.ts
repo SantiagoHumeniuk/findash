@@ -109,8 +109,8 @@ export function summarizeDigest(digest: Digest): string {
   const parts: string[] = [];
   const top = digest.movers[0];
   if (top?.changePercent != null) parts.push(`Mayor movimiento: ${top.symbol} ${formatPercent(top.changePercent)}`);
-  if (digest.agenda.length > 0) parts.push(`${digest.agenda.length} fechas próximas`);
-  if (digest.gradeChanges.length > 0) parts.push(`${digest.gradeChanges.length} cambios de analistas`);
+  if (digest.agenda.length > 0) parts.push(`${digest.agenda.length} ${digest.agenda.length === 1 ? "fecha próxima" : "fechas próximas"}`);
+  if (digest.gradeChanges.length > 0) parts.push(`${digest.gradeChanges.length} ${digest.gradeChanges.length === 1 ? "cambio de analistas" : "cambios de analistas"}`);
   return parts.join(" · ");
 }
 
