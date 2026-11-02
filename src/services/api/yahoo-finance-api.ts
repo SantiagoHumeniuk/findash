@@ -1,3 +1,4 @@
+import type { AssetData } from '../../types/dashboard';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -329,6 +330,16 @@ function getString(value: unknown): string | null {
 
 function getFiniteNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/** Builds an asset on the server, which saves it to the shared cache. */
+export async function fetchYahooAsset(symbol: string): Promise<AssetData> {
+  return (await invokeYahooAction({ action: 'asset', symbol }) as { asset: AssetData }).asset;
+}
+
+/** Updates the quote of a saved asset on the server. */
+export async function refreshYahooAssetQuote(symbol: string): Promise<AssetData> {
+  return (await invokeYahooAction({ action: 'assetQuote', symbol }) as { asset: AssetData }).asset;
 }
 
 async function invokeYahooAction(

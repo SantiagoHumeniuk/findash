@@ -46,7 +46,7 @@ const CASA_NOMBRES: Record<string, string> = {
   solidario: 'Dólar Solidario',
 };
 
-type MacroResource = 'dolares' | 'inflacion' | 'plazos-fijos' | 'uva' | 'dolarazo';
+type MacroResource = 'dolares' | 'dolar-mep-historico' | 'inflacion' | 'plazos-fijos' | 'uva' | 'dolarazo';
 
 async function fetchMacroResource(resource: MacroResource): Promise<unknown> {
   const { data, error } = await supabase.functions.invoke('argentina-macro-proxy', {
@@ -64,6 +64,20 @@ async function fetchMacroResource(resource: MacroResource): Promise<unknown> {
     throw new Error(data.error);
   }
   return data;
+}
+
+/** Daily closing MEP dollar since 2018, oldest first. */
+export async function fetchMepHistory(): Promise<{ fecha: string; venta: number }[]> {
+  const data = await fetchMacroResource('dolar-mep-historico');
+  if (!Array.isArray(data)) throw new Error('El histórico del dólar MEP tiene un formato inválido.');
+  return data as { fecha: string; venta: number }[];
+}
+
+/** Monthly Argentine inflation published by INDEC, oldest first. */
+export async function fetchMonthlyInflation(): Promise<InflacionDato[]> {
+  const data = await fetchMacroResource('inflacion');
+  if (!Array.isArray(data)) throw new Error('La inflación tiene un formato inválido.');
+  return data as InflacionDato[];
 }
 
 /**

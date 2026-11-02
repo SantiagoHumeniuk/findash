@@ -40,14 +40,14 @@ export async function readCache<T>(key: string, maxAgeMs: number): Promise<Cache
   }
 }
 
-export async function writeCache<T>(key: string, data: T): Promise<void> {
+export async function writeCache<T>(key: string, data: T, updatedAt?: string): Promise<void> {
   const headers = restHeaders();
   if (!headers) return;
   try {
     const response = await fetch(`${supabaseUrl}/rest/v1/asset_data_cache`, {
       method: "POST",
       headers: { ...headers, Prefer: "resolution=merge-duplicates,return=minimal" },
-      body: JSON.stringify({ symbol: key, data, last_updated_at: new Date().toISOString() }),
+      body: JSON.stringify({ symbol: key, data, last_updated_at: updatedAt ?? new Date().toISOString() }),
       signal: AbortSignal.timeout(3_000),
     });
     if (!response.ok) {

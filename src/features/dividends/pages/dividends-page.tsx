@@ -2,7 +2,6 @@
 
 import React from "react";
 import { columns, DataTable, DataTableVirtualized, DividendsFilters, DividendsSkeleton, Dividend } from "../components";
-import { supabase } from "../../../lib/supabase";
 import { logger } from "../../../lib/logger";
 import { toast } from "sonner";
 import { useConfig } from "../../../hooks/use-config";
@@ -20,8 +19,6 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import { DateRange } from "react-day-picker";
-import { isDividend } from "../../../utils/type-guards";
-import { AssetDataCacheRow } from "../types/dividends.types";
 import { extractUniqueFrequencies } from "../lib/dividends.utils";
 import { fetchYahooDividendCalendar, type YahooFinanceDividendEvent } from "../../../services/api/yahoo-finance-api";
 import { buildDividendSymbols } from "../lib/dividend-universe";
@@ -55,17 +52,7 @@ const DividendsPage: React.FC = () => {
   React.useEffect(() => {
     const fetchDividends = async () => {
       setLoading(true);
-      // v3: ex-dividend date column fixed; v2 added frequency, amount and the wider universe.
-      const CACHE_KEY = 'yahoo_dividends_calendar_v3';
-      let cacheRow: AssetDataCacheRow | null = null;
       try {
-        const { data: cached } = await supabase.from('asset_data_cache').select('data, last_updated_at').eq('symbol', CACHE_KEY).single();
-        cacheRow = cached as AssetDataCacheRow | null;
-        if (cacheRow && new Date(cacheRow.last_updated_at) > new Date(Date.now() - 24 * 60 * 60 * 1000)) {
-          const arr = Array.isArray(cacheRow.data) ? cacheRow.data : [];
-          setData(arr.filter(isDividend));
-          return;
-        }
         const symbols = buildDividendSymbols(config.plans.freeTierSymbols);
         const yahooEvents: YahooFinanceDividendEvent[] = [];
         // The proxy accepts 50 symbols per call; batches run one after another to avoid bursts.
@@ -91,21 +78,9 @@ const DividendsPage: React.FC = () => {
           }];
         });
         setData(dividends);
-        const { error: cacheError } = await supabase.from('asset_data_cache').upsert({
-          symbol: CACHE_KEY,
-          data: dividends,
-          last_updated_at: new Date().toISOString(),
-        });
-        if (cacheError) {
-          void logger.warn("YAHOO_DIVIDENDS_CACHE_WRITE_FAILED", cacheError.message);
-        }
       } catch (error) {
         const err = error as { message?: string };
-        if (cacheRow) {
-          const arr = Array.isArray(cacheRow.data) ? cacheRow.data : [];
-          setData(arr.filter(isDividend));
-          toast.warning("Yahoo Finance no respondió; se muestran los últimos dividendos guardados.");
-        } else {
+        {
           toast.error("Error al obtener los dividendos de Yahoo Finance.");
           setData([]);
         }
