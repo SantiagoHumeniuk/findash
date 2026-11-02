@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AssetData } from '../../../types/dashboard';
-import { buildAgenda, buildBriefNews, buildMovers, buildPortfolioSummary } from './daily-brief';
+import { buildAgenda, buildBriefNews, buildMovers, buildPortfolioSummary, buildUnifiedTotal } from './daily-brief';
 
 const NOW = new Date('2026-11-02T15:00:00');
 
@@ -36,6 +36,20 @@ describe('buildPortfolioSummary', () => {
       { quantity: 3, assetData: asset('KO', { quote: { price: 0, change: 0 } }) },
       { quantity: 3 },
     ])).toEqual([]);
+  });
+});
+
+describe('buildUnifiedTotal', () => {
+  const line = (currency: string, value: number) => ({ currency, value, dayChange: 0, dayChangePercent: 0 });
+
+  it('adds pesos and dollars at the CCL rate', () => {
+    expect(buildUnifiedTotal([line('USD', 1000), line('ARS', 1_500_000)], 1500)).toEqual({ usd: 2000, ars: 3_000_000 });
+  });
+
+  it('returns nothing it cannot convert honestly', () => {
+    expect(buildUnifiedTotal([line('USD', 1000)], 1500)).toBeNull();
+    expect(buildUnifiedTotal([line('USD', 1000), line('ARS', 1)], null)).toBeNull();
+    expect(buildUnifiedTotal([line('USD', 1000), line('EUR', 1)], 1500)).toBeNull();
   });
 });
 

@@ -37,7 +37,9 @@ import {
   buildBriefNews,
   buildMovers,
   buildPortfolioSummary,
+  buildUnifiedTotal,
 } from '../lib/daily-brief';
+import { useCclRate } from '../../../hooks/use-ccl-rate';
 
 /** Upper bound of extra assets to load, since each one can use the plan's daily queries. */
 const MAX_FOLLOWED_ASSETS = 12;
@@ -141,6 +143,8 @@ export default function DailyPage() {
   }, [holdings, followedQueries.map((query) => query.dataUpdatedAt).join()]);
 
   const summary = useMemo(() => buildPortfolioSummary(holdings), [holdings]);
+  const ccl = useCclRate();
+  const unified = buildUnifiedTotal(summary, ccl.data?.rate);
   const movers = useMemo(() => buildMovers(assets), [assets]);
   const agenda = useMemo(() => buildAgenda(assets).slice(0, 8), [assets]);
   const news = useMemo(() => buildBriefNews(assets), [assets]);
@@ -237,6 +241,11 @@ export default function DailyPage() {
                     </p>
                   </div>
                 ))}
+                {unified && (
+                  <p className="text-sm text-muted-foreground sm:col-span-2">
+                    Total al dólar CCL: <b className="text-foreground">{formatMoney(unified.usd, 'USD')}</b> · {formatMoney(unified.ars, 'ARS')}
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}

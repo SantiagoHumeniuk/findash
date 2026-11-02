@@ -34,6 +34,7 @@ import {
   parseVisualizationRows,
 } from "./insights.ts";
 import { ensureLogo } from "./logos.ts";
+import { fetchHeatmap, parseScreenerRequest, runScreener } from "./screener.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1032,6 +1033,26 @@ serve(async (request) => {
         };
       });
       return jsonResponse({ ...data, cachedAt });
+    }
+
+    if (action === "screen") {
+      const screen = parseScreenerRequest(requestBody);
+      if (!screen) return badRequest("Filtros del screener no permitidos");
+      const { data } = await withCache(
+        `yahoo:screen:${JSON.stringify(screen)}`,
+        5 * 60 * 1000,
+        async () => await runScreener(screen, await getYahooSession()),
+      );
+      return jsonResponse(data);
+    }
+
+    if (action === "heatmap") {
+      const { data } = await withCache("yahoo:heatmap", 5 * 60 * 1000, async () => {
+        const sectors = await fetchHeatmap(await getYahooSession());
+        if (sectors.length === 0) throw new Error("Yahoo Finance no devolvió el mapa del mercado");
+        return sectors;
+      });
+      return jsonResponse({ sectors: data });
     }
 
     if (action === "logos") {

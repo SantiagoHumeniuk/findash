@@ -1021,6 +1021,81 @@ export async function fetchYahooHistory(
   };
 }
 
+export interface YahooScreenerFilter {
+  field: string;
+  min: number | null;
+  max: number | null;
+}
+
+export interface YahooScreenerRequest {
+  region: 'us' | 'ar';
+  sector: string | null;
+  filters: YahooScreenerFilter[];
+  sortField: string;
+  sortDescending: boolean;
+  offset: number;
+  size: number;
+}
+
+export interface YahooScreenerRow {
+  symbol: string;
+  name: string;
+  currency: string;
+  price: number | null;
+  changePercent: number | null;
+  marketCap: number | null;
+  trailingPE: number | null;
+  forwardPE: number | null;
+  priceToBook: number | null;
+  dividendYield: number | null;
+  yearChangePercent: number | null;
+  analystRating: string | null;
+}
+
+function parseScreenerRows(value: unknown): YahooScreenerRow[] {
+  return parseRecords(value, (row) => {
+    const symbol = getString(row.symbol);
+    if (!symbol) return null;
+    return {
+      symbol,
+      name: getString(row.name) ?? symbol,
+      currency: getString(row.currency) ?? 'USD',
+      price: getFiniteNumber(row.price),
+      changePercent: getFiniteNumber(row.changePercent),
+      marketCap: getFiniteNumber(row.marketCap),
+      trailingPE: getFiniteNumber(row.trailingPE),
+      forwardPE: getFiniteNumber(row.forwardPE),
+      priceToBook: getFiniteNumber(row.priceToBook),
+      dividendYield: getFiniteNumber(row.dividendYield),
+      yearChangePercent: getFiniteNumber(row.yearChangePercent),
+      analystRating: getString(row.analystRating),
+    };
+  });
+}
+
+/**
+ * Runs a stock screen over Yahoo's equity universe.
+ */
+export async function fetchYahooScreener(
+  request: YahooScreenerRequest,
+): Promise<{ total: number; rows: YahooScreenerRow[] }> {
+  const record = asRecord(await invokeYahooAction({ action: 'screen', ...request }));
+  if (!Array.isArray(record?.rows)) throw new Error('Yahoo Finance devolvió una respuesta de screener inválida.');
+  return { total: getFiniteNumber(record.total) ?? 0, rows: parseScreenerRows(record.rows) };
+}
+
+/**
+ * Largest US companies per sector for the market map.
+ */
+export async function fetchYahooHeatmap(): Promise<{ sector: string; companies: YahooScreenerRow[] }[]> {
+  const record = asRecord(await invokeYahooAction({ action: 'heatmap' }));
+  if (!Array.isArray(record?.sectors)) throw new Error('Yahoo Finance devolvió un mapa de mercado inválido.');
+  return parseRecords(record.sectors, (item) => {
+    const sector = getString(item.sector);
+    return sector ? { sector, companies: parseScreenerRows(item.companies) } : null;
+  });
+}
+
 /**
  * Resolves stored logo URLs for symbols (null when no logo exists), 50 per request.
  */

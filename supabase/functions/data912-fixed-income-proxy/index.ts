@@ -9,6 +9,7 @@ const corsHeaders = {
 const endpoints = {
   sovereign: "https://data912.com/live/arg_bonds",
   corporate: "https://data912.com/live/arg_corp",
+  cedears: "https://data912.com/live/arg_cedears",
 } as const;
 
 async function fetchMarket(endpoint: string): Promise<unknown[]> {
@@ -34,6 +35,14 @@ serve(async (request) => {
   }
 
   try {
+    const body: unknown = request.method === "POST" ? await request.json().catch(() => null) : null;
+    if ((body as { market?: unknown } | null)?.market === "cedears") {
+      return Response.json(
+        { fetchedAt: new Date().toISOString(), cedears: await fetchMarket(endpoints.cedears) },
+        { headers: corsHeaders },
+      );
+    }
+
     const [sovereignResult, corporateResult] = await Promise.allSettled([
       fetchMarket(endpoints.sovereign),
       fetchMarket(endpoints.corporate),

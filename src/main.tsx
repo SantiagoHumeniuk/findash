@@ -37,6 +37,8 @@ const ForgotPasswordPage = React.lazy(() => import('./features/auth/pages/forgot
 const ResetPasswordPage = React.lazy(() => import('./features/auth/pages/reset-password-page.tsx'));
 const InfoPage = React.lazy(() => import('./features/info/pages/info-page.tsx'));
 const NotFoundPage = React.lazy(() => import('./features/not-found/pages/not-found-page.tsx'));
+const ScreenerPage = React.lazy(() => import('./features/screener/pages/screener-page.tsx'));
+const CedearsPage = React.lazy(() => import('./features/screener/pages/cedears-page.tsx'));
 const AlertsPage = React.lazy(() => import('./features/alerts/pages/alerts-page.tsx'));
 const UnsubscribePage = React.lazy(() => import('./features/alerts/pages/unsubscribe-page.tsx'));
 const DailyPage = React.lazy(() => import('./features/daily/pages/daily-page.tsx'));
@@ -92,6 +94,26 @@ const router = createBrowserRouter([
             {
                 element: <ProtectedRoute />,
                 children: [
+                    {
+                        path: "screener",
+                        element: (
+                            <ErrorBoundary level="feature" featureName="Screener">
+                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando screener..." />}>
+                                    <ScreenerPage />
+                                </Suspense>
+                            </ErrorBoundary>
+                        )
+                    },
+                    {
+                        path: "cedears",
+                        element: (
+                            <ErrorBoundary level="feature" featureName="CEDEARs">
+                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando CEDEARs..." />}>
+                                    <CedearsPage />
+                                </Suspense>
+                            </ErrorBoundary>
+                        )
+                    },
                     {
                         path: "alertas",
                         element: (
