@@ -333,6 +333,18 @@
             "requiresAuth": true
           },
           {
+            "to": "/screener",
+            "label": "Screener",
+            "icon": "Filter",
+            "requiresAuth": true
+          },
+          {
+            "to": "/cedears",
+            "label": "CEDEARs",
+            "icon": "ArrowLeftRight",
+            "requiresAuth": true
+          },
+          {
             "to": "/market-movers",
             "label": "Movimientos del Mercado",
             "icon": "Activity",

@@ -56,6 +56,20 @@ export function buildPortfolioSummary(
   });
 }
 
+/**
+ * The whole portfolio in dollars and pesos at the CCL rate. Null with one currency
+ * (nothing to unify), without a rate, or with a currency other than USD and ARS.
+ */
+export function buildUnifiedTotal(
+  summary: CurrencySummary[],
+  ccl: number | null | undefined,
+): { usd: number; ars: number } | null {
+  if (summary.length < 2 || !ccl || ccl <= 0) return null;
+  if (summary.some(({ currency }) => currency !== 'USD' && currency !== 'ARS')) return null;
+  const usd = summary.reduce((total, { currency, value }) => total + (currency === 'ARS' ? value / ccl : value), 0);
+  return { usd, ars: usd * ccl };
+}
+
 /** The user's assets by size of today's move. */
 export function buildMovers(assets: AssetData[], limit = 6): AssetData[] {
   return assets

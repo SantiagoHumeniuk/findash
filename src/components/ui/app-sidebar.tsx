@@ -17,7 +17,7 @@ import {
   LogIn, UserPlus, Home, ChartCandlestick, LayoutDashboard,
   Divide, Newspaper, BookCopy, BookMarked, FilePenLine, FileEdit,
   MessageSquareHeart, Shield, User, Globe, PiggyBank, Star, Bookmark, Activity,
-  Crown, Mail, TrendingUp, Calendar, FactoryIcon, Landmark, Sun, Bell
+  Crown, Mail, TrendingUp, Calendar, FactoryIcon, Landmark, Sun, Bell, Filter, ArrowLeftRight
 } from "lucide-react";
 import { useAuth } from "../../hooks/use-auth";
 import { useConfig } from "../../hooks/use-config";
@@ -68,7 +68,7 @@ const SidebarNavigation = React.memo(({ isLoaded, config, user, profile }: { isL
   const iconMap = {
     Home, ChartCandlestick, LayoutDashboard, Divide, Newspaper, BookCopy,
     BookMarked, FilePenLine, FileEdit, Bookmark, MessageSquareHeart, Shield,
-    User, Globe, PiggyBank, Star, Crown, Mail, TrendingUp, Calendar, FactoryIcon, Landmark, Activity, Sun, Bell
+    User, Globe, PiggyBank, Star, Crown, Mail, TrendingUp, Calendar, FactoryIcon, Landmark, Activity, Sun, Bell, Filter, ArrowLeftRight
   };
 
   if (!isLoaded) {
