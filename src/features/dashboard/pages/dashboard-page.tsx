@@ -40,7 +40,7 @@ const itemVariants = {
 };
 
 function DashboardPageContent() {
-    const { addTicker, removeTicker, selectedTickers } = useDashboard();
+    const { addTicker, removeTicker, dropFailedTicker, selectedTickers, tickersRestored } = useDashboard();
     const { holdings, loading: portfolioLoading, currentPortfolio } = usePortfolio();
     const { user, profile } = useAuth();
     const config = useConfig();
@@ -54,17 +54,22 @@ function DashboardPageContent() {
 
     // Cargar tickers del portfolio actual
     useEffect(() => {
-        if (!portfolioLoading && currentPortfolio && holdings.length > 0) {
+        if (tickersRestored && !portfolioLoading && currentPortfolio && holdings.length > 0) {
             // Si cambiamos de portfolio o es la primera carga
             if (loadedPortfolioIdRef.current !== currentPortfolio.id) {
+                const isFirstLoad = loadedPortfolioIdRef.current === null;
                 loadedPortfolioIdRef.current = currentPortfolio.id;
+                // La lista guardada del usuario tiene prioridad al entrar.
+                if (isFirstLoad && selectedTickers.length > 0) return;
                 const portfolioSymbols = holdings.map(h => h.symbol);
                 portfolioSymbols.forEach(symbol => {
                     addTicker(symbol);
                 });
             }
         }
-    }, [portfolioLoading, holdings, currentPortfolio, addTicker]);
+        // selectedTickers solo se consulta en la primera carga, no debe volver a disparar el efecto.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tickersRestored, portfolioLoading, holdings, currentPortfolio, addTicker]);
 
     // [CORREGIDO]: Eliminado el useEffect que borraba localStorage en cada montaje.
     // Esto causaba pérdida de estado al navegar entre páginas.
@@ -116,14 +121,14 @@ function DashboardPageContent() {
     useEffect(() => {
         if (failedTickers.length > 0) {
             failedTickers.forEach(ticker => {
-                removeTicker(ticker);
+                dropFailedTicker(ticker);
                 toast.error(`No se pudo cargar "${ticker}"`, {
                     description: "Verifica el símbolo o intenta más tarde.",
                     duration: 5000,
                 });
             });
         }
-    }, [failedTickers, removeTicker]);
+    }, [failedTickers, dropFailedTicker]);
 
     const isLoading = assetQueries.some(query => query.isLoading);
     const handleRefresh = useCallback(async () => {

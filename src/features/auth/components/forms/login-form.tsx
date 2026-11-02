@@ -57,7 +57,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
 
         toast.success('Has iniciado sesión correctamente.');
         setTimeout(() => {
-          void navigate('/dashboard');
+          void navigate('/hoy');
           window.location.reload();
         }, 500);
       } finally {

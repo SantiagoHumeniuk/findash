@@ -1,6 +1,6 @@
 // src/providers/dashboard-provider.tsx
 
-import React, { useCallback, useState, useMemo, createContext } from "react";
+import React, { useCallback, useEffect, useRef, useState, useMemo, createContext } from "react";
 import { toast } from "sonner";
 import { useAuth } from "../hooks/use-auth";
 import { useConfig } from "../hooks/use-config";
@@ -9,6 +9,14 @@ import { indicatorConfig } from "../utils/financial";
 import { logger } from "../lib/logger";
 import { usePlanLimits } from "../hooks/use-plan-limits";
 import { getSymbolRestrictionMessage } from "../utils/plan-validators";
+import {
+    normalizeSavedTickers,
+    readLocalTickers,
+    saveAccountTickers,
+    writeLocalTickers,
+} from "../features/dashboard/lib/saved-tickers";
+
+const ACCOUNT_SAVE_DELAY_MS = 1000;
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -17,11 +25,45 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     const { profile } = useAuth();
     const config = useConfig();
     
-    // NO persistir selectedTickers - se reconstruyen en cada carga
     const [selectedTickers, setSelectedTickers] = useState<string[]>([]);
+    const [tickersRestored, setTickersRestored] = useState(false);
+    // Saved tickers that failed this session stay saved: the failure may be temporary.
+    const restoredTickersRef = useRef(new Set<string>());
+    const failedTickersRef = useRef(new Set<string>());
     
     // Hook para verificar límite de comparación
     const { isAtLimit, limit, limitMessage } = usePlanLimits('comparison', selectedTickers.length);
+
+    const profileId = profile?.id;
+    useEffect(() => {
+        restoredTickersRef.current = new Set();
+        failedTickersRef.current = new Set();
+        if (!profileId || !profile) {
+            setSelectedTickers([]);
+            setTickersRestored(false);
+            return;
+        }
+        // This device's list is the most recent; the account's list covers new devices.
+        const saved = readLocalTickers(profileId) ?? normalizeSavedTickers(profile.onboarding_profile?.dashboardTickers);
+        // A downgraded plan may no longer allow everything that was saved.
+        const allowed = (profile.role ?? 'basico') === 'basico'
+            ? saved.filter((ticker) => config.plans.freeTierSymbols.includes(ticker))
+            : saved;
+        const restored = limit > 0 ? allowed.slice(0, limit) : allowed;
+        restoredTickersRef.current = new Set(restored);
+        setSelectedTickers(restored);
+        setTickersRestored(true);
+        // Restore once per user, not on every profile or plan refresh.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [profileId]);
+
+    useEffect(() => {
+        if (!tickersRestored || !profileId) return;
+        const tickers = [...selectedTickers, ...failedTickersRef.current];
+        writeLocalTickers(profileId, tickers);
+        const timer = window.setTimeout(() => void saveAccountTickers(profileId, tickers), ACCOUNT_SAVE_DELAY_MS);
+        return () => window.clearTimeout(timer);
+    }, [selectedTickers, tickersRestored, profileId]);
 
     const addTicker = useCallback((tickerRaw: string) => {
         const ticker = tickerRaw.trim().toUpperCase();
@@ -87,7 +129,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
             role,
             totalTickers: selectedTickers.length + 1,
         });
-        setSelectedTickers(prev => [...prev, ticker]);
+        failedTickersRef.current.delete(ticker);
+        setSelectedTickers(prev => prev.includes(ticker) ? prev : [...prev, ticker]);
 
     }, [config, profile?.role, selectedTickers, isAtLimit, limit, limitMessage]);
 
@@ -95,6 +138,13 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         void logger.info('DASHBOARD_TICKER_REMOVED', `Ticker ${ticker} removed from comparison`, {
             ticker,
         });
+        failedTickersRef.current.delete(ticker);
+        restoredTickersRef.current.delete(ticker);
+        setSelectedTickers(prev => prev.filter(t => t !== ticker));
+    }, []);
+
+    const dropFailedTicker = useCallback((ticker: string) => {
+        if (restoredTickersRef.current.has(ticker)) failedTickersRef.current.add(ticker);
         setSelectedTickers(prev => prev.filter(t => t !== ticker));
     }, []);
     
@@ -103,7 +153,9 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         selectedTickers,
         addTicker,
         removeTicker,
-    }), [selectedTickers, addTicker, removeTicker]);
+        dropFailedTicker,
+        tickersRestored,
+    }), [selectedTickers, addTicker, removeTicker, dropFailedTicker, tickersRestored]);
 
     return (
         <DashboardContext.Provider value={value}>

@@ -12,13 +12,16 @@ interface AssetLogoProps {
   className?: string;
   /** Set to false when the caller already resolves logos in a batch. */
   lookup?: boolean;
+  /** Morphs into the same symbol's logo on the next page. Use once per symbol per page. */
+  morph?: boolean;
 }
 
 /**
  * Company logo with a two-letter ticker badge when no logo exists or it fails to load.
  * Size it with `className` (for example `size-8`).
  */
-export function AssetLogo({ symbol, name, src, className, lookup = true }: AssetLogoProps) {
+export function AssetLogo({ symbol, name, src, className, lookup = true, morph = false }: AssetLogoProps) {
+  const style = morph ? { viewTransitionName: `asset-logo-${symbol.replace(/[^a-zA-Z0-9]/g, '-')}` } : undefined;
   const lookedUp = useAssetLogos(src || !lookup ? [] : [symbol]);
   const url = src || lookedUp[symbol.toUpperCase()] || null;
   const [failed, setFailed] = useState(false);
@@ -33,6 +36,7 @@ export function AssetLogo({ symbol, name, src, className, lookup = true }: Asset
         src={url}
         alt={`Logo de ${name ?? symbol}`}
         loading="lazy"
+        style={style}
         className={cn('size-8 shrink-0 rounded-full border bg-white object-contain p-0.5', className)}
         onError={() => setFailed(true)}
       />
@@ -42,6 +46,7 @@ export function AssetLogo({ symbol, name, src, className, lookup = true }: Asset
   return (
     <span
       role="img"
+      style={style}
       aria-label={`${name ?? symbol} (sin logo)`}
       title={name ?? symbol}
       className={cn(

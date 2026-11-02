@@ -15,7 +15,7 @@ export const GuestRoute: React.FC = () => {
 
   // Si el usuario ya está logueado, lo redirigimos al dashboard.
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/hoy" replace />;
   }
 
   // Si no hay usuario, permitimos el acceso a la ruta (login/register).

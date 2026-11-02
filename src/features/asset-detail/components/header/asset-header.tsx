@@ -22,6 +22,7 @@ export function AssetHeader({ asset }: AssetHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
       <AssetLogo
+        morph
         symbol={profile.symbol}
         name={profile.companyName}
         src={profile.image}

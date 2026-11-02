@@ -479,5 +479,9 @@ export interface DashboardContextType {
     error?: string; // Opcional
     addTicker: (tickerRaw: string) => void;
     removeTicker: (ticker: string) => void;
+    /** Hides a ticker that failed to load; a saved one stays saved for the next visit. */
+    dropFailedTicker: (ticker: string) => void;
+    /** False until the user's saved tickers were loaded. */
+    tickersRestored: boolean;
     indicatorConfig: IndicatorConfig;
 }
