@@ -9,6 +9,7 @@ import {
 } from "./sidebar"
 
 import { NavLink } from "react-router-dom"
+import { UnreadAlertsBadge } from "../../features/alerts/components/unread-alerts-badge"
 import React from "react"
 
 
@@ -66,6 +67,7 @@ export function NavMain({ items, label }: NavMainProps) {
                     } ${isActive ? 'tracking-wide' : ''}`}>
                       {item.title}
                     </span>
+                    {item.url === '/alertas' && !isCollapsed && <UnreadAlertsBadge />}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}

@@ -14,6 +14,7 @@ export interface RoleLimits {
 export interface Plans {
   roleLimits: RoleLimits;
   portfolioLimits: RoleLimits;
+  alertLimits?: RoleLimits;
   freeTierSymbols: string[];
 }
 

@@ -6,7 +6,7 @@ import { useConfig } from './use-config';
 /**
  * Tipo de límite numérico según el plan.
  */
-export type LimitType = 'watchlist' | 'portfolios' | 'comparison';
+export type LimitType = 'watchlist' | 'portfolios' | 'comparison' | 'alerts';
 
 /**
  * Resultado de la verificación de límites.
@@ -61,6 +61,10 @@ export function usePlanLimits(
       limit = config.plans?.portfolioLimits?.[currentRole] ?? 1;
       featureName = 'portfolios';
       break;
+    case 'alerts':
+      limit = config.plans?.alertLimits?.[currentRole] ?? 3;
+      featureName = 'alertas activas';
+      break;
     case 'comparison':
       limit = config.dashboard?.maxTickersToCompare?.[currentRole] ?? 3;
       featureName = 'activos para comparar';
@@ -81,11 +85,11 @@ export function usePlanLimits(
   const nextPlanLimits: Record<string, { plan: string; limit: number }> = {
     basico: {
       plan: 'Plus',
-      limit: limitType === 'watchlist' ? 25 : limitType === 'portfolios' ? 5 : 5,
+      limit: limitType === 'watchlist' ? 25 : limitType === 'alerts' ? 20 : 5,
     },
     plus: {
       plan: 'Premium',
-      limit: limitType === 'watchlist' ? 50 : limitType === 'portfolios' ? 10 : 10,
+      limit: limitType === 'watchlist' ? 50 : limitType === 'alerts' ? 100 : 10,
     },
   };
 
