@@ -1,5 +1,6 @@
 // src/features/sectors-industries/pages/sectors-industries-page.tsx
 
+import { usePageMeta } from '../../../hooks/use-page-meta';
 import React from 'react';
 import { Factory, FactoryIcon, TrendingUp } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
@@ -98,6 +99,7 @@ const PerformanceLoadingSkeleton: React.FC = () => (
  * - Table view of recent performance data
  */
 export default function SectorsIndustriesPage() {
+  usePageMeta('Sectores e industrias', 'Rendimiento histórico de 11 sectores y unas 145 industrias del mercado.');
   const [activeTab, setActiveTab] = React.useState<'industries' | 'sectors'>('industries');
   const [selectedIndustry, setSelectedIndustry] = React.useState<string | null>(null);
   const [selectedSector, setSelectedSector] = React.useState<string | null>(null);

@@ -7,6 +7,7 @@ import { AdminUsersTable } from './users/admin-users-table';
 import { AdminLogsTable } from './logs/admin-logs-table';
 import { AdminBlogsSection } from './blogs/admin-blogs-section';
 import { AdminStatsSection } from './stats/admin-stats-section';
+import { RetentionCard } from './stats/retention-card';
 import { AdminSuggestionsSection } from './suggestions/admin-suggestions-section';
 import { AdminContactMessagesSection } from './contact/admin-contact-messages-section';
 import { AdminSubscriptionsSection } from './subscriptions/admin-subscriptions-section';
@@ -131,7 +132,8 @@ export function AdminTabs() {
           title="Estadísticas del Sistema"
           description="Vista general de métricas clave de la plataforma. Incluye usuarios activos, blogs publicados, transacciones de portfolio, y más. Filtra por período para análisis detallados."
         />
-        <AdminStatsSection />
+        <RetentionCard />
+          <AdminStatsSection />
       </TabsContent>
     </Tabs>
   );

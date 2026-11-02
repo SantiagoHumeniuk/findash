@@ -4,6 +4,7 @@ import { AdvisoryResult } from '../../lib/advisory-engine';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../../../../components/ui/dialog';
 import { Info, ThumbsUp, AlertTriangle, AlertCircle, TrendingDown, InfoIcon } from 'lucide-react';
 import { Badge } from '../../../../components/ui/badge';
+import { usePlanFeature } from '../../../../hooks/use-plan-feature';
 
 interface RecommendationModalProps {
     symbol: string;
@@ -22,6 +23,7 @@ function TechnicalMetric({ label, value }: { label: string; value: string | null
 }
 
 export function RecommendationModal({ symbol, result }: RecommendationModalProps) {
+    const { hasAccess: showFairValue } = usePlanFeature('fairValueDetails');
     const getStatusConfig = () => {
         switch (result.status) {
             case 'BUY': return { color: 'bg-green-500/10 text-green-600 border-green-500/30', label: 'Comprar', icon: <ThumbsUp className="w-4 h-4 mr-1" /> };
@@ -74,13 +76,13 @@ export function RecommendationModal({ symbol, result }: RecommendationModalProps
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-                        {result.valuation.fairValue !== null && Number.isFinite(result.valuation.fairValue) && (
+                        {showFairValue && result.valuation.fairValue !== null && Number.isFinite(result.valuation.fairValue) && (
                             <TechnicalMetric label="Valor justo:" value={`$${result.valuation.fairValue.toFixed(2)}`} />
                         )}
-                        {result.valuation.upsidePct !== null && Number.isFinite(result.valuation.upsidePct) && (
+                        {showFairValue && result.valuation.upsidePct !== null && Number.isFinite(result.valuation.upsidePct) && (
                             <TechnicalMetric label="Potencial:" value={`${result.valuation.upsidePct > 0 ? '+' : ''}${result.valuation.upsidePct.toFixed(1)}%`} />
                         )}
-                        {result.valuation.fairValueRange && (
+                        {showFairValue && result.valuation.fairValueRange && (
                             <div className="col-span-2 p-2 bg-muted/30 border rounded flex justify-between items-center">
                                 <span className="text-muted-foreground">Rango entre modelos:</span>
                                 <span className="font-bold">${result.valuation.fairValueRange.low.toFixed(2)} – ${result.valuation.fairValueRange.high.toFixed(2)}</span>

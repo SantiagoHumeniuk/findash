@@ -1,6 +1,7 @@
 // src/features/asset-detail/components/error-states/loading-error.tsx
 
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../../../hooks/use-auth';
 import { Button } from '../../../../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
@@ -22,6 +23,21 @@ interface LoadingErrorProps {
  * ```
  */
 export function LoadingError({ errorMessage }: LoadingErrorProps) {
+  const { user } = useAuth();
+
+  if (!user) {
+    return (
+      <div className="text-center py-12 sm:py-20 px-4">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">Este activo todavía no está disponible sin cuenta</h2>
+        <p className="text-sm sm:text-base text-muted-foreground mt-2">{errorMessage}</p>
+        <div className="mt-4 sm:mt-6 flex flex-wrap justify-center gap-2">
+          <Button asChild size="sm"><Link to="/register">Crear cuenta gratis</Link></Button>
+          <Button asChild variant="outline" size="sm"><Link to="/screener">Ir al screener</Link></Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="text-center py-12 sm:py-20 px-4">
       <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-destructive">

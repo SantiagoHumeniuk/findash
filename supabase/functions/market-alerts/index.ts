@@ -219,6 +219,9 @@ async function runDigest(): Promise<Record<string, number>> {
   if (subscribers.length === 0) return { users: 0, sent: 0 };
 
   const userIds = subscribers.map((subscriber) => subscriber.user_id);
+  const roles = new Map((await rest<{ id: string; role: string | null }[]>(
+    `profiles?id=${inList(userIds)}&select=id,role`,
+  )).map((row) => [row.id, row.role]));
   const [watchlist, transactions, emails] = await Promise.all([
     rest<{ user_id: string; symbol: string }[]>(`watchlist?user_id=${inList(userIds)}&select=user_id,symbol`),
     rest<{ user_id: string; symbol: string; quantity: number; transaction_type: string }[]>(
@@ -281,7 +284,8 @@ async function runDigest(): Promise<Record<string, number>> {
       headers: { Prefer: "return=minimal" },
       body: JSON.stringify({ last_digest_date: today }),
     });
-    if (!digest) continue;
+    // The digest belongs to paid plans; a downgraded user is skipped, not unsubscribed.
+    if (!digest || (roles.get(subscriber.user_id) ?? 'basico') === 'basico') continue;
     await rest("notifications", {
       method: "POST",
       headers: { Prefer: "return=minimal" },

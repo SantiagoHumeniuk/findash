@@ -13,7 +13,10 @@ export type Feature =
   | 'retirementAdvanced'
   | 'api'
   | 'alerts'
-  | 'aiPredictions';
+  | 'aiPredictions'
+  | 'fairValueDetails'
+  | 'screenerFull'
+  | 'dailyDigest';
 
 /**
  * Resultado de la verificación de acceso a una funcionalidad.
@@ -58,6 +61,9 @@ export function usePlanFeature(feature: Feature): PlanFeatureResult {
     api: 'premium',
     alerts: 'premium',
     aiPredictions: 'premium',
+    fairValueDetails: 'plus',
+    screenerFull: 'plus',
+    dailyDigest: 'plus',
   };
 
   // Nombres legibles de las funcionalidades
@@ -70,6 +76,9 @@ export function usePlanFeature(feature: Feature): PlanFeatureResult {
     api: 'Acceso a API',
     alerts: 'Alertas en Tiempo Real',
     aiPredictions: 'Análisis Predictivo con IA',
+    fairValueDetails: 'Valor Justo Detallado',
+    screenerFull: 'Screener Completo',
+    dailyDigest: 'Resumen Diario por Email',
   };
 
   const requiredPlan = featureRequirements[feature];

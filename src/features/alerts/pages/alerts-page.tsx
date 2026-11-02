@@ -11,6 +11,8 @@ import { Label } from '../../../components/ui/label';
 import { PageHeader } from '../../../components/ui/page-header';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { Switch } from '../../../components/ui/switch';
+import { UpgradeHint } from '../../../components/shared/upgrade-hint';
+import { usePlanFeature } from '../../../hooks/use-plan-feature';
 import { CreateAlertDialog } from '../components/create-alert-dialog';
 import {
   type PriceAlert,
@@ -36,6 +38,7 @@ export default function AlertsPage() {
   const { deleteAlert } = useAlertMutations();
   const { preferences, isLoading: preferencesLoading, update } = useAlertPreferences();
   const { mutate: markRead } = useMarkNotificationsRead();
+  const { hasAccess: canUseDigest } = usePlanFeature('dailyDigest');
   const hasUnread = notifications.some((item) => !item.read_at);
 
   // Opening the page counts as reading what is listed.
@@ -121,11 +124,12 @@ export default function AlertsPage() {
                 </Label>
                 <Switch
                   id="daily-digest"
-                  checked={preferences.daily_digest}
-                  disabled={preferencesLoading || update.isPending}
+                  checked={canUseDigest && preferences.daily_digest}
+                  disabled={!canUseDigest || preferencesLoading || update.isPending}
                   onCheckedChange={(checked) => update.mutate({ daily_digest: checked })}
                 />
               </div>
+              {!canUseDigest && <UpgradeHint message="El resumen diario por email está disponible en el plan Plus." />}
             </CardContent>
           </Card>
 

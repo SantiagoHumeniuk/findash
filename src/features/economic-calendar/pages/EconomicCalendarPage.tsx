@@ -1,7 +1,9 @@
+import { usePageMeta } from '../../../hooks/use-page-meta';
 import { EconomicCalendar } from '../components/EconomicCalendar';
 import { Calendar } from 'lucide-react';
 
 export default function EconomicCalendarPage() {
+  usePageMeta('Calendario económico y de resultados', 'Indicadores económicos por país y reportes de resultados de las grandes empresas, semana a semana.');
     return (
         <div className="min-h-screen bg-background text-foreground">
             <div className="container-wide stack-8">

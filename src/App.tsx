@@ -15,9 +15,11 @@ import { AnimatedBackground } from "./components/ui/animated-background";
 import { ErrorBoundary } from "./components/error-boundary";
 import { SuspenseFallback } from "./components/suspense";
 import { SubscriptionStatusModal } from "./components/shared/subscription-status-modal";
+import { useActivityPing } from "./hooks/use-activity-ping";
 
 export default function App() {
   const location = useLocation();
+  useActivityPing();
 
   return (
     <ErrorBoundary level="root">
