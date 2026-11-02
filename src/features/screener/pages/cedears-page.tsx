@@ -127,7 +127,7 @@ export default function CedearsPage() {
         <CardHeader className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="text-base">Más operados</CardTitle>
-            <CardDescription>La prima se calcula para los {COMPARED_CEDEARS} de mayor volumen.</CardDescription>
+            <CardDescription>La prima se calcula para los {COMPARED_CEDEARS} de mayor volumen. Queda en blanco si la diferencia supera el 15%, porque suele indicar un dato o ratio incorrecto.</CardDescription>
           </div>
           <Input
             aria-label="Buscar CEDEAR"
@@ -141,7 +141,7 @@ export default function CedearsPage() {
           {isLoading ? <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div> : market.isError ? (
             <p className="p-4 text-sm text-destructive">{market.error.message}</p>
           ) : (
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[820px] text-sm">
               <thead>
                 <tr className="border-b text-right text-xs text-muted-foreground">
                   <th className="py-2 pr-3 text-left font-medium">CEDEAR</th>
@@ -149,8 +149,9 @@ export default function CedearsPage() {
                   <th className="px-3 py-2 font-medium">Precio ARS</th>
                   <th className="px-3 py-2 font-medium">Var. día</th>
                   <th className="px-3 py-2 font-medium">Precio USD</th>
-                  <th className="px-3 py-2 font-medium">CCL implícito</th>
+                  <th className="px-3 py-2 font-medium">MEP implícito</th>
                   <th className="px-3 py-2 font-medium">Valor según EE. UU.</th>
+                  <th className="px-3 py-2 font-medium">CCL implícito</th>
                   <th className="py-2 pl-3 font-medium">Prima</th>
                 </tr>
               </thead>
@@ -169,13 +170,14 @@ export default function CedearsPage() {
                       {row.changePercent > 0 ? '+' : ''}{row.changePercent.toFixed(2)}%
                     </td>
                     <td className="px-3 py-2">{formatNumber(row.priceUsd)}</td>
-                    <td className="px-3 py-2">{formatNumber(row.impliedCcl)}</td>
+                    <td className="px-3 py-2">{formatNumber(row.impliedMep)}</td>
                     <td className="px-3 py-2">{formatNumber(row.fairPriceUsd)}</td>
+                    <td className="px-3 py-2">{formatNumber(row.impliedCcl)}</td>
                     <td className="py-2 pl-3"><PremiumBadge value={row.premiumPercent} /></td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">No hay CEDEARs para mostrar.</td></tr>
+                  <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">No hay CEDEARs para mostrar.</td></tr>
                 )}
               </tbody>
             </table>

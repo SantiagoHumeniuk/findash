@@ -18,11 +18,13 @@ export interface CedearRow {
   priceUsd: number | null;
   volumeArs: number;
   changePercent: number;
-  /** ARS price ÷ USD price of this same CEDEAR. */
+  /** ARS price ÷ USD price of this same CEDEAR. The dollar line settles locally, so this is an MEP rate. */
+  impliedMep: number | null;
+  /** ARS price × ratio ÷ US share price: the dollar rate this CEDEAR is trading at. */
   impliedCcl: number | null;
   /** US share price ÷ ratio: what one CEDEAR should cost in dollars. */
   fairPriceUsd: number | null;
-  /** Dollar price of the CEDEAR at the reference CCL against its fair price, in percent. */
+  /** Implied CCL against the reference CCL, in percent. */
   premiumPercent: number | null;
 }
 
@@ -62,7 +64,8 @@ export function buildCedearRows(quotes: CedearMarketQuote[], ratios: Record<stri
       priceUsd,
       volumeArs: quote.volume * priceArs,
       changePercent: quote.changePercent,
-      impliedCcl: priceUsd ? priceArs / priceUsd : null,
+      impliedMep: priceUsd ? priceArs / priceUsd : null,
+      impliedCcl: null,
       fairPriceUsd: null,
       premiumPercent: null,
     }];
@@ -75,8 +78,11 @@ export function withPremiums(rows: CedearRow[], usPrices: Map<string, number>, c
     const usPrice = usPrices.get(row.usSymbol);
     if (!usPrice || usPrice <= 0) return row;
     const fairPriceUsd = usPrice / row.ratio;
-    if (!ccl || ccl <= 0) return { ...row, fairPriceUsd };
-    const premium = ((row.priceArs / ccl) / fairPriceUsd - 1) * 100;
-    return { ...row, fairPriceUsd, premiumPercent: Math.abs(premium) <= MAX_CREDIBLE_PREMIUM ? premium : null };
+    const impliedCcl = row.priceArs / fairPriceUsd;
+    if (!ccl || ccl <= 0) return { ...row, fairPriceUsd, impliedCcl };
+    const premium = (impliedCcl / ccl - 1) * 100;
+    // A gap this large means the data is wrong, so neither derived figure is shown.
+    if (Math.abs(premium) > MAX_CREDIBLE_PREMIUM) return row;
+    return { ...row, fairPriceUsd, impliedCcl, premiumPercent: premium };
   });
 }

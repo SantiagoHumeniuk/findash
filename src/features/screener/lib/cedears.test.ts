@@ -28,8 +28,8 @@ describe('buildCedearRows', () => {
     ], { AAPL: 20, BRKB: 22 });
     expect(rows.map(({ symbol }) => symbol)).toEqual(['BRKB', 'AAPL']);
     expect(rows[0].usSymbol).toBe('BRK-B');
-    expect(rows[1].impliedCcl).toBeCloseTo(1600);
-    expect(rows[0].impliedCcl).toBeNull();
+    expect(rows[1].impliedMep).toBeCloseTo(1600);
+    expect(rows[0].impliedMep).toBeNull();
   });
 });
 
@@ -39,13 +39,14 @@ describe('withPremiums', () => {
   it('compares the price at CCL against the US share divided by the ratio', () => {
     const [result] = withPremiums([row], new Map([['AAPL', 400]]), 1600);
     expect(result.fairPriceUsd).toBe(20);
+    expect(result.impliedCcl).toBeCloseTo(1600);
     expect(result.premiumPercent).toBeCloseTo(0);
     const [cheap] = withPremiums([row], new Map([['AAPL', 420]]), 1600);
     expect(cheap.premiumPercent).toBeCloseTo((20 / 21 - 1) * 100);
   });
 
   it('leaves the premium blank for implausible gaps or missing inputs', () => {
-    expect(withPremiums([row], new Map([['AAPL', 800]]), 1600)[0].premiumPercent).toBeNull();
+    expect(withPremiums([row], new Map([['AAPL', 800]]), 1600)[0]).toMatchObject({ premiumPercent: null, impliedCcl: null, fairPriceUsd: null });
     expect(withPremiums([row], new Map(), 1600)[0].premiumPercent).toBeNull();
     expect(withPremiums([row], new Map([['AAPL', 400]]), null)[0]).toMatchObject({ fairPriceUsd: 20, premiumPercent: null });
   });
