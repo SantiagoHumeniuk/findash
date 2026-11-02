@@ -3,6 +3,9 @@
 import type { AssetData } from '../../../../types/dashboard';
 import { WatchlistToggleButton } from '../../../watchlist/components';
 import { AssetLogo } from '../../../../components/ui/asset-logo';
+import { Bell } from 'lucide-react';
+import { Button } from '../../../../components/ui/button';
+import { CreateAlertDialog } from '../../../alerts/components/create-alert-dialog';
 
 /**
  * Props para el componente AssetHeader.
@@ -38,7 +41,15 @@ export function AssetHeader({ asset }: AssetHeaderProps) {
               {profile.exchangeFullName}
             </p>
           </div>
-          <WatchlistToggleButton symbol={profile.symbol} variant="outline" size="sm" />
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+            <CreateAlertDialog
+              symbol={profile.symbol}
+              currentPrice={asset.quote.price > 0 ? asset.quote.price : undefined}
+              currency={profile.currency || 'USD'}
+              trigger={<Button variant="outline" size="sm" className="gap-1.5"><Bell className="h-4 w-4" />Alerta</Button>}
+            />
+            <WatchlistToggleButton symbol={profile.symbol} variant="outline" size="sm" />
+          </div>
         </div>
       </div>
     </div>

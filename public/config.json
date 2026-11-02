@@ -27,6 +27,12 @@
       "premium": 10,
       "administrador": 10000
     },
+    "alertLimits": {
+      "basico": 3,
+      "plus": 20,
+      "premium": 100,
+      "administrador": 10000
+    },
     "freeTierSymbols": [
       "AAPL",
       "MSFT",
@@ -336,6 +342,12 @@
             "to": "/watchlist",
             "label": "Watchlist",
             "icon": "Star",
+            "requiresAuth": true
+          },
+          {
+            "to": "/alertas",
+            "label": "Alertas",
+            "icon": "Bell",
             "requiresAuth": true
           },
           {

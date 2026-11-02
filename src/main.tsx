@@ -37,6 +37,8 @@ const ForgotPasswordPage = React.lazy(() => import('./features/auth/pages/forgot
 const ResetPasswordPage = React.lazy(() => import('./features/auth/pages/reset-password-page.tsx'));
 const InfoPage = React.lazy(() => import('./features/info/pages/info-page.tsx'));
 const NotFoundPage = React.lazy(() => import('./features/not-found/pages/not-found-page.tsx'));
+const AlertsPage = React.lazy(() => import('./features/alerts/pages/alerts-page.tsx'));
+const UnsubscribePage = React.lazy(() => import('./features/alerts/pages/unsubscribe-page.tsx'));
 const DailyPage = React.lazy(() => import('./features/daily/pages/daily-page.tsx'));
 const DashboardPage = React.lazy(() => import('./features/dashboard/pages/dashboard-page.tsx'));
 const AssetDetailPage = React.lazy(() => import('./features/asset-detail/pages/asset-detail-page.tsx'));
@@ -69,6 +71,7 @@ const router = createBrowserRouter([
         children: [
             // --- Ruta Pública General ---
             { index: true, element: <Suspense fallback={<PageSkeleton />}><InfoPage /></Suspense> },
+            { path: "baja", element: <Suspense fallback={<PageSkeleton />}><UnsubscribePage /></Suspense> },
             { path: "contact", element: <Suspense fallback={<PageSkeleton />}><ContactPage /></Suspense> },
             { path: "plans", element: <Suspense fallback={<PageSkeleton />}><PlansPage /></Suspense> },
 
@@ -89,6 +92,16 @@ const router = createBrowserRouter([
             {
                 element: <ProtectedRoute />,
                 children: [
+                    {
+                        path: "alertas",
+                        element: (
+                            <ErrorBoundary level="feature" featureName="Alerts">
+                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando alertas..." />}>
+                                    <AlertsPage />
+                                </Suspense>
+                            </ErrorBoundary>
+                        )
+                    },
                     {
                         path: "hoy",
                         element: (
