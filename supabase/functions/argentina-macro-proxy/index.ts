@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const upstreams = {
   dolares: "https://api.argentinadatos.com/v1/cotizaciones/dolares",
+  "dolar-mep-historico": "https://api.argentinadatos.com/v1/cotizaciones/dolares/bolsa",
   inflacion: "https://api.argentinadatos.com/v1/finanzas/indices/inflacion",
   "plazos-fijos": "https://api.argentinadatos.com/v1/finanzas/tasas/plazoFijo",
   uva: "https://api.argentinadatos.com/v1/finanzas/indices/uva",

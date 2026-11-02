@@ -11,7 +11,12 @@ import {
   mapWithConcurrency,
   type YahooSession,
 } from "./http.ts";
-import { withCache } from "./cache.ts";
+import { readCache, withCache, writeCache } from "./cache.ts";
+import {
+  createYahooAssetData,
+  hasUsableYahooData,
+  refreshAssetMarketQuoteFromYahoo,
+} from "./asset-builder.generated.js";
 import {
   EMPTY_FUNDAMENTALS,
   fetchSecFilings,
@@ -960,6 +965,71 @@ function jsonResponse(body: unknown, status = 200, extraHeaders: Record<string, 
   return Response.json(body, { status, headers: { ...corsHeaders, ...extraHeaders } });
 }
 
+/** Rebuilding assets costs Yahoo requests, so only people with an account can trigger it. */
+async function isSignedIn(request: Request): Promise<boolean> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const authorization = request.headers.get("Authorization");
+  if (!supabaseUrl || !anonKey || !authorization) return false;
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: { apikey: anonKey, Authorization: authorization },
+    signal: AbortSignal.timeout(5_000),
+  });
+  await response.body?.cancel();
+  return response.ok;
+}
+
+type SavedAsset = Record<string, unknown> & { yahooQuoteAttemptedAt?: string };
+const ANY_AGE = Number.MAX_SAFE_INTEGER;
+const QUOTE_REFRESH_MS = 60 * 1000;
+
+async function loadFullQuote(symbol: string): Promise<YahooQuote> {
+  try {
+    return await fetchQuote(symbol, await getYahooSession());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo iniciar una sesión de Yahoo Finance";
+    return await fetchPublicYahooData(symbol, message);
+  }
+}
+
+/** Builds an asset here and saves it: clients cannot write the shared cache. */
+async function buildAsset(symbol: string): Promise<Response> {
+  const [quote, riskFreeRate] = await Promise.all([loadFullQuote(symbol), fetchRiskFreeRate()]);
+  const fetchedAt = new Date().toISOString();
+  if (!hasUsableYahooData(quote)) {
+    const error = quote.error ?? `Yahoo Finance no devolvió una cotización válida para ${symbol}.`;
+    const saved = await readCache<SavedAsset>(symbol, ANY_AGE);
+    if (saved) {
+      await writeCache(symbol, { ...saved.data, yahooAttemptedAt: fetchedAt, yahooError: error }, saved.updatedAt);
+    }
+    return jsonResponse({ error }, 502);
+  }
+  const asset = createYahooAssetData(symbol, quote, fetchedAt, riskFreeRate as never);
+  await writeCache(symbol, asset, fetchedAt);
+  return jsonResponse({ asset }, 200, { "Cache-Control": "no-store" });
+}
+
+async function refreshAssetQuote(symbol: string): Promise<Response> {
+  const saved = await readCache<SavedAsset>(symbol, ANY_AGE);
+  if (!saved) return jsonResponse({ error: `${symbol} todavía no está guardado.` }, 404);
+  const attemptedAt = Date.parse(saved.data.yahooQuoteAttemptedAt ?? "");
+  if (Date.now() - attemptedAt < QUOTE_REFRESH_MS) {
+    return jsonResponse({ asset: saved.data }, 200, { "Cache-Control": "no-store" });
+  }
+  const asset: SavedAsset = { ...saved.data };
+  const fetchedAt = new Date().toISOString();
+  try {
+    if (!refreshAssetMarketQuoteFromYahoo(asset, await fetchMarketQuote(symbol), fetchedAt)) {
+      asset.yahooQuoteAttemptedAt = fetchedAt;
+    }
+  } catch (error) {
+    console.warn(`Could not refresh the saved quote of ${symbol}:`, error);
+    asset.yahooQuoteAttemptedAt = fetchedAt;
+  }
+  await writeCache(symbol, asset, saved.updatedAt);
+  return jsonResponse({ asset }, 200, { "Cache-Control": "no-store" });
+}
+
 function badRequest(message: string): Response {
   return jsonResponse({ error: message }, 400);
 }
@@ -983,6 +1053,17 @@ serve(async (request) => {
     const body: unknown = await request.json();
     const requestBody = asRecord(body);
     const action = requestBody?.action;
+
+    if (action === "asset" || action === "assetQuote") {
+      const symbol = requestBody?.symbol;
+      if (typeof symbol !== "string" || !symbolPattern.test(symbol)) {
+        return badRequest("Envía un símbolo bursátil válido en mayúsculas");
+      }
+      if (!await isSignedIn(request)) {
+        return jsonResponse({ error: "Iniciá sesión para actualizar este activo." }, 401);
+      }
+      return action === "asset" ? await buildAsset(symbol) : await refreshAssetQuote(symbol);
+    }
 
     if (action === "dividends") {
       const symbols = requestBody?.symbols;
