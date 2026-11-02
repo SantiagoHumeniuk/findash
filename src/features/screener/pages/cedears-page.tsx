@@ -1,5 +1,6 @@
 // src/features/screener/pages/cedears-page.tsx
 
+import { usePageMeta } from '../../../hooks/use-page-meta';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -59,6 +60,7 @@ function PremiumBadge({ value }: { value: number | null }) {
  * CCL implied by its peso and dollar lines.
  */
 export default function CedearsPage() {
+  usePageMeta('CEDEARs: ratios, CCL implícito y prima', 'Compará cada CEDEAR con su acción en EE. UU.: ratio, MEP y CCL implícito, y si está caro o barato.');
   const [search, setSearch] = useState('');
   const { ratios, loading: ratiosLoading } = useCedearRatios();
   const ccl = useCclRate();

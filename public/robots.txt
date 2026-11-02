@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /admin
+Disallow: /profile
+Disallow: /baja
+
+Sitemap: https://findash-data.vercel.app/sitemap.xml

@@ -13,6 +13,7 @@ import {
   CalendarClock,
   FileSpreadsheet
 } from 'lucide-react';
+import { usePlanFeature } from '../../../../hooks/use-plan-feature';
 import { AssetEarningsSection } from '../insights/asset-earnings-section';
 import { AssetStatementsSection } from '../insights/asset-statements-section';
 
@@ -222,7 +223,8 @@ export function AssetFinancialsTab({ asset }: AssetFinancialsTabProps) {
   const hasEstimates = asset.analystEstimates && asset.analystEstimates.length > 0;
   const hasKeyMetrics = asset.keyMetricsYearly && asset.keyMetricsYearly.length > 0;
   const hasRatios = asset.ratios && asset.ratios.length > 0;
-  const hasDCF = asset.dcf && asset.dcf.length > 0;
+  const { hasAccess: showDcf } = usePlanFeature('fairValueDetails');
+  const hasDCF = showDcf && asset.dcf && asset.dcf.length > 0;
   const insights = asset.yahooInsights;
   const hasEarnings = Boolean(insights && (insights.nextEarnings?.date || insights.earningsHistory.length > 0 || insights.quarterlyStatements.length > 0));
   const hasStatements = (insights?.annualStatements.length ?? 0) > 0;

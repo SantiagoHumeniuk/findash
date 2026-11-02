@@ -2,6 +2,8 @@
 
 import { Link, useParams } from 'react-router-dom';
 import { useAssetData } from '../../dashboard/hooks/use-asset-data';
+import { usePageMeta } from '../../../hooks/use-page-meta';
+import { useAuth } from '../../../hooks/use-auth';
 import { motion, type Variants } from 'framer-motion';
 import { Button } from '../../../components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -73,6 +75,12 @@ export default function AssetDetailPage() {
     isFetching,
     refreshAssetData,
   } = useAssetData(symbol!);
+  const { user } = useAuth();
+  const name = asset?.profile.companyName ?? symbol ?? '';
+  usePageMeta(
+    `${symbol}: cotización, valor justo y análisis`,
+    `Cotización de ${name} (${symbol}), veredicto de valor justo, estados financieros, analistas y accionistas.`,
+  );
 
   // Loading state
   if (isLoading) {
@@ -100,14 +108,14 @@ export default function AssetDetailPage() {
       {/* Back button */}
       <motion.div variants={itemVariants}>
         <Button variant="outline" asChild className="group">
-          <Link to="/dashboard">
+          <Link to={user ? "/dashboard" : "/screener"}>
             <motion.span
               className="inline-flex items-center"
               whileHover={{ x: -3 }}
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
             >
               <ArrowLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-0.5" />
-              Volver al Dashboard
+              {user ? 'Volver al Dashboard' : 'Ir al screener'}
             </motion.span>
           </Link>
         </Button>

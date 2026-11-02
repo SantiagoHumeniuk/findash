@@ -73,6 +73,67 @@ const router = createBrowserRouter([
         children: [
             // --- Ruta Pública General ---
             { index: true, element: <Suspense fallback={<PageSkeleton />}><InfoPage /></Suspense> },
+            // Público para atraer visitantes desde buscadores.
+            {
+                path: "asset/:symbol",
+                element: (
+                    <ErrorBoundary level="feature" featureName="Asset Detail">
+                        <Suspense fallback={<AssetDetailSkeleton />}>
+                            <AssetDetailPage />
+                        </Suspense>
+                    </ErrorBoundary>
+                )
+            },
+            {
+                path: "screener",
+                element: (
+                    <ErrorBoundary level="feature" featureName="Screener">
+                        <Suspense fallback={<SuspenseFallback type="page" message="Cargando screener..." />}>
+                            <ScreenerPage />
+                        </Suspense>
+                    </ErrorBoundary>
+                )
+            },
+            {
+                path: "cedears",
+                element: (
+                    <ErrorBoundary level="feature" featureName="CEDEARs">
+                        <Suspense fallback={<SuspenseFallback type="page" message="Cargando CEDEARs..." />}>
+                            <CedearsPage />
+                        </Suspense>
+                    </ErrorBoundary>
+                )
+            },
+            {
+                path: "economic-calendar",
+                element: (
+                    <ErrorBoundary level="feature" featureName="Economic Calendar">
+                        <Suspense fallback={<SuspenseFallback type="page" message="Cargando calendario..." />}>
+                            <EconomicCalendarPage />
+                        </Suspense>
+                    </ErrorBoundary>
+                )
+            },
+            {
+                path: "risk-premium",
+                element: (
+                    <ErrorBoundary level="feature" featureName="Risk Premium">
+                        <Suspense fallback={<SuspenseFallback type="page" message="Cargando riesgo país..." />}>
+                            <RiskPremiumPage />
+                        </Suspense>
+                    </ErrorBoundary>
+                )
+            },
+            {
+                path: "sectors-industries",
+                element: (
+                    <ErrorBoundary level="feature" featureName="Sectors & Industries">
+                        <Suspense fallback={<SuspenseFallback type="page" message="Cargando sectores e industrias..." />}>
+                            <SectorsIndustriesPage />
+                        </Suspense>
+                    </ErrorBoundary>
+                )
+            },
             { path: "baja", element: <Suspense fallback={<PageSkeleton />}><UnsubscribePage /></Suspense> },
             { path: "contact", element: <Suspense fallback={<PageSkeleton />}><ContactPage /></Suspense> },
             { path: "plans", element: <Suspense fallback={<PageSkeleton />}><PlansPage /></Suspense> },
@@ -94,26 +155,6 @@ const router = createBrowserRouter([
             {
                 element: <ProtectedRoute />,
                 children: [
-                    {
-                        path: "screener",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="Screener">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando screener..." />}>
-                                    <ScreenerPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
-                    },
-                    {
-                        path: "cedears",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="CEDEARs">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando CEDEARs..." />}>
-                                    <CedearsPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
-                    },
                     {
                         path: "alertas",
                         element: (
@@ -140,16 +181,6 @@ const router = createBrowserRouter([
                             <ErrorBoundary level="feature" featureName="Dashboard">
                                 <Suspense fallback={<DashboardSkeleton />}>
                                     <DashboardPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
-                    },
-                    {
-                        path: "asset/:symbol",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="Asset Detail">
-                                <Suspense fallback={<AssetDetailSkeleton />}>
-                                    <AssetDetailPage />
                                 </Suspense>
                             </ErrorBoundary>
                         )
@@ -221,36 +252,6 @@ const router = createBrowserRouter([
                             <ErrorBoundary level="feature" featureName="Dividends">
                                 <Suspense fallback={<SuspenseFallback type="page" message="Cargando dividendos..." />}>
                                     <DividendsPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
-                    },
-                    {
-                        path: "economic-calendar",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="Economic Calendar">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando calendario..." />}>
-                                    <EconomicCalendarPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
-                    },
-                    {
-                        path: "risk-premium",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="Risk Premium">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando riesgo país..." />}>
-                                    <RiskPremiumPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
-                    },
-                    {
-                        path: "sectors-industries",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="Sectors & Industries">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando sectores e industrias..." />}>
-                                    <SectorsIndustriesPage />
                                 </Suspense>
                             </ErrorBoundary>
                         )

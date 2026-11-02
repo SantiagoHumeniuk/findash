@@ -347,7 +347,12 @@ function runInBackground(ticker: string, refresh: () => Promise<AssetData>): voi
         .finally(() => backgroundRefreshes.delete(ticker));
 }
 
-async function refreshCachedQuote(ticker: string, cachedAsset: AssetData, lastUpdatedAt: string): Promise<AssetData> {
+async function refreshCachedQuote(
+    ticker: string,
+    cachedAsset: AssetData,
+    lastUpdatedAt: string,
+    persist = true,
+): Promise<AssetData> {
     const asset = { ...cachedAsset };
     const attemptedAt = new Date().toISOString();
     try {
@@ -370,6 +375,7 @@ async function refreshCachedQuote(ticker: string, cachedAsset: AssetData, lastUp
         });
     }
 
+    if (!persist) return asset;
     const { error: cacheError } = await supabase.from('asset_data_cache').upsert({
         symbol: ticker,
         data: asset,
@@ -406,6 +412,19 @@ export async function fetchTickerData({
             ticker,
             errorMessage: cacheReadError.message,
         });
+    }
+
+    // Visitors without an account see what is already saved, with a fresh quote. Each uncached asset
+    // costs about ten Yahoo requests, so only signed-in users (with their plan limits) can trigger them.
+    if (!user) {
+        const saved = cached?.data as AssetData | undefined;
+        if (saved?.dataSource !== 'Yahoo Finance') {
+            throw new Error('Creá tu cuenta gratis para analizar este activo.');
+        }
+        if (shouldRefreshYahooQuote(saved, Date.now())) {
+            runInBackground(ticker, () => refreshCachedQuote(ticker, saved, cached?.last_updated_at as string, false));
+        }
+        return saved;
     }
 
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);

@@ -1,5 +1,6 @@
 ﻿// src/features/risk-premium/pages/risk-premium-page.tsx
 
+import { usePageMeta } from '../../../hooks/use-page-meta';
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Globe } from 'lucide-react';
@@ -11,6 +12,7 @@ import { RiskPremiumViewMode } from '../types/risk-premium.types';
 import { DAMODARAN_SOURCE_URL, DAMODARAN_UPDATED_AT } from '../../../data/damodaran-country-risk';
 
 export default function RiskPremiumPage() {
+  usePageMeta('Riesgo país y prima de riesgo', 'Prima de riesgo país y prima total de acciones de 178 países, según Aswath Damodaran.');
   const [countryFilter, setCountryFilter] = useState('');
   const [continentFilter, setContinentFilter] = useState('');
   const [viewMode, setViewMode] = useState<RiskPremiumViewMode>('percentage');

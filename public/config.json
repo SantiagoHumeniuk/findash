@@ -335,14 +335,12 @@
           {
             "to": "/screener",
             "label": "Screener",
-            "icon": "Filter",
-            "requiresAuth": true
+            "icon": "Filter"
           },
           {
             "to": "/cedears",
             "label": "CEDEARs",
-            "icon": "ArrowLeftRight",
-            "requiresAuth": true
+            "icon": "ArrowLeftRight"
           },
           {
             "to": "/market-movers",
@@ -377,14 +375,12 @@
           {
             "to": "/sectors-industries",
             "label": "Sectores e Industrias",
-            "icon": "FactoryIcon",
-            "requiresAuth": true
+            "icon": "FactoryIcon"
           },
           {
             "to": "/economic-calendar",
             "label": "Calendario Económico",
-            "icon": "Calendar",
-            "requiresAuth": true
+            "icon": "Calendar"
           },
           {
             "to": "/dividends",
@@ -395,8 +391,7 @@
           {
             "to": "/risk-premium",
             "label": "Riesgo País",
-            "icon": "Globe",
-            "requiresAuth": true
+            "icon": "Globe"
           },
           {
             "to": "/retirement-calculator",

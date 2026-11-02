@@ -4,6 +4,8 @@ import type { AssetData } from '../../../../types/dashboard';
 import { WatchlistToggleButton } from '../../../watchlist/components';
 import { AssetLogo } from '../../../../components/ui/asset-logo';
 import { Bell } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../../../hooks/use-auth';
 import { Button } from '../../../../components/ui/button';
 import { CreateAlertDialog } from '../../../alerts/components/create-alert-dialog';
 
@@ -21,6 +23,7 @@ interface AssetHeaderProps {
  */
 export function AssetHeader({ asset }: AssetHeaderProps) {
   const { profile } = asset;
+  const { user } = useAuth();
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
@@ -41,7 +44,9 @@ export function AssetHeader({ asset }: AssetHeaderProps) {
               {profile.exchangeFullName}
             </p>
           </div>
-          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+          {!user ? (
+            <Button asChild size="sm" className="shrink-0"><Link to="/register">Crear cuenta gratis</Link></Button>
+          ) : <div className="flex shrink-0 flex-wrap justify-end gap-2">
             <CreateAlertDialog
               symbol={profile.symbol}
               currentPrice={asset.quote.price > 0 ? asset.quote.price : undefined}
@@ -49,7 +54,7 @@ export function AssetHeader({ asset }: AssetHeaderProps) {
               trigger={<Button variant="outline" size="sm" className="gap-1.5"><Bell className="h-4 w-4" />Alerta</Button>}
             />
             <WatchlistToggleButton symbol={profile.symbol} variant="outline" size="sm" />
-          </div>
+          </div>}
         </div>
       </div>
     </div>

@@ -13,6 +13,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../
 import { Badge } from '../../../../components/ui/badge';
 import { calculateContextualRatingScores } from '../../lib/valuation-models';
 import { useRiskPremiumQuery } from '../../../risk-premium/hooks/use-risk-premium-query';
+import { usePlanFeature } from '../../../../hooks/use-plan-feature';
+import { UpgradeHint } from '../../../../components/shared/upgrade-hint';
 
 interface RatingScorecardProps {
   asset: AssetData;
@@ -21,6 +23,7 @@ interface RatingScorecardProps {
 export function RatingScorecard({ asset }: RatingScorecardProps) {
   const { rating } = asset;
   const { data: riskPremiumData = [] } = useRiskPremiumQuery();
+  const { hasAccess: showDetails } = usePlanFeature('fairValueDetails');
   const contextualScores = calculateContextualRatingScores(asset, riskPremiumData);
 
   if (!rating?.rating) return null;
@@ -117,8 +120,10 @@ export function RatingScorecard({ asset }: RatingScorecardProps) {
           </Badge>
         </div>
 
+        {!showDetails && <UpgradeHint message="El puntaje de cada factor está disponible en el plan Plus." />}
+
         {/* Lista de Métricas */}
-        <div className="space-y-3">
+        {showDetails && <div className="space-y-3">
           {metrics.filter(({ score }) => score !== null && Number.isFinite(score) && score >= 1 && score <= 5).map((metric) => (
             <div key={metric.label} className="flex items-center justify-between text-sm group">
               <div className="flex items-center gap-1.5">
@@ -143,7 +148,7 @@ export function RatingScorecard({ asset }: RatingScorecardProps) {
               </div>
             </div>
           ))}
-        </div>
+        </div>}
 
         <div className="text-[10px] text-muted-foreground pt-2 border-t text-center italic">
           Estrellas individuales ajustadas por valoración y empresas comparables.

@@ -1,5 +1,6 @@
 // src/features/screener/pages/screener-page.tsx
 
+import { usePageMeta } from '../../../hooks/use-page-meta';
 import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -15,10 +16,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import { useAssetLogos } from '../../../hooks/use-asset-logos';
 import { useAuth } from '../../../hooks/use-auth';
+import { usePlanFeature } from '../../../hooks/use-plan-feature';
+import { UpgradeHint } from '../../../components/shared/upgrade-hint';
 import { fetchYahooScreener, type YahooScreenerFilter } from '../../../services/api/yahoo-finance-api';
 import { MarketHeatmap } from '../components/market-heatmap';
 
 const PAGE_SIZE = 25;
+const FREE_RESULTS = 10;
 const MILLION = 1_000_000;
 
 const SECTORS: Record<string, string> = {
@@ -150,6 +154,7 @@ function changeClass(value: number | null): string {
 
 function ScreenerTable() {
   const { user } = useAuth();
+  const { hasAccess: fullAccess } = usePlanFeature('screenerFull');
   const [draft, setDraft] = useState<ScreenState>(EMPTY_STATE);
   const [applied, setApplied] = useState<ScreenState>(EMPTY_STATE);
   const [page, setPage] = useState(0);
@@ -184,7 +189,7 @@ function ScreenerTable() {
   };
 
   const { data, isLoading, isError, isFetching } = useQuery({
-    queryKey: ['screener', applied, page],
+    queryKey: ['screener', applied, page, fullAccess],
     placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000,
     queryFn: () => fetchYahooScreener({
@@ -193,8 +198,8 @@ function ScreenerTable() {
       filters: toScreenerFilters(applied.limits),
       sortField: applied.sortField,
       sortDescending: applied.sortDescending,
-      offset: page * PAGE_SIZE,
-      size: PAGE_SIZE,
+      offset: fullAccess ? page * PAGE_SIZE : 0,
+      size: fullAccess ? PAGE_SIZE : FREE_RESULTS,
     }),
   });
   const rows = data?.rows ?? [];
@@ -299,7 +304,7 @@ function ScreenerTable() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button className="gap-2" onClick={() => run(draft)}><Filter className="h-4 w-4" />Aplicar</Button>
-            <Button variant="outline" className="gap-2" onClick={saveCurrent}><Save className="h-4 w-4" />Guardar filtro</Button>
+            {fullAccess && <Button variant="outline" className="gap-2" onClick={saveCurrent}><Save className="h-4 w-4" />Guardar filtro</Button>}
             <Button variant="ghost" className="gap-2" onClick={() => run(EMPTY_STATE)}><RotateCcw className="h-4 w-4" />Limpiar</Button>
           </div>
         </CardContent>
@@ -311,7 +316,7 @@ function ScreenerTable() {
             {total.toLocaleString('es-AR')} resultados
             {isFetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </CardTitle>
-          <div className="flex items-center gap-2 text-sm">
+          {fullAccess && <div className="flex items-center gap-2 text-sm">
             <Button variant="outline" size="icon" aria-label="Página anterior" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -319,7 +324,7 @@ function ScreenerTable() {
             <Button variant="outline" size="icon" aria-label="Página siguiente" disabled={(page + 1) * PAGE_SIZE >= total} onClick={() => setPage((value) => value + 1)}>
               <ChevronRight className="h-4 w-4" />
             </Button>
-          </div>
+          </div>}
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {isLoading ? <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div> : isError ? (
@@ -366,6 +371,9 @@ function ScreenerTable() {
               </tbody>
             </table>
           )}
+          {!fullAccess && total > FREE_RESULTS && (
+            <UpgradeHint className="mt-4" message={`Estás viendo los primeros ${FREE_RESULTS} resultados. Los ${total.toLocaleString('es-AR')} y guardar filtros están disponibles en el plan Plus.`} />
+          )}
         </CardContent>
       </Card>
     </div>
@@ -374,6 +382,7 @@ function ScreenerTable() {
 
 /** Stock filters and a market map over Yahoo's whole equity universe. */
 export default function ScreenerPage() {
+  usePageMeta('Screener de acciones y mapa del mercado', 'Filtrá acciones por valuación, dividendos y crecimiento, y mirá el mercado de un vistazo.');
   return (
     <div className="container-wide stack-6">
       <PageHeader
