@@ -204,7 +204,7 @@ export function AssetFundamentalsTrends({ asset }: AssetFundamentalsTrendsProps)
                 <Bar 
                   dataKey="value"
                   radius={[6, 6, 6, 6]}
-                  animationDuration={1500}
+                  animationDuration={500}
                   maxBarSize={60}
                 >
                   <LabelList 

@@ -45,7 +45,7 @@ const SidebarHeaderContent = React.memo(({ config }: { config: Config }) => {
           <NavLink to="/" className="flex items-center gap-2 group">
             <SidebarMenuButton size="lg" className="hover:bg-primary/5 transition-all duration-300">
               <div className="text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg shrink-0">
-                <img src="/logo.png" alt="Logo" className="size-7 object-contain" />
+                <img src="/logo-128.png" alt="Logo" width="28" height="28" className="size-7 object-contain" />
               </div>
               <div className={`grid flex-1 text-left body-sm leading-tight transition-all duration-200 ${isCollapsed ? 'opacity-0 w-0 hidden' : 'opacity-100'}`}>
                 <span className="truncate font-bold text-gradient-animated tracking-tight">{config.app.name}</span>

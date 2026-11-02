@@ -31,15 +31,13 @@ const tabContentVariants: Variants = {
         opacity: 0,
         y: 8,
         scale: 0.995,
-        filter: "blur(3px)",
     },
     visible: {
         opacity: 1,
         y: 0,
         scale: 1,
-        filter: "blur(0px)",
         transition: {
-            duration: 0.35,
+            duration: 0.2,
             ease: [0.22, 1, 0.36, 1],
         },
     },
@@ -47,9 +45,8 @@ const tabContentVariants: Variants = {
         opacity: 0,
         y: -6,
         scale: 0.995,
-        filter: "blur(3px)",
         transition: {
-            duration: 0.2,
+            duration: 0.08,
             ease: [0.4, 0, 1, 1],
         },
     },

@@ -84,7 +84,7 @@ export default function ActivesBar() {
     const isHomePage = location.pathname === '/' || location.pathname === '/inicio';
     const containerClass = isHomePage 
        ? "relative w-full h-10 overflow-hidden border-b bg-transparent border-white/[0.02]"
-       : "relative w-full h-10 overflow-hidden border-b bg-background/80 backdrop-blur-xl border-border/40 transition-all duration-300";
+       : "relative w-full h-10 overflow-hidden border-b bg-background/90 border-border/40";
 
     // Renderiza un placeholder si está cargando
     if (loading) {

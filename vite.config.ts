@@ -84,49 +84,13 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
+        // Only always-needed libraries get their own chunk. jspdf, html2canvas and recharts stay
+        // out on purpose: forcing them here made Rollup hoist shared helpers into those chunks,
+        // so every page downloaded them up front even without exporting or showing a chart.
         manualChunks: {
-          // Vendor chunks - React core
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          
-          // Charts library - heavy dependency (299 kB)
-          'recharts-vendor': ['recharts'],
-          
-          // PDF/Export libraries
-          'export-vendor': ['html2canvas', 'jspdf'],
-          
-          // UI library - Radix UI components
-          'radix-vendor': [
-            '@radix-ui/react-accordion',
-            '@radix-ui/react-alert-dialog',
-            '@radix-ui/react-avatar',
-            '@radix-ui/react-checkbox',
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-label',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-select',
-            '@radix-ui/react-separator',
-            '@radix-ui/react-slider',
-            '@radix-ui/react-slot',
-            '@radix-ui/react-switch',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-tooltip',
-          ],
-          
-          // Date utilities
-          'date-vendor': ['date-fns'],
-          
-          // State management
-          'query-vendor': ['@tanstack/react-query', '@tanstack/react-table'],
-          
-          // Backend
+          'query-vendor': ['@tanstack/react-query'],
           'supabase-vendor': ['@supabase/supabase-js'],
-          
-          // Icons
-          'icons-vendor': ['lucide-react'],
-          
-          // Utilities
-          'utils-vendor': ['clsx', 'tailwind-merge', 'framer-motion', 'sonner', 'dompurify'],
         },
       },
     },

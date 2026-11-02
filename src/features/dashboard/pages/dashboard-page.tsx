@@ -35,8 +35,8 @@ const containerVariants = {
 };
 
 const itemVariants = {
-    hidden: { opacity: 0, y: 20, filter: "blur(4px)" },
-    show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { type: "spring" as const, stiffness: 300, damping: 24, mass: 0.8 } }
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24, mass: 0.8 } }
 };
 
 function DashboardPageContent() {
@@ -181,7 +181,7 @@ function DashboardPageContent() {
 
             <motion.div variants={itemVariants}>
                 <div id="ticker-search-container" className="relative p-[1.5px] rounded-2xl bg-gradient-to-br from-primary/30 via-blue-500/10 to-cyan-400/30 overflow-hidden group hover:from-primary/50 hover:to-cyan-400/50 transition-all duration-500">
-                    <Card className="bg-background/95 backdrop-blur-xl border-0 rounded-2xl shadow-inner h-full">
+                    <Card className="bg-background/95 border-0 rounded-2xl shadow-inner h-full">
                         <CardHeader className="relative z-10">
                             <TickerAddForm onAddTicker={addTicker} />
                             <SelectedTickersList tickers={selectedTickers} onRemoveTicker={removeTicker} />
@@ -193,7 +193,7 @@ function DashboardPageContent() {
             {selectedTickers.length === 0 ? (
                 <motion.div
                     variants={itemVariants}
-                    className="relative flex flex-col items-center text-center py-16 sm:py-24 px-6 border border-white/[0.05] rounded-3xl bg-card/30 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden group"
+                    className="relative flex flex-col items-center text-center py-16 sm:py-24 px-6 border border-white/[0.05] rounded-3xl bg-card/60 shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden group"
                 >
                     {/* Glowing background effect */}
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-cyan-400/5 opacity-50 group-hover:opacity-100 transition-opacity duration-700" />

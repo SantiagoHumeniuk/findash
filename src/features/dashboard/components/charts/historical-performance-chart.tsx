@@ -400,7 +400,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
                   connectNulls={true}
                   dot={false}
                   activeDot={{ r: 4, strokeWidth: 0 }}
-                  isAnimationActive={true}
+                  isAnimationActive={false}
                 />
               );
             })}
