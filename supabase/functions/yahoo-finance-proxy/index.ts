@@ -705,25 +705,43 @@ async function fetchPeers(symbol: string, session: YahooSession): Promise<PeerQu
 }
 
 async function fetchQuote(symbol: string, session: YahooSession): Promise<YahooQuote> {
-  const [summaryResult, historyResult, snapshotResult, peersResult] = await Promise.allSettled([
-    fetchWithCrumb((crumb) => {
-      const url = new URL(`https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}`);
-      url.searchParams.set("modules", modules);
-      url.searchParams.set("crumb", crumb);
-      return url;
-    }, session),
-    fetchHistoryChart(symbol),
-    fetchMarketSnapshot(symbol),
-    fetchPeers(symbol, session),
+  // Everything starts at once; statements and logo only wait for what they depend on.
+  const snapshotRequest = fetchMarketSnapshot(symbol);
+  const summaryRequest = fetchWithCrumb((crumb) => {
+    const url = new URL(`https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}`);
+    url.searchParams.set("modules", modules);
+    url.searchParams.set("crumb", crumb);
+    return url;
+  }, session);
+  const fundamentalsRequest = snapshotRequest
+    .catch(() => null)
+    .then((snapshot) => fetchFundamentals(symbol, snapshot?.quoteType ?? null));
+  const logoRequest = Promise.all([snapshotRequest.catch(() => null), summaryRequest.catch(() => null)])
+    .then(([snapshot, summary]) => {
+      const quoteType = snapshot?.quoteType;
+      if (quoteType && quoteType !== "EQUITY" && quoteType !== "ETF") return null;
+      const website = summary?.payload ? normalizeQuote(symbol, summary.payload).companyProfile.website : null;
+      return ensureLogo(symbol, website);
+    })
+    .catch(() => null);
+
+  const [summaryResult, historyResult, snapshotResult, peersResult, fundamentals, logoUrl] = await Promise.all([
+    summaryRequest.then(
+      (value) => ({ status: "fulfilled" as const, value }),
+      (reason: unknown) => ({ status: "rejected" as const, reason }),
+    ),
+    fetchHistoryChart(symbol).catch((error: unknown) => {
+      console.error(`Yahoo history request failed for ${symbol}:`, error);
+      return null;
+    }),
+    snapshotRequest.catch((error: unknown) => {
+      console.error(`Yahoo chart quote request failed for ${symbol}:`, error);
+      return null;
+    }),
+    fetchPeers(symbol, session).catch(() => []),
+    fundamentalsRequest,
+    logoRequest,
   ]);
-  const history = historyResult.status === "fulfilled" ? historyResult.value : null;
-  const marketSnapshot = snapshotResult.status === "fulfilled" ? snapshotResult.value : null;
-  if (historyResult.status === "rejected") {
-    console.error(`Yahoo history request failed for ${symbol}:`, historyResult.reason);
-  }
-  if (snapshotResult.status === "rejected") {
-    console.error(`Yahoo chart quote request failed for ${symbol}:`, snapshotResult.reason);
-  }
 
   const quote = summaryResult.status === "fulfilled" && summaryResult.value.payload !== null
     ? normalizeQuote(symbol, summaryResult.value.payload)
@@ -733,14 +751,8 @@ async function fetchQuote(symbol: string, session: YahooSession): Promise<YahooQ
         ? "Yahoo Finance no pudo consultar las métricas fundamentales; se usa la cotización pública del gráfico"
         : "Yahoo Finance devolvió una respuesta no JSON; se usa la cotización pública del gráfico",
     );
-  const enriched = attachHistory(applyMarketSnapshot(quote, marketSnapshot), history);
-  enriched.peers = peersResult.status === "fulfilled" ? peersResult.value : [];
-  const [fundamentals, logoUrl] = await Promise.all([
-    fetchFundamentals(symbol, enriched.quoteType),
-    enriched.quoteType === "EQUITY" || enriched.quoteType === "ETF"
-      ? ensureLogo(symbol, enriched.companyProfile.website).catch(() => null)
-      : Promise.resolve(null),
-  ]);
+  const enriched = attachHistory(applyMarketSnapshot(quote, snapshotResult), historyResult);
+  enriched.peers = peersResult;
   enriched.fundamentals = fundamentals;
   enriched.logoUrl = logoUrl;
   return enriched;
@@ -1143,9 +1155,17 @@ serve(async (request) => {
 
     const normalizedSymbols = [...new Set(symbols.map((symbol) => symbol.toUpperCase()))];
     if (marketDataOnly) {
-      const quotes = await mapWithConcurrency(normalizedSymbols, 5, fetchMarketQuote);
+      // Shared for a minute: the ticker bar and quote refreshes of every user reuse one fetch.
+      const { data } = await withCache(
+        `yahoo:market:${[...normalizedSymbols].sort().join(",")}`,
+        60 * 1000,
+        async () => ({
+          fetchedAt: new Date().toISOString(),
+          quotes: await mapWithConcurrency(normalizedSymbols, 5, fetchMarketQuote),
+        }),
+      );
       return jsonResponse(
-        { fetchedAt: new Date().toISOString(), quotes },
+        data,
         200,
         { "Cache-Control": "no-store" },
       );

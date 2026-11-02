@@ -71,6 +71,10 @@ export async function withCache<T>(
   const cached = await readCache<T>(key, maxAgeMs);
   if (cached) return { data: cached.data, cachedAt: cached.updatedAt };
   const data = await compute();
-  await writeCache(key, data);
+  // The response does not wait for the write; the runtime keeps it alive until it finishes.
+  const write = writeCache(key, data);
+  const runtime = (globalThis as { EdgeRuntime?: { waitUntil(promise: Promise<unknown>): void } }).EdgeRuntime;
+  if (runtime) runtime.waitUntil(write);
+  else await write;
   return { data, cachedAt: null };
 }

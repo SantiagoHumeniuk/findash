@@ -13,7 +13,7 @@
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
 
-    <link rel="icon" type="image/svg+xml" href="/logo.png" />
+    <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
     <meta property="og:title" content="FinDash - Análisis Financiero Inteligente" />
@@ -27,8 +27,10 @@
     <meta name="twitter:description" content="Herramientas de nivel profesional para visualizar el mercado y tomar decisiones informadas." />
     <meta name="twitter:image" content="/og-image.png" />
 
-    <!-- Preload con crossorigin para evitar warnings en dev -->
-    <link rel="preload" href="/src/main.tsx" as="script" crossorigin="anonymous">
+    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap">
 
   </head>
   <body>

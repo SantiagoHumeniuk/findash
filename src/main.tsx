@@ -299,6 +299,16 @@ const router = createBrowserRouter([
 // Inicializar monitoreo de performance
 initPerformanceMonitoring();
 
+// Signed-in users almost always open these next; loading them while idle makes navigation instant.
+if (Object.keys(localStorage).some((key) => key.startsWith('sb-'))) {
+    const preloadMainPages = () => {
+        void import('./features/dashboard/pages/dashboard-page.tsx');
+        void import('./features/asset-detail/pages/asset-detail-page.tsx');
+    };
+    if ('requestIdleCallback' in window) window.requestIdleCallback(preloadMainPages, { timeout: 4000 });
+    else setTimeout(preloadMainPages, 2000);
+}
+
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <QueryClientProvider client={queryClient}>

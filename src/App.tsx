@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { ThemeProvider } from "./components/ui/theme-provider";
 import {
   SidebarProvider,
@@ -32,20 +32,18 @@ export default function App() {
               <ActivesBar />
 
               <main className="flex-1 flex flex-col relative z-10 overflow-x-hidden">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={location.pathname}
-                    initial={{ opacity: 0, y: 15, filter: "blur(4px)" }}
-                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                    exit={{ opacity: 0, y: -15, filter: "blur(4px)" }}
-                    transition={{ type: "spring", stiffness: 260, damping: 20, mass: 0.5 }}
-                    className="h-full"
-                  >
+                {/* Entrada breve sin salida: la página nueva aparece enseguida en vez de esperar a la anterior. */}
+                <motion.div
+                  key={location.pathname}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                  className="h-full"
+                >
                     <React.Suspense fallback={<SuspenseFallback type="page" message="Cargando página..." />}>
                       <Outlet />
                     </React.Suspense>
                   </motion.div>
-                </AnimatePresence>
               </main>
             </AnimatedBackground>
 

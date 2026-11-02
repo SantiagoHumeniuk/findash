@@ -16,13 +16,11 @@ const tickerVariants: Variants = {
     opacity: 0,
     scale: 0.3,
     y: 20,
-    filter: "blur(10px)",
   },
   animate: {
     opacity: 1,
     scale: 1,
     y: 0,
-    filter: "blur(0px)",
     transition: {
       type: "spring",
       stiffness: 400,
@@ -34,7 +32,6 @@ const tickerVariants: Variants = {
     opacity: 0,
     scale: 0.5,
     x: -30,
-    filter: "blur(6px)",
     transition: {
       duration: 0.25,
       ease: [0.4, 0, 1, 1],

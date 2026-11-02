@@ -50,7 +50,7 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({
     <div className={`relative ${className}`}>
       {/* Fondo sutil y minimalista con pelotitas luminosas que suben y bajan suavemente */}
       <div 
-        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden transform-gpu will-change-transform" 
+        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" 
         style={{ contain: 'strict' }}
         aria-hidden="true"
       >
@@ -73,18 +73,9 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({
               animation: `${particle.animation} ${particle.duration} ease-in-out infinite`,
               animationDelay: particle.delay,
               transform: 'translate3d(0, 0, 0)',
-              willChange: 'transform, opacity',
-            }}
+                          }}
           />
         ))}
-
-        {/* Capa de textura microscópica sutil */}
-        <div
-          className="absolute inset-0 opacity-[0.012] dark:opacity-[0.02]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          }}
-        />
       </div>
 
       {/* Contenido real de la página */}

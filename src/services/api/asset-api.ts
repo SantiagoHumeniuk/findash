@@ -1,6 +1,7 @@
 // src/services/api/asset-api.ts
 
 import { supabase } from '../../lib/supabase';
+import { queryClient } from '../../lib/react-query';
 import { logger } from '../../lib/logger';
 import type {
     AssetData,
@@ -328,6 +329,61 @@ function shouldRefreshYahooQuote(asset: AssetData, now: number): boolean {
     return !Number.isFinite(attemptedAt) || now - attemptedAt >= 2 * 60 * 1000;
 }
 
+const STALE_WHILE_REFRESH_MS = 24 * 60 * 60 * 1000;
+const backgroundRefreshes = new Set<string>();
+
+/** Runs one refresh per ticker and publishes its result to every view of that asset. */
+function runInBackground(ticker: string, refresh: () => Promise<AssetData>): void {
+    if (backgroundRefreshes.has(ticker)) return;
+    backgroundRefreshes.add(ticker);
+    void refresh()
+        .then((asset) => queryClient.setQueriesData<AssetData>({ queryKey: ['assetData', ticker] }, asset))
+        .catch((error: unknown) => {
+            void logger.warn('YAHOO_BACKGROUND_REFRESH_FAILED', `Could not refresh ${ticker} in the background`, {
+                ticker,
+                errorMessage: error instanceof Error ? error.message : String(error),
+            });
+        })
+        .finally(() => backgroundRefreshes.delete(ticker));
+}
+
+async function refreshCachedQuote(ticker: string, cachedAsset: AssetData, lastUpdatedAt: string): Promise<AssetData> {
+    const asset = { ...cachedAsset };
+    const attemptedAt = new Date().toISOString();
+    try {
+        const response = await fetchYahooMarketQuotes([ticker]);
+        const yahooQuote = response.quotes.find((item) => item.symbol === ticker.toUpperCase());
+        if (yahooQuote && refreshAssetMarketQuoteFromYahoo(asset, yahooQuote, response.fetchedAt)) {
+            asset.yahooQuoteAttemptedAt = response.fetchedAt;
+        } else {
+            asset.yahooQuoteAttemptedAt = attemptedAt;
+            void logger.warn('YAHOO_MARKET_QUOTE_EMPTY', `Yahoo Finance returned no usable market quote for ${ticker}`, {
+                ticker,
+                errorMessage: yahooQuote?.error ?? 'Yahoo Finance no devolvió un precio y cierre previo válidos',
+            });
+        }
+    } catch (error) {
+        asset.yahooQuoteAttemptedAt = attemptedAt;
+        void logger.warn('YAHOO_MARKET_QUOTE_FAILED', `Could not refresh the cached market quote for ${ticker}`, {
+            ticker,
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+
+    const { error: cacheError } = await supabase.from('asset_data_cache').upsert({
+        symbol: ticker,
+        data: asset,
+        last_updated_at: lastUpdatedAt,
+    });
+    if (cacheError) {
+        void logger.warn('ASSET_CACHE_WRITE_FAILED', `Could not cache Yahoo market quote for ${ticker}`, {
+            ticker,
+            errorMessage: cacheError.message,
+        });
+    }
+    return asset;
+}
+
 export async function fetchTickerData({
     queryKey,
     forceRefresh = false,
@@ -433,41 +489,23 @@ export async function fetchTickerData({
             }
         }
 
+        // The saved data shows immediately; a newer quote replaces it when it arrives.
         if (shouldRefreshYahooQuote(cachedAsset, Date.now())) {
-            const attemptedAt = new Date().toISOString();
-            try {
-                const response = await fetchYahooMarketQuotes([ticker]);
-                const yahooQuote = response.quotes.find((item) => item.symbol === ticker.toUpperCase());
-                if (yahooQuote && refreshAssetMarketQuoteFromYahoo(cachedAsset, yahooQuote, response.fetchedAt)) {
-                    cachedAsset.yahooQuoteAttemptedAt = response.fetchedAt;
-                } else {
-                    cachedAsset.yahooQuoteAttemptedAt = attemptedAt;
-                    void logger.warn('YAHOO_MARKET_QUOTE_EMPTY', `Yahoo Finance returned no usable market quote for ${ticker}`, {
-                        ticker,
-                        errorMessage: yahooQuote?.error ?? 'Yahoo Finance no devolvió un precio y cierre previo válidos',
-                    });
-                }
-            } catch (error) {
-                cachedAsset.yahooQuoteAttemptedAt = attemptedAt;
-                void logger.warn('YAHOO_MARKET_QUOTE_FAILED', `Could not refresh the cached market quote for ${ticker}`, {
-                    ticker,
-                    errorMessage: error instanceof Error ? error.message : 'Unknown error',
-                });
-            }
-
-            const { error: cacheError } = await supabase.from('asset_data_cache').upsert({
-                symbol: ticker,
-                data: cachedAsset,
-                last_updated_at: cached.last_updated_at,
-            });
-            if (cacheError) {
-                void logger.warn('ASSET_CACHE_WRITE_FAILED', `Could not cache Yahoo market quote for ${ticker}`, {
-                    ticker,
-                    errorMessage: cacheError.message,
-                });
-            }
+            runInBackground(ticker, () => refreshCachedQuote(ticker, cachedAsset, cached.last_updated_at as string));
         }
         return cachedAsset;
+    }
+
+    // Expired but recent data also shows immediately while the full rebuild runs behind it.
+    if (
+        !forceRefresh &&
+        cached &&
+        (cached.data as AssetData).dataSource === 'Yahoo Finance' &&
+        ((cached.data as AssetData).yahooDataVersion ?? 1) >= YAHOO_DATA_VERSION &&
+        Date.now() - new Date(cached.last_updated_at as string).getTime() < STALE_WHILE_REFRESH_MS
+    ) {
+        runInBackground(ticker, () => fetchTickerData({ queryKey, forceRefresh: true, fromPortfolio: true }));
+        return cached.data as AssetData;
     }
 
     if (forceRefresh && cached && new Date(cached.last_updated_at as string) > twoHoursAgo) {

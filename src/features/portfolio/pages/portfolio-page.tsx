@@ -238,8 +238,8 @@ function PortfolioPageContent() {
       <motion.div
         id="portfolio-export-area"
         className="container-wide stack-8 relative bg-background" // Added bg-background just in case html2canvas needs a solid base
-        initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 24, mass: 0.8 }}
       >
         <div className="flex items-center justify-between gap-4 pb-6 border-b flex-wrap">
