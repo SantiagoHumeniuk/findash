@@ -37,6 +37,7 @@ const ForgotPasswordPage = React.lazy(() => import('./features/auth/pages/forgot
 const ResetPasswordPage = React.lazy(() => import('./features/auth/pages/reset-password-page.tsx'));
 const InfoPage = React.lazy(() => import('./features/info/pages/info-page.tsx'));
 const NotFoundPage = React.lazy(() => import('./features/not-found/pages/not-found-page.tsx'));
+const DailyPage = React.lazy(() => import('./features/daily/pages/daily-page.tsx'));
 const DashboardPage = React.lazy(() => import('./features/dashboard/pages/dashboard-page.tsx'));
 const AssetDetailPage = React.lazy(() => import('./features/asset-detail/pages/asset-detail-page.tsx'));
 const PortfolioPage = React.lazy(() => import('./features/portfolio/pages/portfolio-page.tsx'));
@@ -88,6 +89,16 @@ const router = createBrowserRouter([
             {
                 element: <ProtectedRoute />,
                 children: [
+                    {
+                        path: "hoy",
+                        element: (
+                            <ErrorBoundary level="feature" featureName="Daily Summary">
+                                <Suspense fallback={<SuspenseFallback type="page" message="Preparando tu día..." />}>
+                                    <DailyPage />
+                                </Suspense>
+                            </ErrorBoundary>
+                        )
+                    },
                     {
                         path: "dashboard",
                         element: (
@@ -302,12 +313,20 @@ initPerformanceMonitoring();
 // Signed-in users almost always open these next; loading them while idle makes navigation instant.
 if (Object.keys(localStorage).some((key) => key.startsWith('sb-'))) {
     const preloadMainPages = () => {
+        void import('./features/daily/pages/daily-page.tsx');
         void import('./features/dashboard/pages/dashboard-page.tsx');
         void import('./features/asset-detail/pages/asset-detail-page.tsx');
     };
     if ('requestIdleCallback' in window) window.requestIdleCallback(preloadMainPages, { timeout: 4000 });
     else setTimeout(preloadMainPages, 2000);
 }
+
+// Every in-app navigation animates through the View Transitions API where the browser supports it.
+const navigateRouter = router.navigate.bind(router);
+router.navigate = ((to: Parameters<typeof router.navigate>[0], options?: Parameters<typeof router.navigate>[1]) =>
+    typeof to === 'number'
+        ? navigateRouter(to)
+        : navigateRouter(to, { ...options, viewTransition: options?.viewTransition ?? true })) as typeof router.navigate;
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>

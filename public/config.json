@@ -309,6 +309,12 @@
             "icon": "Home"
           },
           {
+            "to": "/hoy",
+            "label": "Tu día",
+            "icon": "Sun",
+            "requiresAuth": true
+          },
+          {
             "to": "/dashboard",
             "label": "Dashboard",
             "icon": "ChartCandlestick",

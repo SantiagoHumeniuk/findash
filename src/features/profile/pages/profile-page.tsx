@@ -60,6 +60,8 @@ export default function ProfilePage() {
     const savedAvatarIndex = profile?.onboarding_profile?.avatarIndex;
     const savedAvatarImage = profile?.onboarding_profile?.avatarImage;
     const onboardingProfile: OnboardingProfile = {
+      // Keeps other saved preferences, such as the dashboard's tickers.
+      ...profile?.onboarding_profile,
       investorProfile,
       experience,
       interests,

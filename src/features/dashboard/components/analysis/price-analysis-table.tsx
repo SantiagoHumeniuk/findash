@@ -5,6 +5,7 @@ import { AssetData } from "../../../../types/dashboard";
 import { Button } from "../../../../components/ui/button";
 import { ArrowDown, ArrowUp, Download, BarChart2, ShoppingCart } from "lucide-react";
 import { AssetLogo } from "../../../../components/ui/asset-logo";
+import { LiveValue } from "../../../../components/ui/live-value";
 import { exportToPdf } from "../../../../utils/export-pdf";
 import { toast } from "sonner";
 import { indicatorConfig } from "../../../../utils/financial";
@@ -252,7 +253,7 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                                                     onMouseEnter={() => prefetchAssetIfNotCached(asset.symbol)}
                                                     onFocus={() => prefetchAssetIfNotCached(asset.symbol)}
                                                 >
-                                                    <AssetLogo src={asset.image} name={asset.companyName} symbol={asset.symbol} className="size-8" />
+                                                    <AssetLogo morph src={asset.image} name={asset.companyName} symbol={asset.symbol} className="size-8" />
                                                     <div>
                                                         <div className="flex items-center justify-between gap-2">
                                                             <div className="flex-1 min-w-0">
@@ -263,7 +264,7 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                                                     </div>
                                                 </Link>
                                             </TableCell>
-                                            <TableCell className="text-center font-semibold">{formatCurrency(asset.currentPrice)}</TableCell>
+                                            <TableCell className="text-center font-semibold"><LiveValue value={asset.currentPrice}>{formatCurrency(asset.currentPrice)}</LiveValue></TableCell>
                                             <TableCell className="text-center">{pctNode(asset.dayChange)}</TableCell>
                                             <TableCell className="text-center">{pctNode(asset.monthChange)}</TableCell>
                                             <TableCell className="text-center">{pctNode(asset.yearChange)}</TableCell>
