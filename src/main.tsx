@@ -326,7 +326,7 @@ const navigateRouter = router.navigate.bind(router);
 router.navigate = ((to: Parameters<typeof router.navigate>[0], options?: Parameters<typeof router.navigate>[1]) =>
     typeof to === 'number'
         ? navigateRouter(to)
-        : navigateRouter(to, { viewTransition: true, ...options })) as typeof router.navigate;
+        : navigateRouter(to, { ...options, viewTransition: options?.viewTransition ?? true })) as typeof router.navigate;
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
