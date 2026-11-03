@@ -141,7 +141,7 @@ export function AssetStatementsSection({ asset }: AssetStatementsSectionProps) {
                   <YAxis type="category" dataKey="year" tick={{ fontSize: 12 }} width={44} />
                   <Tooltip
                     formatter={(value, name) => [formatFraction(Number(value)), String(name)]}
-                    contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
+                    contentStyle={{ background: 'var(--popover)', color: 'var(--popover-foreground)', border: '1px solid var(--border)', borderRadius: 8 }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   {COMPOSITION_SERIES.map((series) => (

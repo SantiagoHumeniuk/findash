@@ -35,9 +35,8 @@ export type Digest = {
 };
 
 /**
- * Price targets fire once and deactivate. A daily-move alert stays active but
- * fires at most once per day, and only for a session traded today, so it does
- * not repeat last Friday's move on Monday morning.
+ * Every alert fires once and then deactivates. A daily-move alert only counts a
+ * session traded today, so it does not report last Friday's move on Monday morning.
  */
 export function shouldTrigger(alert: PriceAlert, quote: MarketQuote, today: string): boolean {
   if (alert.condition === "above") return quote.price >= alert.target;

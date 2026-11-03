@@ -30,7 +30,7 @@ function HeatCell({ x = 0, y = 0, width = 0, height = 0, depth = 0, name = '', c
   if (depth !== 2) {
     return (
       <g>
-        <rect x={x} y={y} width={width} height={height} fill="none" stroke="hsl(var(--background))" strokeWidth={3} />
+        <rect x={x} y={y} width={width} height={height} fill="none" stroke="var(--background)" strokeWidth={3} />
       </g>
     );
   }
@@ -48,7 +48,7 @@ function HeatCell({ x = 0, y = 0, width = 0, height = 0, depth = 0, name = '', c
         if (event.key === 'Enter') onOpen(name);
       }}
     >
-      <rect x={x} y={y} width={width} height={height} fill={heatColor(change)} stroke="hsl(var(--background))" strokeWidth={1} />
+      <rect x={x} y={y} width={width} height={height} fill={heatColor(change)} stroke="var(--background)" strokeWidth={1} />
       {showSymbol && (
         <text x={x + width / 2} y={y + height / 2 - (showChange ? 4 : -4)} textAnchor="middle" fill="#fff" stroke="none" fontSize={fontSize} fontWeight={700}>
           {name}

@@ -122,7 +122,8 @@ export function AllocationChart({ data, title, description, type, isLoading }: A
                                         borderRadius: '12px', 
                                         border: 'none', 
                                         boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.3)',
-                                        backgroundColor: 'hsl(var(--card))',
+                                        backgroundColor: 'var(--popover)',
+                                        color: 'var(--popover-foreground)',
                                         padding: '12px'
                                     }}
                                     itemStyle={{ fontWeight: 'bold' }}

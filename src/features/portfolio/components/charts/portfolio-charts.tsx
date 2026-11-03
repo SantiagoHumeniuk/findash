@@ -414,14 +414,14 @@ export const PortfolioCharts = React.memo(function PortfolioCharts({ holdings, p
               <ChartContainer config={{ pl: { label: "G/P (%)" } }} className="h-[250px] sm:h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={plData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
                     <XAxis dataKey="symbol" hide />
                     <YAxis
                       tickFormatter={(value) => `${value}%`}
                       tickLine={false}
                       axisLine={false}
                       domain={['auto', 'auto']}
-                      tick={{ fill: "hsl(var(--foreground))", fontSize: 12, fontWeight: 500 }}
+                      tick={{ fill: "var(--foreground)", fontSize: 12, fontWeight: 500 }}
                     />
                     <ChartTooltip
                       content={({ active, payload }: { active?: boolean; payload?: Payload<number, string>[] }) => {

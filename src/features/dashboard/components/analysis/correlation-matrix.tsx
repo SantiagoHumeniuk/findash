@@ -66,8 +66,8 @@ function alignAndCalculateReturns(
 const getCellStyle = (value: number | null): React.CSSProperties => {
     if (typeof value !== "number" || !Number.isFinite(value)) {
         return {
-            backgroundColor: "hsl(var(--muted))",
-            color: "hsl(var(--muted-foreground))",
+            backgroundColor: "var(--muted)",
+            color: "var(--muted-foreground)",
         };
     }
 

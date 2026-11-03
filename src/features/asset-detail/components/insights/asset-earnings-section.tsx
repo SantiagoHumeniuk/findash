@@ -107,11 +107,11 @@ export function AssetEarningsSection({ asset }: AssetEarningsSectionProps) {
                   <YAxis tick={{ fontSize: 12 }} width={48} />
                   <Tooltip
                     formatter={(value, name) => [formatDecimal(Number(value)), name === 'real' ? 'Real' : 'Estimado']}
-                    contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
+                    contentStyle={{ background: 'var(--popover)', color: 'var(--popover-foreground)', border: '1px solid var(--border)', borderRadius: 8 }}
                   />
                   <Legend formatter={(value) => (value === 'real' ? 'Real' : 'Estimado')} />
-                  <Bar dataKey="estimado" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="real" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="estimado" fill="var(--muted-foreground)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="real" fill="var(--primary)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -148,10 +148,10 @@ export function AssetEarningsSection({ asset }: AssetEarningsSectionProps) {
                   <YAxis tickFormatter={(value: number) => formatCompact(value)} tick={{ fontSize: 12 }} width={56} />
                   <Tooltip
                     formatter={(value, name) => [formatCompact(Number(value), currency), String(name)]}
-                    contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: 8 }}
+                    contentStyle={{ background: 'var(--popover)', color: 'var(--popover-foreground)', border: '1px solid var(--border)', borderRadius: 8 }}
                   />
                   <Legend />
-                  <Bar dataKey="ingresos" name="Ingresos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="ingresos" name="Ingresos" fill="var(--primary)" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="operativo" name="Resultado operativo" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="neto" name="Resultado neto" fill="#10b981" radius={[4, 4, 0, 0]} />
                 </BarChart>

@@ -600,11 +600,11 @@
 
     0%,
     100% {
-      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+      box-shadow: 0 0 0 0 color-mix(in oklch,var(--primary) 40%,transparent);
     }
 
     50% {
-      box-shadow: 0 0 20px 5px hsl(var(--primary) / 0.2);
+      box-shadow: 0 0 20px 5px color-mix(in oklch,var(--primary) 20%,transparent);
     }
   }
 
@@ -691,8 +691,8 @@
 
   /* Citas en el contenido */
   .prose blockquote {
-    border-left-color: hsl(var(--primary));
-    background-color: hsl(var(--primary) / 0.05);
+    border-left-color: var(--primary);
+    background-color: color-mix(in oklch,var(--primary) 5%,transparent);
     padding: 1rem 1.5rem;
     border-radius: 0.5rem;
     font-style: italic;
@@ -700,8 +700,8 @@
 
   /* Código inline */
   .prose code {
-    background-color: hsl(var(--muted));
-    color: hsl(var(--foreground));
+    background-color: var(--muted);
+    color: var(--foreground);
     padding: 0.2rem 0.4rem;
     border-radius: 0.25rem;
     font-size: 0.9em;
@@ -710,8 +710,8 @@
 
   /* Bloques de código */
   .prose pre {
-    background-color: hsl(var(--muted));
-    border: 1px solid hsl(var(--border));
+    background-color: var(--muted);
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     padding: 1rem;
     overflow-x: auto;
@@ -726,7 +726,7 @@
 
   /* Enlaces en el contenido */
   .prose a {
-    color: hsl(var(--primary));
+    color: var(--primary);
     text-decoration: none;
     font-weight: 500;
     transition: color 0.2s ease;
@@ -734,7 +734,7 @@
 
   .prose a:hover {
     text-decoration: underline;
-    color: hsl(var(--primary) / 0.8);
+    color: color-mix(in oklch,var(--primary) 80%,transparent);
   }
 
   /* Títulos en el contenido */
@@ -742,7 +742,7 @@
   .prose h2,
   .prose h3,
   .prose h4 {
-    color: hsl(var(--foreground));
+    color: var(--foreground);
     font-weight: 700;
     margin-top: 2rem;
     margin-bottom: 1rem;
@@ -794,23 +794,23 @@
 
   .prose th,
   .prose td {
-    border: 1px solid hsl(var(--border));
+    border: 1px solid var(--border);
     padding: 0.75rem;
     text-align: left;
   }
 
   .prose th {
-    background-color: hsl(var(--muted));
+    background-color: var(--muted);
     font-weight: 600;
   }
 
   .prose tr:nth-child(even) {
-    background-color: hsl(var(--muted) / 0.3);
+    background-color: color-mix(in oklch,var(--muted) 30%,transparent);
   }
 
   /* Separadores */
   .prose hr {
-    border-color: hsl(var(--border));
+    border-color: var(--border);
     margin-top: 2rem;
     margin-bottom: 2rem;
   }
@@ -829,29 +829,29 @@
 
   /* Ajustes para dark mode */
   .dark .prose {
-    color: hsl(var(--foreground));
+    color: var(--foreground);
   }
 
   .dark .prose h1,
   .dark .prose h2,
   .dark .prose h3,
   .dark .prose h4 {
-    color: hsl(var(--foreground));
+    color: var(--foreground);
   }
 
   .dark .prose blockquote {
-    border-left-color: hsl(var(--primary));
-    background-color: hsl(var(--primary) / 0.1);
+    border-left-color: var(--primary);
+    background-color: color-mix(in oklch,var(--primary) 10%,transparent);
   }
 
   .dark .prose code {
-    background-color: hsl(var(--muted));
-    color: hsl(var(--foreground));
+    background-color: var(--muted);
+    color: var(--foreground);
   }
 
   .dark .prose pre {
-    background-color: hsl(var(--muted));
-    border-color: hsl(var(--border));
+    background-color: var(--muted);
+    border-color: var(--border);
   }
 
   /* ==============================
@@ -1135,4 +1135,31 @@
   .tabs-indicator {
     transition: none;
   }
+}
+
+/* Recharts' default tooltip sets a white background inline; match the theme in both modes. */
+.recharts-default-tooltip {
+  background-color: var(--popover) !important;
+  border-color: var(--border) !important;
+  border-radius: 8px;
+  color: var(--popover-foreground);
+}
+.recharts-default-tooltip .recharts-tooltip-label {
+  color: var(--popover-foreground);
+}
+/* The hover highlight defaults to a light gray (#ccc), too bright on dark backgrounds. */
+.recharts-rectangle.recharts-tooltip-cursor {
+  fill: var(--muted);
+  fill-opacity: 0.5;
+}
+.recharts-curve.recharts-tooltip-cursor {
+  stroke: var(--muted-foreground);
+}
+/* Axes left at Recharts' default gray (#666) are hard to read on dark backgrounds. */
+.recharts-cartesian-axis-tick-value[fill="#666"] {
+  fill: var(--muted-foreground);
+}
+.recharts-cartesian-axis-line[stroke="#666"],
+.recharts-cartesian-axis-tick-line[stroke="#666"] {
+  stroke: var(--border);
 }

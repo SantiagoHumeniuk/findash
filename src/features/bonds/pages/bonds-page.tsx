@@ -430,7 +430,7 @@ export default function BondsPage() {
                   {inflacionReciente.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={inflacionReciente} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                         <XAxis dataKey="periodo" stroke="#888888" fontSize={11} tickLine={false} />
                         <YAxis stroke="#888888" fontSize={11} tickLine={false} unit="%" />
                         <Tooltip
