@@ -165,16 +165,12 @@ async function runAlerts(): Promise<Record<string, number>> {
 
   // Marked before notifying: if a run fails halfway, a repeat notification is worse than a late one.
   const now = new Date().toISOString();
-  const onceOnly = triggered.filter(({ alert }) => alert.condition !== "move").map(({ alert }) => alert.id);
-  const repeating = triggered.filter(({ alert }) => alert.condition === "move").map(({ alert }) => alert.id);
-  const mark = (ids: string[], body: Record<string, unknown>) =>
-    ids.length === 0 ? Promise.resolve(null) : rest(`price_alerts?id=${inList(ids)}`, {
-      method: "PATCH",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify(body),
-    });
-  await mark(onceOnly, { active: false, last_triggered_at: now });
-  await mark(repeating, { last_triggered_at: now });
+  // Every alert fires once; it then stays in the user's history.
+  await rest(`price_alerts?id=${inList(triggered.map(({ alert }) => alert.id))}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ active: false, last_triggered_at: now }),
+  });
 
   await rest("notifications", {
     method: "POST",

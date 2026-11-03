@@ -47,9 +47,9 @@ export function AssetNewsTab({ symbol }: AssetNewsTabProps) {
     // --- Error State ---
     if (isError) {
         return (
-            <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-red-200 bg-red-50/50 rounded-xl">
+            <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-red-200 bg-red-50/50 dark:border-red-500/30 dark:bg-red-500/10 rounded-xl">
                 <AlertTriangle className="w-8 h-8 text-red-400 mb-2" />
-                <p className="text-sm font-medium text-red-600">No se pudieron cargar las noticias</p>
+                <p className="text-sm font-medium text-red-600 dark:text-red-400">No se pudieron cargar las noticias</p>
                 <Button variant="link" onClick={() => window.location.reload()} className="text-red-500">
                     Reintentar
                 </Button>

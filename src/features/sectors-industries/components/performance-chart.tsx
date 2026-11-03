@@ -113,7 +113,7 @@ export const PerformanceChart = React.memo<PerformanceChartProps>(
                   if (active && payload?.length) {
                     const data = payload[0].payload;
                     return (
-                      <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+                      <div className="bg-popover text-popover-foreground border border-border rounded-lg p-3 shadow-lg">
                         <p className="text-sm font-medium mb-1">{data.formattedDate}</p>
                         <p className={`text-sm font-bold ${
                           data.value >= 0 
@@ -128,11 +128,11 @@ export const PerformanceChart = React.memo<PerformanceChartProps>(
                   return null;
                 }}
               />
-              <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
+              <ReferenceLine y={0} stroke="var(--muted-foreground)" strokeDasharray="3 3" />
               <Line 
                 type="monotone" 
                 dataKey="value" 
-                stroke="hsl(var(--primary))" 
+                stroke="var(--primary)" 
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4 }}

@@ -278,12 +278,12 @@ function VisualMockup({ step }: { step: number }) {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <span className="font-semibold">YPF</span>
-                <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">+2.45%</span>
+                <span className="text-xs bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400 px-1.5 py-0.5 rounded">+2.45%</span>
               </div>
               <div className="text-sm text-muted-foreground">YPF Sociedad Anónima</div>
             </div>
           </div>
-          <div className="mt-2 text-xs text-muted-foreground bg-blue-50 p-2 rounded border-l-2 border-l-blue-500">
+          <div className="mt-2 text-xs text-muted-foreground bg-blue-50 dark:bg-blue-500/10 p-2 rounded border-l-2 border-l-blue-500">
             💡 Haz clic para ver noticias, análisis detallado y más
           </div>
         </div>

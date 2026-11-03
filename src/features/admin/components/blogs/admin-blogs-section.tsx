@@ -416,7 +416,7 @@ export function AdminBlogsSection() {
                           variant="outline"
                           size="sm"
                           onClick={() => setReviewAction({ blogId: blog.id, action: 'approve' })}
-                          className="text-green-600 hover:bg-green-50"
+                          className="text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10"
                         >
                           <Check className="w-4 h-4" />
                         </Button>
@@ -424,7 +424,7 @@ export function AdminBlogsSection() {
                           variant="outline"
                           size="sm"
                           onClick={() => setReviewAction({ blogId: blog.id, action: 'reject' })}
-                          className="text-red-600 hover:bg-red-50"
+                          className="text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
                         >
                           <X className="w-4 h-4" />
                         </Button>

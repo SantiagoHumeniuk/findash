@@ -2,9 +2,8 @@
 
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, BellRing, Plus, Trash2 } from 'lucide-react';
+import { Bell, BellRing, History, Plus, Trash2 } from 'lucide-react';
 import { AssetLogo } from '../../../components/ui/asset-logo';
-import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Label } from '../../../components/ui/label';
@@ -40,6 +39,10 @@ export default function AlertsPage() {
   const { mutate: markRead } = useMarkNotificationsRead();
   const { hasAccess: canUseDigest } = usePlanFeature('dailyDigest');
   const hasUnread = notifications.some((item) => !item.read_at);
+  const activeAlerts = alerts.filter((alert) => alert.active);
+  const triggeredAlerts = alerts
+    .filter((alert) => !alert.active)
+    .sort((a, b) => (b.last_triggered_at ?? b.created_at).localeCompare(a.last_triggered_at ?? a.created_at));
 
   // Opening the page counts as reading what is listed.
   useEffect(() => {
@@ -59,18 +62,20 @@ export default function AlertsPage() {
           <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
             <div>
               <CardTitle className="text-base">Mis alertas</CardTitle>
-              <CardDescription>Las de precio se desactivan al cumplirse; las de movimiento avisan una vez por día.</CardDescription>
+              <CardDescription>Cada alerta avisa una vez y después pasa al historial.</CardDescription>
             </div>
             <CreateAlertDialog trigger={<Button size="sm" className="shrink-0 gap-1.5"><Plus className="h-4 w-4" />Nueva</Button>} />
           </CardHeader>
           <CardContent>
-            {alertsLoading ? <Skeleton className="h-24 w-full" /> : alerts.length === 0 ? (
+            {alertsLoading ? <Skeleton className="h-24 w-full" /> : activeAlerts.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                Todavía no creaste alertas. Probá con un precio que quieras comprar o vender.
+                {triggeredAlerts.length > 0
+                  ? 'No tenés alertas activas. Las que ya avisaron están en el historial.'
+                  : 'Todavía no creaste alertas. Probá con un precio que quieras comprar o vender.'}
               </p>
             ) : (
               <ul className="divide-y divide-border">
-                {alerts.map((alert) => (
+                {activeAlerts.map((alert) => (
                   <li key={alert.id} className="flex items-center gap-3 py-2.5">
                     <Link to={`/asset/${alert.symbol}`} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80">
                       <AssetLogo symbol={alert.symbol} className="size-7" />
@@ -79,7 +84,6 @@ export default function AlertsPage() {
                         <span className="block truncate text-xs text-muted-foreground">{describeAlert(alert)}</span>
                       </span>
                     </Link>
-                    <Badge variant={alert.active ? 'outline' : 'secondary'}>{alert.active ? 'Activa' : 'Cumplida'}</Badge>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -96,7 +100,46 @@ export default function AlertsPage() {
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
+        {triggeredAlerts.length > 0 && (
+          <Card className="lg:col-start-1">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History className="h-4 w-4 text-primary" />
+                Historial de alertas
+              </CardTitle>
+              <CardDescription>Las alertas que ya avisaron.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="divide-y divide-border">
+                {triggeredAlerts.map((alert) => (
+                  <li key={alert.id} className="flex items-center gap-3 py-2.5">
+                    <Link to={`/asset/${alert.symbol}`} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-80">
+                      <AssetLogo symbol={alert.symbol} className="size-7" />
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold">{alert.symbol}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{describeAlert(alert)}</span>
+                      </span>
+                    </Link>
+                    {alert.last_triggered_at && (
+                      <span className="shrink-0 text-xs text-muted-foreground">Avisó el {formatDateTime(alert.last_triggered_at)}</span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Borrar del historial la alerta de ${alert.symbol}`}
+                      disabled={deleteAlert.isPending}
+                      onClick={() => deleteAlert.mutate(alert.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="space-y-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Avisos por email</CardTitle>

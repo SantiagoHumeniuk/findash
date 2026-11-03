@@ -36,22 +36,22 @@ const RETURN_PERIODS = [
 const METRIC_CONFIG = {
   pricePerformance: {
     label: 'Rendimiento del precio',
-    color: 'hsl(var(--primary))',
+    color: 'var(--primary)',
     gradient: ['#0f766e', '#14b8a6']
   },
   revenuePerShare: {
     label: 'Ingresos por Acción (Revenue p/s)',
-    color: 'hsl(var(--primary))',
+    color: 'var(--primary)',
     gradient: ['#3b82f6', '#1d4ed8']
   },
   netIncomePerShare: {
     label: 'Beneficio por Acción (EPS)',
-    color: 'hsl(var(--accent))',
+    color: 'var(--accent)',
     gradient: ['#10b981', '#047857']
   },
   freeCashFlowPerShare: {
     label: 'FCF por Acción',
-    color: 'hsl(var(--chart-3))',
+    color: 'var(--chart-3)',
     gradient: ['#8b5cf6', '#6d28d9']
   }
 };
@@ -178,18 +178,18 @@ export function AssetFundamentalsTrends({ asset }: AssetFundamentalsTrendsProps)
                     <stop offset="100%" stopColor="#991b1b" stopOpacity={0.75}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.3} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.3} />
                 <XAxis 
                   dataKey="label"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: 'hsl(var(--foreground))', fontSize: 13, fontWeight: 500 }}
+                  tick={{ fill: 'var(--foreground)', fontSize: 13, fontWeight: 500 }}
                   dy={10}
                 />
                 <YAxis 
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
                   tickFormatter={(val) => {
                     if (isPricePerformance) return `${val.toFixed(0)}%`;
                     if (Math.abs(val) >= 1000) return `${(val / 1000).toFixed(1)}k`;
@@ -199,7 +199,7 @@ export function AssetFundamentalsTrends({ asset }: AssetFundamentalsTrendsProps)
                 />
                 <Tooltip 
                   content={<CustomTooltip />} 
-                  cursor={{ fill: 'hsl(var(--muted))', opacity: 0.15 }}
+                  cursor={{ fill: 'var(--muted)', opacity: 0.15 }}
                 />
                 <Bar 
                   dataKey="value"
@@ -215,7 +215,7 @@ export function AssetFundamentalsTrends({ asset }: AssetFundamentalsTrendsProps)
                       if (!Number.isFinite(val)) return '';
                       return isPricePerformance ? `${val > 0 ? '+' : ''}${val.toFixed(1)}%` : val.toFixed(2);
                     }}
-                    style={{ fill: 'hsl(var(--foreground))', fontSize: 12, fontWeight: 600 }}
+                    style={{ fill: 'var(--foreground)', fontSize: 12, fontWeight: 600 }}
                   />
                   {chartData.map((entry, index) => (
                     <Cell 

@@ -42,21 +42,21 @@ export function RetirementChart({ chartData }: RetirementChartProps) {
           <CartesianGrid
             vertical={false}
             strokeDasharray="3 3"
-            stroke="hsl(var(--border))"
+            stroke="var(--border)"
           />
           <XAxis
             dataKey="year"
             tickLine={false}
             axisLine={false}
             tickMargin={8}
-            tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
+            tick={{ fontSize: 10, fill: "var(--foreground)" }}
           />
           <YAxis
             tickFormatter={(value) => formatCurrency(Number(value))}
             tickLine={false}
             axisLine={false}
             width={60}
-            tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
+            tick={{ fontSize: 10, fill: "var(--foreground)" }}
           />
           <ChartTooltip
             content={({ active, payload }) => {
