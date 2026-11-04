@@ -50,7 +50,7 @@ export function ForgotPasswordForm({
 
         if (!result.success) {
           toast.error(
-            'Error al enviar el correo. Verifica que el email sea correcto.'
+            'Error al enviar el correo. Verificá que el email sea correcto.'
           );
           return;
         }

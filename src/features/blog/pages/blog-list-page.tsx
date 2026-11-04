@@ -232,7 +232,7 @@ function BlogListPage() {
           <h2 className="text-xl font-semibold">No encontramos artículos</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
             {searchQuery || categoryFilter !== 'all'
-              ? 'Prueba con otros términos o cambia los filtros.'
+              ? 'Probá con otros términos o cambiá los filtros.'
               : 'Estamos preparando nuevas ideas y análisis para esta sección.'}
           </p>
         </section>
