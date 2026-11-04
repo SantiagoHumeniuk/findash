@@ -60,7 +60,7 @@ export function CsvImportButton() {
     }
 
     if (!currentPortfolio) {
-      toast.error('Selecciona un portafolio antes de importar un CSV.');
+      toast.error('Seleccioná un portafolio antes de importar un CSV.');
       event.target.value = '';
       return;
     }
@@ -85,7 +85,7 @@ export function CsvImportButton() {
     } catch (error) {
       console.error('CSV import failed', error);
       toast.error('No se pudo importar el CSV', {
-        description: error instanceof Error ? error.message : 'Revisa el formato del archivo.',
+        description: error instanceof Error ? error.message : 'Revisá el formato del archivo.',
       });
     } finally {
       event.target.value = '';
@@ -114,7 +114,7 @@ export function CsvImportButton() {
       setImportAsCedears(false);
     } catch (error) {
       toast.error('No se pudo completar la importación', {
-        description: error instanceof Error ? error.message : 'Intenta nuevamente.',
+        description: error instanceof Error ? error.message : 'Intentá de nuevo.',
       });
     } finally {
       setLoading(false);

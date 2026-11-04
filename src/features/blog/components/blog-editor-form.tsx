@@ -195,7 +195,7 @@ export function BlogEditorForm({
             onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
           >
             <SelectTrigger id="category" className="text-sm">
-              <SelectValue placeholder="Selecciona una categoría" />
+              <SelectValue placeholder="Seleccioná una categoría" />
             </SelectTrigger>
             <SelectContent>
               {categories.map(cat => (

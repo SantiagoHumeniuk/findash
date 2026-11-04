@@ -1,5 +1,6 @@
 // src/features/portfolio/pages/portfolio-page.tsx
 
+import { BuyAssetDialog } from '../components/modals/buy-asset-dialog';
 import { RealReturnsCard } from '../components/analysis/real-returns-card';
 import { useState, useMemo, useCallback } from 'react';
 import { usePortfolio } from '../../../hooks/use-portfolio';
@@ -254,6 +255,7 @@ function PortfolioPageContent() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <BuyAssetDialog onChoose={(ticker, price) => setAddModalInfo({ isOpen: true, ticker, price })} />
             <PortfolioSelector />
             <CsvImportButton />
             <Button 

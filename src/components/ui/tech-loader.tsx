@@ -80,14 +80,12 @@ export function TechLoader() {
             }}
           />
           {/* Moving dot at the tip */}
-          <motion.circle
+          <circle
             r="3"
             fill="hsl(192, 91%, 58%)"
             filter="drop-shadow(0 0 6px hsl(192, 91%, 58%))"
-            initial={{ offsetDistance: '0%' }}
-            animate={{ offsetDistance: '100%' }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
             style={{
+              animation: 'loader-dot-travel 1.5s ease-in-out infinite',
               offsetPath: `path("M${linePoints.map((y, i) => `${(i / (linePoints.length - 1)) * 160},${40 - y}`).join(' L')}")`
             }}
           />

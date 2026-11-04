@@ -85,7 +85,7 @@ export function SellTransactionModal({ isOpen, onClose, holding }: SellTransacti
     e.preventDefault();
     if (!holding) return;
     if (!portfolioId) {
-      toast.error("Selecciona un portafolio de origen.");
+      toast.error("Seleccioná un portafolio de origen.");
       return;
     }
 
@@ -129,7 +129,7 @@ export function SellTransactionModal({ isOpen, onClose, holding }: SellTransacti
         const maxAvailableDisplay = isCedears ? maxCedears.toFixed(2) : availableShares.toFixed(4);
         const unit = isCedears ? 'CEDEARs' : 'acciones';
         toast.error("Cantidad excede lo disponible en este portafolio", {
-          description: `Solo puedes vender hasta ${maxAvailableDisplay} ${unit} en el portafolio seleccionado.`,
+          description: `Solo podés vender hasta ${maxAvailableDisplay} ${unit} en el portafolio seleccionado.`,
         });
         setLoading(false);
         return;
@@ -175,7 +175,7 @@ export function SellTransactionModal({ isOpen, onClose, holding }: SellTransacti
           <DialogDescription>
             {portfolioId ? (
               <>Disponible: {availableShares.toFixed(4)} acciones {ratio ? `(~${maxCedears.toFixed(2)} CEDEARs)` : ''}</>
-            ) : "Selecciona un portafolio para ver disponibilidad"}
+            ) : "Seleccioná un portafolio para ver disponibilidad"}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={e => { e.preventDefault(); void handleSubmit(e); }} className="space-y-4 pt-4">
@@ -188,7 +188,7 @@ export function SellTransactionModal({ isOpen, onClose, holding }: SellTransacti
               onValueChange={(val) => setPortfolioId(parseInt(val))}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecciona un portafolio" />
+                <SelectValue placeholder="Seleccioná un portafolio" />
               </SelectTrigger>
               <SelectContent>
                 {portfolios.map(p => (
@@ -257,7 +257,7 @@ export function SellTransactionModal({ isOpen, onClose, holding }: SellTransacti
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
+                  {date ? format(date, "PPP", { locale: es }) : <span>Seleccioná una fecha</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[270px] p-0" align="start">

@@ -82,7 +82,7 @@ export function AdminTabs() {
       <TabsContent value="subscriptions" className="mt-4 sm:mt-6">
         <TabHelper 
           title="Gestión de Pagos y Suscripciones"
-          description="Revisa las transferencias informadas por los usuarios. Al hacer clic en 'Aprobar', el rol del usuario se actualiza automáticamente al plan correspondiente (Plus o Premium) y se le habilitan todas las funcionalidades."
+          description="Revisá las transferencias informadas por los usuarios. Al hacer clic en 'Aprobar', el rol del usuario se actualiza automáticamente al plan correspondiente (Plus o Premium) y se le habilitan todas las funcionalidades."
         />
         <AdminSubscriptionsSection />
       </TabsContent>
@@ -90,7 +90,7 @@ export function AdminTabs() {
       <TabsContent value="users" className="mt-4 sm:mt-6">
         <TabHelper 
           title="Gestión de Usuarios"
-          description="Administra los usuarios de la plataforma. Puedes editar roles, otorgar permisos de blog, y ver información detallada de cada usuario. Los cambios se guardan automáticamente."
+          description="Administra los usuarios de la plataforma. Podés editar roles, otorgar permisos de blog, y ver información detallada de cada usuario. Los cambios se guardan automáticamente."
         />
         <AdminUsersTable />
       </TabsContent>
@@ -98,7 +98,7 @@ export function AdminTabs() {
       <TabsContent value="blogs" className="mt-4 sm:mt-6">
         <TabHelper 
           title="Moderación de Blogs"
-          description="Revisa y modera artículos de blog enviados por los usuarios. Aprueba, rechaza o solicita cambios en las publicaciones pendientes. Los autores serán notificados de las decisiones."
+          description="Revisá y modera artículos de blog enviados por los usuarios. Aprueba, rechaza o solicita cambios en las publicaciones pendientes. Los autores serán notificados de las decisiones."
         />
         <AdminBlogsSection />
       </TabsContent>
@@ -106,7 +106,7 @@ export function AdminTabs() {
       <TabsContent value="contact" className="mt-4 sm:mt-6">
         <TabHelper 
           title="Mensajes de Contacto"
-          description="Administra los mensajes recibidos a través del formulario de contacto. Revisa consultas, marca como leído o respondido, y contacta directamente a los usuarios por email."
+          description="Administra los mensajes recibidos a través del formulario de contacto. Revisá consultas, marca como leído o respondido, y contacta directamente a los usuarios por email."
         />
         <AdminContactMessagesSection />
       </TabsContent>
@@ -114,7 +114,7 @@ export function AdminTabs() {
       <TabsContent value="suggestions" className="mt-4 sm:mt-6">
         <TabHelper 
           title="Gestión de Sugerencias"
-          description="Administra las sugerencias enviadas por los usuarios. Revisa, aprueba o rechaza ideas para mejorar la plataforma. Puedes cambiar el estado y eliminar sugerencias."
+          description="Administra las sugerencias enviadas por los usuarios. Revisá, aprueba o rechaza ideas para mejorar la plataforma. Podés cambiar el estado y eliminar sugerencias."
         />
         <AdminSuggestionsSection />
       </TabsContent>

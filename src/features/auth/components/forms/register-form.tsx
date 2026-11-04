@@ -47,7 +47,7 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
         const result = await registerUser(email, password);
 
         if (!result.success) {
-          toast.error('Error al crear la cuenta. Intenta nuevamente.');
+          toast.error('Error al crear la cuenta. Intentá de nuevo.');
           return;
         }
 
@@ -55,7 +55,7 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
         setTimeout(
           () =>
             toast.success(
-              'Revisa tu correo electrónico para verificar tu cuenta.'
+              'Revisá tu correo electrónico para verificar tu cuenta.'
             ),
           1000
         );
@@ -69,7 +69,7 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <AuthCard
         title="Crea tu cuenta"
-        description="Ingresa tu correo electrónico a continuación para crear una cuenta"
+        description="Ingresá tu correo electrónico a continuación para crear una cuenta"
       >
         <form onSubmit={handleSubmit}>
           <div className="flex flex-col gap-6">
@@ -110,7 +110,7 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
           </div>
 
           <FormFooter
-            text="¿Ya tienes una cuenta?"
+            text="¿Ya tenés una cuenta?"
             linkText="Iniciar sesión"
             linkTo="/login"
           />

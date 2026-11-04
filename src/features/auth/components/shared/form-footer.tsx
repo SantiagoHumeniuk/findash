@@ -16,12 +16,12 @@ interface FormFooterProps {
 
 /**
  * Footer reutilizable para formularios de autenticación.
- * Muestra un texto con un enlace a otra página (ej: "¿No tienes cuenta? Crear cuenta").
+ * Muestra un texto con un enlace a otra página (ej: "¿No tenés cuenta? Crear cuenta").
  * 
  * @example
  * ```tsx
  * <FormFooter
- *   text="¿No tienes una cuenta?"
+ *   text="¿No tenés una cuenta?"
  *   linkText="Crear cuenta"
  *   linkTo="/register"
  * />

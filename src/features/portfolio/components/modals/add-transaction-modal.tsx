@@ -54,7 +54,7 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
     if (!ticker) return;
 
     if (!portfolioId) {
-      toast.error("Selecciona un portafolio destino.");
+      toast.error("Seleccioná un portafolio destino.");
       return;
     }
 
@@ -69,7 +69,7 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
 
     if (!symbolExistsInPortfolio && isAtLimit) {
       toast.error("Límite de activos alcanzado en este portafolio", {
-        description: `${upgradeMessage} Actualiza tu plan para agregar más activos.`,
+        description: `${upgradeMessage} Actualizá tu plan para agregar más activos.`,
       });
       return;
     }
@@ -164,7 +164,7 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
               onValueChange={(val) => setPortfolioId(parseInt(val))}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecciona un portafolio" />
+                <SelectValue placeholder="Seleccioná un portafolio" />
               </SelectTrigger>
               <SelectContent>
                 {portfolios.map(p => (
@@ -248,7 +248,7 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
                   )}
                 >
                   <CalendarIcon className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  {date ? format(date, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
+                  {date ? format(date, "PPP", { locale: es }) : <span>Seleccioná una fecha</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">

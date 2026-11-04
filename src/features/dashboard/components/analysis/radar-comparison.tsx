@@ -173,8 +173,8 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
                     </p>
                     <p className="text-xs sm:text-sm">
                         {fallbackAssets.length > 0
-                            ? 'Añade activos con métricas comparables para ver el gráfico.'
-                            : 'Añade al menos un activo para ver el gráfico radar.'}
+                            ? 'Agregá activos con métricas comparables para ver el gráfico.'
+                            : 'Agregá al menos un activo para ver el gráfico radar.'}
                     </p>
                 </div>
             </Card>

@@ -32,7 +32,7 @@ interface RichTextEditorProps {
   placeholder?: string;
 }
 
-export function RichTextEditor({ value, onChange, placeholder = "Escribe el contenido de tu blog..." }: RichTextEditorProps) {
+export function RichTextEditor({ value, onChange, placeholder = "Escribí el contenido de tu blog..." }: RichTextEditorProps) {
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);

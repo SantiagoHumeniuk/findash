@@ -3,7 +3,7 @@
 import { usePageMeta } from '../../../hooks/use-page-meta';
 import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Filter, Loader2, Map as MapIcon, RotateCcw, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AssetLogo } from '../../../components/ui/asset-logo';
@@ -94,6 +94,14 @@ const PRESETS: { name: string; state: Partial<ScreenState> }[] = [
     state: {
       limits: { marketCap: { min: '2000', max: '' }, revenueGrowth: { min: '20', max: '' } },
       sortField: 'revenueGrowth',
+    },
+  },
+  {
+    name: 'Subas fuertes de hoy',
+    state: {
+      limits: { marketCap: { min: '2000', max: '' }, changePercent: { min: '5', max: '' } },
+      sortField: 'changePercent',
+      sortDescending: true,
     },
   },
   {
@@ -382,6 +390,7 @@ function ScreenerTable() {
 
 /** Stock filters and a market map over Yahoo's whole equity universe. */
 export default function ScreenerPage() {
+  const [searchParams] = useSearchParams();
   usePageMeta('Screener de acciones y mapa del mercado', 'Filtrá acciones por valuación, dividendos y crecimiento, y mirá el mercado de un vistazo.');
   return (
     <div className="container-wide stack-6">
@@ -390,7 +399,7 @@ export default function ScreenerPage() {
         title="Screener"
         description="Encontrá acciones con tus criterios y mirá el mercado de un vistazo."
       />
-      <Tabs defaultValue="filters">
+      <Tabs defaultValue={searchParams.get('tab') === 'map' ? 'map' : 'filters'}>
         <TabsList>
           <TabsTrigger value="filters" className="gap-2"><Filter className="h-4 w-4" />Filtros</TabsTrigger>
           <TabsTrigger value="map" className="gap-2"><MapIcon className="h-4 w-4" />Mapa del mercado</TabsTrigger>

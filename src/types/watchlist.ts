@@ -9,6 +9,7 @@ export interface WatchlistItem {
   symbol: string;
   added_at: string;
   notes?: string | null;
+  list_name: string;
 }
 
 /**
@@ -17,6 +18,7 @@ export interface WatchlistItem {
 export interface CreateWatchlistItemDto {
   symbol: string;
   notes?: string;
+  list_name?: string;
 }
 
 /**

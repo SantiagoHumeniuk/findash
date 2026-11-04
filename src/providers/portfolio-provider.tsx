@@ -167,7 +167,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
             throw new Error(`No se pudo verificar el portafolio: ${portfolioResult.error.message}`);
         }
         if (!portfolioResult.data) {
-            throw new Error('El portafolio no existe o no tienes permiso para eliminarlo.');
+            throw new Error('El portafolio no existe o no tenés permiso para eliminarlo.');
         }
 
         const transactionsResult = await supabase

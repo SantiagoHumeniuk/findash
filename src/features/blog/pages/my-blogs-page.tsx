@@ -127,7 +127,7 @@ function MyBlogsPage() {
       setBlogToDelete(null);
     } catch (error) {
       console.error('Error deleting blog:', error);
-      alert('Error al eliminar el artículo. Por favor intenta nuevamente.');
+      alert('Error al eliminar el artículo. Por favor intentá de nuevo.');
     }
   };
 

@@ -28,8 +28,8 @@ export function DashboardGuide({ isVisible, onDismiss }: DashboardGuideProps) {
     },
     {
       icon: MousePointer2,
-      title: "2. Selecciona del menú",
-      description: "Aparecerán sugerencias, haz clic en el activo que te interesa",
+      title: "2. Seleccioná del menú",
+      description: "Aparecerán sugerencias, hacé clic en el activo que te interesa",
       examples: ["YPF S.A.", "Apple Inc.", "Microsoft Corp"],
       visual: "search-results",
     },
@@ -50,7 +50,7 @@ export function DashboardGuide({ isVisible, onDismiss }: DashboardGuideProps) {
     {
       icon: NewspaperIcon,
       title: "5. Ve detalles específicos",
-      description: "Haz clic en cualquier activo para ver su página completa con noticias",
+      description: "Hacé clic en cualquier activo para ver su página completa con noticias",
       examples: ["Noticias", "Reportes", "Análisis detallado"],
       visual: "asset-detail",
     },
@@ -206,7 +206,7 @@ function VisualMockup({ step }: { step: number }) {
       return (
         <div className="space-y-0 border rounded-md bg-background">
           <div className="p-2 border-b bg-background">
-            <div className="text-xs text-muted-foreground px-2 py-1">Escribe ticker o nombre...</div>
+            <div className="text-xs text-muted-foreground px-2 py-1">Escribí ticker o nombre...</div>
           </div>
           <div className="max-h-24 overflow-hidden">
             <div className="flex items-center gap-3 p-3 hover:bg-accent cursor-pointer border-l-2 border-l-primary bg-accent/50">

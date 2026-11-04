@@ -193,7 +193,7 @@ export default function SectorsIndustriesPage() {
             {/* Industry Selector */}
             <Selector
               label="Seleccionar Industria"
-              placeholder="Elige una industria..."
+              placeholder="Elegí una industria..."
               options={industries?.map(i => i.industry) ?? []}
               value={selectedIndustry}
               onChange={setSelectedIndustry}
@@ -263,7 +263,7 @@ export default function SectorsIndustriesPage() {
                 <div className="p-6 bg-primary/5 rounded-full mb-6">
                   <Factory className="w-16 h-16 text-primary/50" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Selecciona una industria</h3>
+                <h3 className="text-xl font-semibold mb-2">Seleccioná una industria</h3>
                 <p className="text-muted-foreground max-w-sm">
                   Elige una industria del menú superior para visualizar su performance histórico y estadísticas
                 </p>
@@ -276,7 +276,7 @@ export default function SectorsIndustriesPage() {
             {/* Sector Selector */}
             <Selector
               label="Seleccionar Sector"
-              placeholder="Elige un sector..."
+              placeholder="Elegí un sector..."
               options={sectors?.map(s => s.sector) ?? []}
               value={selectedSector}
               onChange={setSelectedSector}
@@ -346,7 +346,7 @@ export default function SectorsIndustriesPage() {
                 <div className="p-6 bg-primary/5 rounded-full mb-6">
                   <TrendingUp className="w-16 h-16 text-primary/50" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Selecciona un sector</h3>
+                <h3 className="text-xl font-semibold mb-2">Seleccioná un sector</h3>
                 <p className="text-muted-foreground max-w-sm">
                   Elige un sector del menú superior para visualizar su performance histórico y estadísticas
                 </p>

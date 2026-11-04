@@ -54,7 +54,7 @@ interface SelectorProps {
  * ```tsx
  * <Selector
  *   label="Seleccionar Industria"
- *   placeholder="Elige una industria..."
+ *   placeholder="Elegí una industria..."
  *   options={industries.map(i => i.industry)}
  *   value={selectedIndustry}
  *   onChange={setSelectedIndustry}

@@ -26,7 +26,7 @@ interface AuthCardProps {
  * 
  * @example
  * ```tsx
- * <AuthCard title="Iniciar sesión" description="Ingresa tus credenciales">
+ * <AuthCard title="Iniciar sesión" description="Ingresá tus credenciales">
  *   <form>...</form>
  * </AuthCard>
  * ```

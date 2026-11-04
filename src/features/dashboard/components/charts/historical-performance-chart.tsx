@@ -233,7 +233,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
   if (assets.length === 0) {
     return (
       <Card className="flex items-center justify-center h-64 sm:h-96">
-        <p className="text-muted-foreground text-sm sm:text-base px-4">Añade activos para ver su rendimiento.</p>
+        <p className="text-muted-foreground text-sm sm:text-base px-4">Agregá activos para ver su rendimiento.</p>
       </Card>
     );
   }

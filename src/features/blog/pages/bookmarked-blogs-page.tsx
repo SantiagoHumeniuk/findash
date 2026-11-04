@@ -152,7 +152,7 @@ function BookmarkedBlogsPage() {
             <div className="flex justify-center">
               <Bookmark className="w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground" />
             </div>
-            <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold">No tienes artículos guardados</h3>
+            <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold">No tenés artículos guardados</h3>
             <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto">
               Cuando encuentres artículos interesantes, puedes guardarlos haciendo clic en el ícono de bookmark.
             </p>

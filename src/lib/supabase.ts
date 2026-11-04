@@ -9,7 +9,7 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 // 2. Verificamos que las variables existan.
 // Si no están definidas, es un error crítico de configuración y la app no puede funcionar.
 if (!supabaseUrl || !supabaseKey) {
-  throw new Error("Error de configuración: Las variables de entorno de Supabase (VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY) no están definidas. Revisa tu archivo .env");
+  throw new Error("Error de configuración: Las variables de entorno de Supabase (VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY) no están definidas. Revisá tu archivo .env");
 }
 
 /**

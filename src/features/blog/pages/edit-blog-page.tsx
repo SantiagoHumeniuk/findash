@@ -93,7 +93,7 @@ function EditBlogPage() {
       void navigate(`/blog/${data.slug}`);
     } catch (error) {
       console.error('Error updating blog:', error);
-      alert('Error al actualizar el artículo. Por favor intenta nuevamente.');
+      alert('Error al actualizar el artículo. Por favor intentá de nuevo.');
     }
   };
 
