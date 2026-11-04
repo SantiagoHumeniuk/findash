@@ -53,7 +53,7 @@ export function InvestmentPreferencesForm({
               onValueChange={onInvestorProfileChange}
             >
               <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-primary/20">
-                <SelectValue placeholder="Selecciona tu perfil..." />
+                <SelectValue placeholder="Seleccioná tu perfil..." />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="conservative">Conservador</SelectItem>
@@ -66,7 +66,7 @@ export function InvestmentPreferencesForm({
             <Label className="text-xs sm:text-sm font-medium">Nivel de Experiencia</Label>
             <Select value={experience || undefined} onValueChange={onExperienceChange}>
               <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-primary/20">
-                <SelectValue placeholder="Selecciona tu experiencia..." />
+                <SelectValue placeholder="Seleccioná tu experiencia..." />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="beginner">Principiante</SelectItem>

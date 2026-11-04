@@ -167,7 +167,7 @@ export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets 
                 <div className="text-center text-muted-foreground px-4">
                     <GitCompareArrows className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 sm:mb-3" />
                     <p className="font-semibold text-sm sm:text-base">Necesitas al menos 2 activos</p>
-                    <p className="text-xs sm:text-sm mt-1">Añade otro activo para calcular la correlación.</p>
+                    <p className="text-xs sm:text-sm mt-1">Agregá otro activo para calcular la correlación.</p>
                 </div>
             </Card>
         );

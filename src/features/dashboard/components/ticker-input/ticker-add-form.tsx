@@ -69,7 +69,7 @@ export function TickerAddForm({ onAddTicker }: TickerAddFormProps) {
           console.error("Error searching assets:", error);
           if (isActive) {
             setResults([]);
-            setSearchError("No se pudo completar la búsqueda. Intenta nuevamente.");
+            setSearchError("No se pudo completar la búsqueda. Intentá de nuevo.");
           }
         } finally {
           if (isActive) setLoading(false);
@@ -130,7 +130,7 @@ export function TickerAddForm({ onAddTicker }: TickerAddFormProps) {
         <TabsContent value="ticker" className="space-y-2">
           <div className="flex items-center space-x-2">
             <Input
-              placeholder="Escribe el ticker (ej. AAPL, MSFT)..."
+              placeholder="Escribí el ticker (ej. AAPL, MSFT)..."
               value={tickerInput}
               onChange={(e) => setTickerInput(e.target.value)}
               onKeyDown={handleTickerKeyPress}
@@ -168,7 +168,7 @@ export function TickerAddForm({ onAddTicker }: TickerAddFormProps) {
             <PopoverContent className="w-full p-0" align="start">
               <Command shouldFilter={false}> {/* Importante: false porque filtramos en servidor/API */}
                 <CommandInput
-                  placeholder="Escribe nombre de empresa..."
+                  placeholder="Escribí nombre de empresa..."
                   value={inputValue}
                   onValueChange={setInputValue}
                 />
@@ -182,7 +182,7 @@ export function TickerAddForm({ onAddTicker }: TickerAddFormProps) {
                   {!loading && results.length === 0 && inputValue.length > 0 && (
                     <CommandEmpty>
                       {searchError ?? (inputValue.trim().length < 2
-                        ? "Escribe al menos 2 caracteres para buscar."
+                        ? "Escribí al menos 2 caracteres para buscar."
                         : "No se encontraron resultados.")}
                     </CommandEmpty>
                   )}

@@ -77,7 +77,7 @@ export function useWatchlistMutations() {
 
       // ✅ VALIDAR LÍMITE DEL PLAN ANTES DE AGREGAR
       if (isAtLimit) {
-        throw new Error(`Has alcanzado el límite de ${limit} activos en tu watchlist. Actualiza tu plan para agregar más.`);
+        throw new Error(`Has alcanzado el límite de ${limit} activos en tu watchlist. Actualizá tu plan para agregar más.`);
       }
 
       const result = await supabase
@@ -86,6 +86,7 @@ export function useWatchlistMutations() {
           user_id: user.id,
           symbol: dto.symbol,
           notes: dto.notes,
+          list_name: dto.list_name ?? 'General',
         })
         .select()
         .single();
@@ -117,6 +118,7 @@ export function useWatchlistMutations() {
         user_id: user?.id ?? '',
         symbol: dto.symbol,
         notes: dto.notes,
+        list_name: dto.list_name ?? 'General',
         added_at: new Date().toISOString(),
       };
 
@@ -276,7 +278,7 @@ export function useWatchlistMutations() {
         .select('id')
         .eq('user_id', user.id)
         .eq('symbol', symbol)
-        .single();
+        .maybeSingle();
 
       if (existing) {
         // Remover
@@ -291,7 +293,7 @@ export function useWatchlistMutations() {
       } else {
         // ✅ VALIDAR LÍMITE DEL PLAN ANTES DE AGREGAR
         if (isAtLimit) {
-          throw new Error(`Has alcanzado el límite de ${limit} activos en tu watchlist. Actualiza tu plan para agregar más.`);
+          throw new Error(`Has alcanzado el límite de ${limit} activos en tu watchlist. Actualizá tu plan para agregar más.`);
         }
 
         // Agregar
@@ -334,6 +336,7 @@ export function useWatchlistMutations() {
           user_id: user?.id ?? '',
           symbol,
           notes: null,
+          list_name: 'General',
           added_at: new Date().toISOString(),
         };
         queryClient.setQueryData<WatchlistItem[]>(queryKey, (old = []) => [optimisticItem, ...old]);
@@ -360,10 +363,46 @@ export function useWatchlistMutations() {
     },
   });
 
+  // Mover a otra lista
+  const moveToList = useMutation({
+    mutationFn: async ({ symbol, listName }: { symbol: string; listName: string }): Promise<void> => {
+      if (!user?.id) {
+        throw new Error('Usuario no autenticado');
+      }
+      const { error } = await supabase
+        .from('watchlist')
+        .update({ list_name: listName })
+        .eq('user_id', user.id)
+        .eq('symbol', symbol);
+      if (error) {
+        void logger.error('WATCHLIST_MOVE_ERROR', 'Error moving watchlist item', { error, symbol, listName });
+        throw new Error('No se pudo mover el activo de lista');
+      }
+    },
+    onMutate: async ({ symbol, listName }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousWatchlist = queryClient.getQueryData<WatchlistItem[]>(queryKey);
+      queryClient.setQueryData<WatchlistItem[]>(queryKey, (old = []) =>
+        old.map(item => item.symbol === symbol ? { ...item, list_name: listName } : item)
+      );
+      return { previousWatchlist };
+    },
+    onError: (error: Error, _variables, context) => {
+      if (context?.previousWatchlist) {
+        queryClient.setQueryData(queryKey, context.previousWatchlist);
+      }
+      toast.error(error.message);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
   return {
     addToWatchlist,
     removeFromWatchlist,
     updateWatchlistItem,
     toggleWatchlist,
+    moveToList,
   };
 }

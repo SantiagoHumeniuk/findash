@@ -70,7 +70,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <AuthCard
         title="Inicia sesión en tu cuenta"
-        description="Ingresa tu correo electrónico a continuación para iniciar sesión en tu cuenta"
+        description="Ingresá tu correo electrónico a continuación para iniciar sesión en tu cuenta"
       >
         <form onSubmit={handleSubmit}>
           <div className="flex flex-col gap-6">
@@ -122,7 +122,7 @@ export function LoginForm({ className, ...props }: LoginFormProps) {
           </div>
 
           <FormFooter
-            text="¿No tienes una cuenta?"
+            text="¿No tenés una cuenta?"
             linkText="Crear cuenta"
             linkTo="/register"
           />

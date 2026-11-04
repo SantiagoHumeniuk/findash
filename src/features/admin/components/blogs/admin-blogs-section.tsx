@@ -171,7 +171,7 @@ export function AdminBlogsSection() {
       setRejectionReason('');
     } catch (error) {
       console.error('Error reviewing blog:', error);
-      alert('Error al procesar la revisión. Por favor intenta nuevamente.');
+      alert('Error al procesar la revisión. Por favor intentá de nuevo.');
     }
   };
 
@@ -188,7 +188,7 @@ export function AdminBlogsSection() {
       setBlogToDelete(null);
     } catch (error) {
       console.error('Error deleting blog:', error);
-      alert('Error al eliminar el artículo. Por favor intenta nuevamente.');
+      alert('Error al eliminar el artículo. Por favor intentá de nuevo.');
     }
   };
 
@@ -216,7 +216,7 @@ export function AdminBlogsSection() {
       setNewStatus('pending_review');
     } catch (error) {
       console.error('Error changing status:', error);
-      alert('Error al cambiar el estado. Por favor intenta nuevamente.');
+      alert('Error al cambiar el estado. Por favor intentá de nuevo.');
     }
   };
 

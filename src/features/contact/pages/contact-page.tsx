@@ -83,7 +83,7 @@ export default function ContactPage() {
         await logger.error('CONTACT_FORM_ERROR', 'Error submitting contact form', {
           errorMessage: error instanceof Error ? error.message : String(error),
         });
-        toast.error('Error al enviar el mensaje. Por favor, intenta nuevamente o contáctanos directamente por email.');
+        toast.error('Error al enviar el mensaje. Por favor, intentá de nuevo o contáctanos directamente por email.');
       } finally {
         setLoading(false);
       }
@@ -176,7 +176,7 @@ export default function ContactPage() {
                   <Textarea
                     id="message"
                     name="message"
-                    placeholder="Escribe tu mensaje aquí..."
+                    placeholder="Escribí tu mensaje aquí..."
                     rows={5}
                     value={formData.message}
                     onChange={handleChange}

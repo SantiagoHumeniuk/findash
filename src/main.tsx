@@ -2,7 +2,7 @@
 
 import React, { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Outlet, RouterProvider, Navigate } from "react-router-dom";
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/react-query';
 
@@ -47,7 +47,6 @@ const AssetDetailPage = React.lazy(() => import('./features/asset-detail/pages/a
 const PortfolioPage = React.lazy(() => import('./features/portfolio/pages/portfolio-page.tsx'));
 const BondsPage = React.lazy(() => import('./features/bonds/pages/bonds-page.tsx'));
 const NewsPage = React.lazy(() => import('./features/news/pages/news-page.tsx'));
-const MarketMoversPage = React.lazy(() => import('./features/market-movers/pages/MarketMoversPage.tsx'));
 const ProfilePage = React.lazy(() => import('./features/profile/pages/profile-page.tsx'));
 const SuggestionsPage = React.lazy(() => import('./features/suggestions/pages/suggestion-page.tsx'));
 const AdminPage = React.lazy(() => import('./features/admin/pages/admin-page.tsx'));
@@ -225,16 +224,7 @@ const router = createBrowserRouter([
                             </ErrorBoundary>
                         )
                     },
-                    {
-                        path: "market-movers",
-                        element: (
-                            <ErrorBoundary level="feature" featureName="Market Movers">
-                                <Suspense fallback={<SuspenseFallback type="page" message="Cargando movimientos del mercado..." />}>
-                                    <MarketMoversPage />
-                                </Suspense>
-                            </ErrorBoundary>
-                        )
-                    },
+                    { path: "market-movers", element: <Navigate to="/screener?tab=map" replace /> },
 
                     {
                         path: "insights",

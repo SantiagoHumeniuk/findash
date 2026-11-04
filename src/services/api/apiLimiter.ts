@@ -151,7 +151,7 @@ export const checkApiLimit = async (
   // Verificamos si se ha alcanzado el límite
   if (calls >= limit) {
     toast.info('Has alcanzado el límite diario de uso de la API.', {
-      description: 'Actualiza tu plan para obtener más acceso.',
+      description: 'Actualizá tu plan para obtener más acceso.',
     });
     return false;
   }

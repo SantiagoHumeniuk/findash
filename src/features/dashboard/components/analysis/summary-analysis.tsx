@@ -419,7 +419,7 @@ export default function SummaryAnalysis({ assets, indicatorConfig }: SummaryAnal
                             ))}
                         </div>
                     ) : (
-                        <p>Selecciona al menos un activo para generar el análisis inteligente.</p>
+                        <p>Seleccioná al menos un activo para generar el análisis inteligente.</p>
                     )}
                 </CardContent>
             </Card>

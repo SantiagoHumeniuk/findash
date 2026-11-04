@@ -96,7 +96,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
                 currentCount: selectedTickers.length,
             });
             toast.error(`Límite de comparación alcanzado`, {
-                description: limitMessage || `Puedes comparar hasta ${limit} activos a la vez en tu plan.`,
+                description: limitMessage || `Podés comparar hasta ${limit} activos a la vez en tu plan.`,
             });
             return;
         }

@@ -57,7 +57,7 @@ export function ForgotPasswordForm({
 
         setEmailSent(true);
         toast.success('Correo de recuperación enviado correctamente.');
-        toast.info('Revisa tu bandeja de entrada y spam.');
+        toast.info('Revisá tu bandeja de entrada y spam.');
       } finally {
         setTimeout(() => setLoading(false), 500);
       }

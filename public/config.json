@@ -343,12 +343,6 @@
             "icon": "ArrowLeftRight"
           },
           {
-            "to": "/market-movers",
-            "label": "Movimientos del Mercado",
-            "icon": "Activity",
-            "requiresAuth": true
-          },
-          {
             "to": "/watchlist",
             "label": "Watchlist",
             "icon": "Star",

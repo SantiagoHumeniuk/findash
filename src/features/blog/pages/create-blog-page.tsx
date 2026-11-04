@@ -52,7 +52,7 @@ function CreateBlogPage() {
       void navigate(`/blog/${typedBlogData.slug}`);
     } catch (error) {
       console.error('Error creating blog:', error);
-      alert('Error al crear el artículo. Por favor intenta nuevamente.');
+      alert('Error al crear el artículo. Por favor intentá de nuevo.');
     }
   };
 
@@ -77,7 +77,7 @@ function CreateBlogPage() {
       void navigate('/blog');
     } catch (error) {
       console.error('Error saving draft:', error);
-      alert('Error al guardar el borrador. Por favor intenta nuevamente.');
+      alert('Error al guardar el borrador. Por favor intentá de nuevo.');
     }
   };
 
