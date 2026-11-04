@@ -152,7 +152,7 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
       <DialogContent className="max-w-[95vw] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-lg sm:text-xl">Agregar Compra de <span className="text-primary">{ticker}</span></DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">Completa los datos de tu operación.</DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">Completá los datos de tu operación.</DialogDescription>
         </DialogHeader>
         <form onSubmit={e => { e.preventDefault(); void handleSubmit(e); }} className="space-y-3 sm:space-y-4 pt-4">
 

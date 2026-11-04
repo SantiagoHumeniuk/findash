@@ -142,11 +142,11 @@ export function TickerAddForm({ onAddTicker }: TickerAddFormProps) {
               size="sm"
             >
               <Plus className="h-4 w-4" />
-              Añadir
+              Agregar
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Escribe directamente el símbolo del activo (ej. AAPL para Apple Inc.)
+            Escribí directamente el símbolo del activo (ej. AAPL para Apple Inc.)
           </p>
         </TabsContent>
         

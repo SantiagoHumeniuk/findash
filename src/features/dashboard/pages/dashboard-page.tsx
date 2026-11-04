@@ -123,7 +123,7 @@ function DashboardPageContent() {
             failedTickers.forEach(ticker => {
                 dropFailedTicker(ticker);
                 toast.error(`No se pudo cargar "${ticker}"`, {
-                    description: "Verifica el símbolo o intenta más tarde.",
+                    description: "Verificá el símbolo o intentá más tarde.",
                     duration: 5000,
                 });
             });

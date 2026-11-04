@@ -22,6 +22,8 @@ import { useWatchlistQuotes } from '../hooks/use-watchlist-quotes';
 
 const ALL = 'Todas';
 const DEFAULT_LIST = 'General';
+// Plans without a real cap store a very large number.
+const UNLIMITED = 10000;
 
 function formatPercent(value: number | null): string {
   if (value === null) return '—';
@@ -93,7 +95,9 @@ export default function WatchlistPage() {
                 Se suma a {selectedList === ALL ? `la lista ${DEFAULT_LIST}` : `la lista ${selectedList}`}.
               </CardDescription>
             </div>
-            <Badge variant={isAtLimit ? 'destructive' : 'secondary'}>{watchlist.length} / {limit}</Badge>
+            <Badge variant={isAtLimit ? 'destructive' : 'secondary'}>
+              {limit >= UNLIMITED ? `${watchlist.length} activos` : `${watchlist.length} / ${limit}`}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -149,7 +153,7 @@ export default function WatchlistPage() {
           </div>
           {live && (
             <CardDescription>
-              Se actualiza cada minuto. Última: {new Date(live.fetchedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}.
+              Se actualiza cada minuto. Última: {new Date(live.fetchedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })} h
             </CardDescription>
           )}
         </CardHeader>

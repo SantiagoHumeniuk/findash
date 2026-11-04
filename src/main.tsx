@@ -133,6 +133,7 @@ const router = createBrowserRouter([
                     </ErrorBoundary>
                 )
             },
+            { path: "market-movers", element: <Navigate to="/screener?tab=map" replace /> },
             { path: "baja", element: <Suspense fallback={<PageSkeleton />}><UnsubscribePage /></Suspense> },
             { path: "contact", element: <Suspense fallback={<PageSkeleton />}><ContactPage /></Suspense> },
             { path: "plans", element: <Suspense fallback={<PageSkeleton />}><PlansPage /></Suspense> },
@@ -224,7 +225,6 @@ const router = createBrowserRouter([
                             </ErrorBoundary>
                         )
                     },
-                    { path: "market-movers", element: <Navigate to="/screener?tab=map" replace /> },
 
                     {
                         path: "insights",

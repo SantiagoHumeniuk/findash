@@ -34,7 +34,7 @@ export function EmptyState() {
           <Lightbulb className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
           <div className="text-left">
             <p className="text-xs sm:text-sm text-blue-900 dark:text-blue-100 font-medium mb-1">
-              💡 Tip: Prueba con estos valores
+              💡 Tip: Probá con estos valores
             </p>
             <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-0.5">
               <li>• Inversión inicial: $100,000</li>

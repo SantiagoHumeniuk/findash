@@ -126,7 +126,7 @@ export default function ContactPage() {
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">Contacto</h1>
           <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto px-4">
             ¿Tienes alguna pregunta o sugerencia? Nos encantaría escucharte.
-            Completa el formulario o contáctanos directamente.
+            Completá el formulario o escribinos directamente.
           </p>
         </div>
 
@@ -139,7 +139,7 @@ export default function ContactPage() {
                 Envíanos un mensaje
               </CardTitle>
               <CardDescription className="text-xs sm:text-sm">
-                Completa el formulario y te responderemos lo antes posible.
+                Completá el formulario y te responderemos lo antes posible.
               </CardDescription>
             </CardHeader>
             <CardContent>
