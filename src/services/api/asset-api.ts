@@ -7,7 +7,8 @@ import type { AssetData } from '../../types/dashboard';
 import type { Config } from '../../types/config';
 import type { Profile } from '../../types/auth';
 import type { User } from '@supabase/supabase-js';
-import { hasApiCallsAvailable, incrementApiCallCounter } from './apiLimiter';
+// The server counts each rebuild against the plan; this only avoids asking when the limit is reached.
+import { hasApiCallsAvailable } from './apiLimiter';
 import { toast } from 'sonner';
 import { fetchYahooAsset, fetchYahooMarketQuotes, refreshYahooAssetQuote } from './yahoo-finance-api';
 import {
@@ -132,7 +133,6 @@ export async function fetchTickerData({
         if (shouldRefreshFundamentals && await hasApiCallsAvailable(user, profile, config)) {
             try {
                 const refreshedAsset = await fetchYahooAsset(ticker.trim().toUpperCase());
-                if (user?.id) await incrementApiCallCounter(user.id);
                 return refreshedAsset;
             } catch (error) {
                 const yahooError = error instanceof Error ? error.message : String(error);
@@ -188,7 +188,6 @@ export async function fetchTickerData({
     if (YAHOO_MARKET_INDEX_SYMBOLS.has(normalizedTicker)) {
         try {
             const indexData = await fetchYahooAsset(normalizedTicker);
-            if (user?.id) await incrementApiCallCounter(user.id);
             return indexData;
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Error desconocido';
@@ -205,7 +204,6 @@ export async function fetchTickerData({
 
     try {
         const yahooAsset = await fetchYahooAsset(normalizedTicker);
-        if (user?.id) await incrementApiCallCounter(user.id);
         return yahooAsset;
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

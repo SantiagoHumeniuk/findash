@@ -7,8 +7,8 @@ import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from "../../../hooks/use-auth";
 import { useConfig } from "../../../hooks/use-config";
 import { fetchTickerData } from "../../../services/api/asset-api";
+import { fetchYahooAsset } from "../../../services/api/yahoo-finance-api";
 import { toast } from "sonner";
-import { supabase } from "../../../lib/supabase";
 
 import { Card, CardHeader } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
@@ -135,14 +135,12 @@ function DashboardPageContent() {
         if (selectedTickers.length === 0) return;
         toast.info('Actualizando datos...', { duration: 1500 });
 
-        const { error } = await supabase
-            .from('asset_data_cache')
-            .update({ last_updated_at: new Date(0).toISOString() })
-            .in('symbol', selectedTickers)
-        if (error) {
-            console.error('Error invalidating the asset cache:', error);
-            toast.error('No se pudo iniciar la actualización de los activos.');
-            return;
+        // The server rebuilds and saves each asset (the browser cannot write the shared cache).
+        const results = await Promise.allSettled(selectedTickers.map((ticker) => fetchYahooAsset(ticker)));
+        const failed = results.flatMap((result) => result.status === 'rejected' ? [result.reason] : []);
+        if (failed.length > 0) {
+            const reason = failed[0] instanceof Error ? failed[0].message : 'Intentá de nuevo en unos minutos.';
+            toast.error(failed.length === results.length ? 'No se pudieron actualizar los activos.' : 'Algunos activos no se actualizaron.', { description: reason });
         }
 
         await Promise.all([

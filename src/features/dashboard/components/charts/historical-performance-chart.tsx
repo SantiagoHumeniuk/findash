@@ -11,7 +11,7 @@ import { Checkbox } from "../../../../components/ui/checkbox"
 import { AreaChartIcon } from "lucide-react"
 import { useAuth } from "../../../../hooks/use-auth"
 import { useConfig } from "../../../../hooks/use-config"
-import { hasApiCallsAvailable, incrementApiCallCounter } from "../../../../services/api/apiLimiter"
+import { hasApiCallsAvailable } from "../../../../services/api/apiLimiter"
 import { fetchYahooHistory } from "../../../../services/api/yahoo-finance-api"
 import { normalizeHistoricalPerformance, type HistoricalPerformanceRow } from "../../lib/historical-performance"
 
@@ -57,7 +57,6 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
         throw new Error(`No se recibió historial suficiente para ${symbol}.`);
       }
 
-      if (user) await incrementApiCallCounter(user.id);
       return {
         histories: { [symbol]: history.map(({ date, close }) => ({ date, close })) },
         errors: {},
