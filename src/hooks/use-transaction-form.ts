@@ -1,6 +1,6 @@
 // src/hooks/useTransactionForm.ts
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCedearRatios } from './use-cedear-ratios';
 import { useCclRate } from './use-ccl-rate';
 import { usePortfolio } from './use-portfolio'; // Importamos usePortfolio
@@ -24,6 +24,8 @@ export const useTransactionForm = ({ isOpen, ticker, currentPrice }: UseTransact
   const [date, setDate] = useState<Date>(new Date());
   const [inputType, setInputType] = useState<InputType>('shares');
   const [portfolioId, setPortfolioId] = useState<number | null>(null); // Estado para el portfolio seleccionado
+  // The CEDEAR price is suggested once per opening; after that the field is the user's.
+  const cedearPriceSuggestedRef = useRef(false);
 
   const { ratios: cedearRatios } = useCedearRatios();
   const { data: cclQuote, isLoading: loadingCcl } = useCclRate();
@@ -48,6 +50,7 @@ export const useTransactionForm = ({ isOpen, ticker, currentPrice }: UseTransact
       }
       setQuantity('');
       setDate(new Date());
+      cedearPriceSuggestedRef.current = false;
       // Inicializar con el portfolio actual si existe
       if (currentPortfolio) {
         setPortfolioId(currentPortfolio.id);
@@ -55,11 +58,14 @@ export const useTransactionForm = ({ isOpen, ticker, currentPrice }: UseTransact
     }
   }, [isOpen, currentPrice, ratio, ticker, currentPortfolio]);
 
+  // The CCL rate may arrive after the modal opens, so the suggestion waits for it.
   useEffect(() => {
-    if (isOpen && ratio && currentPrice && cclQuote?.rate && !price) {
+    if (!isOpen || inputType !== 'cedears' || cedearPriceSuggestedRef.current) return;
+    if (ratio && currentPrice && cclQuote?.rate) {
+      cedearPriceSuggestedRef.current = true;
       setPrice(((currentPrice * cclQuote.rate) / ratio).toFixed(2));
     }
-  }, [isOpen, currentPrice, ratio, cclQuote?.rate, price]);
+  }, [isOpen, inputType, currentPrice, ratio, cclQuote?.rate]);
 
   // Maneja el cambio entre input de 'shares' y 'cedears', convirtiendo los valores.
   const handleTypeChange = useCallback((newType: InputType) => {

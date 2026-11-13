@@ -21,6 +21,8 @@ import type { User } from '@supabase/supabase-js';
 // eslint-disable-next-line react-refresh/only-export-components
 export const PortfolioContext = createContext<PortfolioContextType | undefined>(undefined);
 
+const PORTFOLIO_LOAD_CONCURRENCY = 4;
+
 // Define return type for fetch to include portfolios
 interface FetchPortfolioResult {
     transactions: Transaction[];
@@ -67,7 +69,8 @@ const fetchPortfolioData = async (
     const unavailableSymbols: string[] = [];
 
     // Use shared cache first; only cache misses use a plan-metered asset lookup.
-    for (const symbol of symbols) {
+    // A few at a time: concurrent enough to be fast, gentle enough on the Edge Function.
+    const loadSymbol = async (symbol: string) => {
         try {
             portfolioData[symbol] = await fetchTickerData({
                 queryKey: ['assetData', symbol, config, user, profile],
@@ -80,6 +83,9 @@ const fetchPortfolioData = async (
                 error: errorToString(error),
             });
         }
+    };
+    for (let index = 0; index < symbols.length; index += PORTFOLIO_LOAD_CONCURRENCY) {
+        await Promise.all(symbols.slice(index, index + PORTFOLIO_LOAD_CONCURRENCY).map(loadSymbol));
     }
 
     if (unavailableSymbols.length > 0) {
@@ -202,11 +208,11 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const addTransaction = (transaction: Omit<Transaction, 'id' | 'user_id'>) => {
+    const addTransaction = async (transaction: Omit<Transaction, 'id' | 'user_id'>) => {
         if (!user) {
             toast.error("Debes iniciar sesión para agregar una transacción.");
-            return Promise.resolve(null);
-        };
+            return null;
+        }
 
         // Ensure we have a target portfolio
         const targetPortfolioId = transaction.portfolio_id ?? currentPortfolioId;
@@ -214,15 +220,16 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         // If still null (All Portfolios view and no specific portfolio passed), error
         if (!targetPortfolioId) {
             toast.error("No se ha seleccionado ningún portafolio.");
-            return Promise.resolve(null);
+            return null;
         }
 
-        addTransactionMutation.mutate({
+        // Awaited so callers only report success once the database accepted it.
+        await addTransactionMutation.mutateAsync({
             ...transaction,
             userId: user.id,
             portfolio_id: targetPortfolioId
         });
-        return Promise.resolve(null);
+        return null;
     };
 
     const importTransactions = async (transactionsToImport: Omit<Transaction, 'id' | 'user_id'>[]) => {

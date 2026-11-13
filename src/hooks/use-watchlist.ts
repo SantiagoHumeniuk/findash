@@ -98,6 +98,10 @@ export function useWatchlistMutations() {
         if (result.error.code === '23505') {
           throw new Error('Este asset ya está en tu watchlist');
         }
+        // Plan limit raised by the database.
+        if (result.error.code === 'P0001') {
+          throw new Error(result.error.message);
+        }
         
         throw new Error('No se pudo agregar a watchlist');
       }
@@ -288,7 +292,7 @@ export function useWatchlistMutations() {
           .eq('user_id', user.id)
           .eq('symbol', symbol);
 
-        if (error) throw error;
+        if (error) throw new Error('No se pudo eliminar de watchlist');
         return 'removed';
       } else {
         // ✅ VALIDAR LÍMITE DEL PLAN ANTES DE AGREGAR
@@ -307,7 +311,9 @@ export function useWatchlistMutations() {
           .select()
           .single();
 
-        if (result.error) throw result.error;
+        if (result.error) {
+          throw new Error(result.error.code === 'P0001' ? result.error.message : 'No se pudo agregar a watchlist');
+        }
         return 'added';
       }
     },
@@ -354,7 +360,7 @@ export function useWatchlistMutations() {
       if (context?.previousWatchlist) {
         queryClient.setQueryData(queryKey, context.previousWatchlist);
       }
-      toast.error('Error al actualizar watchlist');
+      toast.error(error.message || 'Error al actualizar watchlist');
       void logger.error('WATCHLIST_TOGGLE_ERROR', 'Error toggling watchlist', { error });
     },
     // Refetch para sincronizar

@@ -87,10 +87,14 @@ export default defineConfig({
         // Only always-needed libraries get their own chunk. jspdf, html2canvas and recharts stay
         // out on purpose: forcing them here made Rollup hoist shared helpers into those chunks,
         // so every page downloaded them up front even without exporting or showing a chart.
+        // Libraries that rarely change live apart from the app code, so after a deploy returning
+        // users only download what changed. 'react-dom/client' must be listed: naming the package
+        // root alone left React DOM inside the app chunk.
         manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'react-vendor': ['react', 'react-dom', 'react-dom/client', 'react-router-dom'],
           'query-vendor': ['@tanstack/react-query'],
           'supabase-vendor': ['@supabase/supabase-js'],
+          'motion-vendor': ['framer-motion'],
         },
       },
     },

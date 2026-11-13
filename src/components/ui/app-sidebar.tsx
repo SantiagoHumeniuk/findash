@@ -42,8 +42,9 @@ const SidebarHeaderContent = React.memo(({ config }: { config: Config }) => {
     <SidebarHeader>
       <SidebarMenu>
         <SidebarMenuItem>
-          <NavLink to="/" className="flex items-center gap-2 group">
-            <SidebarMenuButton size="lg" className="hover:bg-primary/5 transition-all duration-300">
+          {/* The link carries the button styles: a button inside a link is invalid HTML. */}
+          <SidebarMenuButton asChild size="lg" className="hover:bg-primary/5 transition-all duration-300">
+            <NavLink to="/" className="flex items-center gap-2 group" aria-label={`${config.app.name}, inicio`}>
               <div className="text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg shrink-0">
                 <img src="/logo-128.png" alt="Logo" width="28" height="28" className="size-7 object-contain" />
               </div>
@@ -51,8 +52,8 @@ const SidebarHeaderContent = React.memo(({ config }: { config: Config }) => {
                 <span className="truncate font-bold text-gradient-animated tracking-tight">{config.app.name}</span>
                 <span className="text-muted-foreground truncate caption font-medium">3.0</span>
               </div>
-            </SidebarMenuButton>
-          </NavLink>
+            </NavLink>
+          </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
     </SidebarHeader>
@@ -122,20 +123,20 @@ const SidebarFooterContent = React.memo(({ isLoaded, user, profile, signOut }: R
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <NavLink to="/login" className="w-full">
-          <SidebarMenuButton tooltip="Iniciar Sesión" className="w-full">
+        <SidebarMenuButton asChild tooltip="Iniciar Sesión" className="w-full">
+          <NavLink to="/login">
             <LogIn />
             <span>Iniciar Sesión</span>
-          </SidebarMenuButton>
-        </NavLink>
+          </NavLink>
+        </SidebarMenuButton>
       </SidebarMenuItem>
       <SidebarMenuItem>
-        <NavLink to="/register" className="w-full">
-          <SidebarMenuButton tooltip="Registrarse" variant="outline" className="w-full">
+        <SidebarMenuButton asChild tooltip="Registrarse" variant="outline" className="w-full">
+          <NavLink to="/register">
             <UserPlus />
             <span>Registrarse</span>
-          </SidebarMenuButton>
-        </NavLink>
+          </NavLink>
+        </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
   );

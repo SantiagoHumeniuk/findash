@@ -1,6 +1,6 @@
 // src/providers/auth-provider.tsx
 
-import React, { createContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 import { AuthContextType, Profile } from '../types/auth';
@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null); // ✅ Cancelar requests pendientes
-  const fetchInProgressRef = useRef(false); // ✅ Prevenir llamadas concurrentes
+  const profileRequestRef = useRef(0);
   const initPromiseRef = useRef<Promise<unknown> | null>(null); // ✅ Evitar doble inicialización
   const initialUserIdRef = useRef<string | null>(null);
 
@@ -38,12 +38,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    // ✅ Prevenir múltiples llamadas concurrentes
-    if (fetchInProgressRef.current) {
-      return;
-    }
-
-    fetchInProgressRef.current = true;
+    // The latest request wins: an older one finishing later must not overwrite a newer profile.
+    const requestId = ++profileRequestRef.current;
+    const isStale = () => signal?.aborted || requestId !== profileRequestRef.current;
 
     try {
       const resp = await supabase
@@ -52,8 +49,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .eq('id', user.id)
         .single();
 
-      // ✅ Si la request fue abortada, no actualizar el estado
-      if (signal?.aborted) {
+      if (isStale()) {
         return;
       }
 
@@ -84,6 +80,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             .single();
 
           if (!insertError && createdProfile) {
+            if (isStale()) return;
             setProfile(createdProfile as unknown as Profile);
             return;
           }
@@ -94,9 +91,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const dataUnknown = resp.data as unknown;
       if (dataUnknown && typeof dataUnknown === 'object') {
         const loadedProfile = dataUnknown as Profile;
-        if (!signal?.aborted && (loadedProfile.role === 'plus' || loadedProfile.role === 'premium')) {
+        if (loadedProfile.role === 'plus' || loadedProfile.role === 'premium') {
           const subscriptionExpired = await paymentService.expireCurrentUserPlanIfDue();
-          if (signal?.aborted) return;
+          if (isStale()) return;
           setProfile(subscriptionExpired ? { ...loadedProfile, role: 'basico' } : loadedProfile);
         } else {
           setProfile(loadedProfile);
@@ -105,15 +102,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setProfile(null);
       }
     } catch (error: unknown) {
-      // ✅ No loggear errores si fue cancelación intencional
-      if (signal?.aborted) {
+      if (isStale()) {
         return;
       }
       const msg = error instanceof Error ? error.message : 'Fallo al obtener perfil';
       void logger.error('AUTH_PROFILE_FETCH_FAILED', msg);
       setProfile(null);
-    } finally {
-      fetchInProgressRef.current = false;
     }
   }, []);
 
@@ -327,9 +321,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Token refreshes replace the session object every hour; the user stays the same object unless it
+  // actually changed, so effects keyed on it do not re-run across the app.
+  const sessionUser = session?.user ?? null;
+  const user = useMemo(
+    () => sessionUser,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sessionUser?.id, sessionUser?.updated_at, sessionUser?.email],
+  );
+
   const value: AuthContextType = {
     session,
-    user: session?.user ?? null,
+    user,
     profile,
     isLoaded,
     loading,

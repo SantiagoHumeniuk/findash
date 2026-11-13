@@ -17,7 +17,7 @@ vi.mock('../../lib/supabase', () => ({
     from: () => ({
       select: () => ({
         eq: () => ({
-          single: () => Promise.resolve({ data: cacheState.row, error: null }),
+          maybeSingle: () => Promise.resolve({ data: cacheState.row, error: null }),
         }),
       }),
       upsert: cacheState.upsert,
@@ -84,14 +84,15 @@ describe('fetchTickerData with saved data', () => {
     expect(refreshYahooAssetQuote).toHaveBeenCalledWith('AAPL');
   });
 
-  it('shows expired data from the last day while it rebuilds in the background', async () => {
+  it('shows data from the last day with a fresh quote, without spending a rebuild', async () => {
     cacheState.row = { data: cachedAsset(), last_updated_at: new Date(Date.now() - 5 * HOUR).toISOString() };
-    vi.mocked(fetchYahooAsset).mockReturnValue(new Promise(() => undefined) as never);
+    vi.mocked(refreshYahooAssetQuote).mockReturnValue(new Promise(() => undefined) as never);
 
     const asset = await load();
 
     expect(asset.quote.price).toBe(100);
-    await vi.waitFor(() => expect(fetchYahooAsset).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(refreshYahooAssetQuote).toHaveBeenCalledOnce());
+    expect(fetchYahooAsset).not.toHaveBeenCalled();
   });
 
   it('waits for a rebuild when the saved data is too old or has an old format', async () => {

@@ -65,7 +65,8 @@ export function useAlertMutations() {
       if (!user) throw new Error('Iniciá sesión para crear alertas.');
       if (isAtLimit) throw new Error(limitMessage || 'Alcanzaste el límite de alertas de tu plan.');
       const { error } = await supabase.from('price_alerts').insert({ ...input, user_id: user.id });
-      if (error) throw new Error('No se pudo crear la alerta.');
+      // P0001 is the plan-limit message raised by the database; show it as is.
+      if (error) throw new Error(error.code === 'P0001' ? error.message : 'No se pudo crear la alerta.');
     },
     onSuccess: () => {
       toast.success('Alerta creada');
