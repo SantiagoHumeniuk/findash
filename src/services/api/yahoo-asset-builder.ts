@@ -29,7 +29,7 @@ import {
 
 export const YAHOO_MARKET_INDEX_SYMBOLS = new Set(['SPY', 'QQQ', 'DIA', 'IWM']);
 /** Bump when createYahooAssetData adds fields so cached assets are rebuilt. */
-export const YAHOO_DATA_VERSION = 3;
+export const YAHOO_DATA_VERSION = 4;
 
 function getYahooMarketIndexName(symbol: string, fallback: string | null): string {
     const knownNames: Record<string, string> = {
@@ -262,6 +262,7 @@ export function createYahooAssetData(
         },
         dataFetchedAt: fetchedAt,
         yahooMetrics: yahoo.metrics,
+        valuationInputs: { riskFreeRate, sector: yahoo.sectorStats ?? null },
         yahooAttemptedAt: fetchedAt,
         yahooQuoteAttemptedAt: fetchedAt,
         yahooError: yahoo.error,

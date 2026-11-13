@@ -6,14 +6,14 @@ import {
   CardHeader,
   CardTitle,
 } from '../../../../components/ui/card';
-import { Scale, TrendingUp, TrendingDown, HelpCircle, AlertTriangle, Calculator, Building2, ShieldAlert, ShieldCheck, Globe, Layers, ChevronDown } from 'lucide-react';
+import { Scale, TrendingUp, TrendingDown, Equal, HelpCircle, AlertTriangle, Calculator, Building2, ShieldAlert, ShieldCheck, Globe, Layers, ChevronDown } from 'lucide-react';
 import { formatPrice } from '../../lib/asset-formatters';
 import type { AssetData } from '../../../../types/dashboard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../components/ui/tooltip';
 import { usePlanFeature } from '../../../../hooks/use-plan-feature';
 import { UpgradeHint } from '../../../../components/shared/upgrade-hint';
 import { Badge } from '../../../../components/ui/badge';
-import { calculateBlendedFairValue, classifyBusinessProfile } from '../../lib/valuation-models';
+import { calculateBlendedFairValue, classifyBusinessProfile, FAIR_PRICE_BAND_PCT } from '../../lib/valuation-models';
 import { useRiskPremiumQuery } from '../../../risk-premium/hooks/use-risk-premium-query';
 
 interface DCFValuationCardProps {
@@ -25,11 +25,21 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
   const { data: riskPremiumData = [] } = useRiskPremiumQuery();
   const { hasAccess: showDetails } = usePlanFeature('fairValueDetails');
 
-  // Usa el algoritmo robusto multi-modelo calibrado por sector y geografía
-  const { fairValue, fairValueRange, modelsUsed, isAnomaly, spread, context } = calculateBlendedFairValue(asset, riskPremiumData);
+  const { fairValue, fairValueRange, modelsUsed, isAnomaly, spread, verdict, confidence, context } = calculateBlendedFairValue(asset, riskPremiumData);
   const businessProfile = classifyBusinessProfile(asset, context);
   
   const isUndervalued = spread !== null && spread >= 0;
+  const verdictStyle = {
+    infravalorada: { label: 'Infravalorada', badge: 'bg-green-600 hover:bg-green-700', text: 'text-green-600', bar: 'bg-green-500 left-0', Icon: TrendingUp },
+    'en-precio': { label: 'En precio', badge: 'bg-slate-600 hover:bg-slate-700', text: 'text-muted-foreground', bar: `bg-slate-400 ${isUndervalued ? 'left-0' : 'right-0'}`, Icon: Equal },
+    sobrevalorada: { label: 'Sobrevalorada', badge: 'bg-red-600 hover:bg-red-700', text: 'text-red-600', bar: 'bg-red-500 right-0', Icon: TrendingDown },
+  }[verdict ?? 'en-precio'];
+  const confidenceLabel = { alta: 'Confianza alta', media: 'Confianza media', baja: 'Confianza baja' }[confidence ?? 'baja'];
+  const confidenceHint = {
+    alta: 'Los modelos coinciden entre sí.',
+    media: 'Los modelos difieren en parte; tomá el rango como referencia.',
+    baja: 'Los modelos se contradicen o hay pocos datos; el número es apenas orientativo.',
+  }[confidence ?? 'baja'];
 
   // Si después de todo no hay valor, salir
   if (fairValue === null || isNaN(fairValue) || currentPrice === 0) {
@@ -74,9 +84,9 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
                     Calibrado para el sector <strong className="text-foreground">{context.sector}</strong> e industria <strong className="text-foreground">{context.industry}</strong> en <strong className="text-foreground">{context.country}</strong>.
                   </p>
                   <div className="space-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
-                    <p>{modelsUsed.length} modelos válidos participan del valor ponderado.</p>
-                    <p>La mediana de empresas comparables se usa cuando hay tres o más pares con múltiplos comparables.</p>
-                    <p>El precio objetivo de analistas tiene un peso secundario.</p>
+                    <p>{modelsUsed.length} miradas independientes: flujo de caja, ganancias, cómo cotiza su sector y qué esperan los analistas.</p>
+                    <p>Todas usan el mismo crecimiento y la misma tasa de descuento. Un resultado extremo se acota, no se descarta.</p>
+                    <p>Entre −{FAIR_PRICE_BAND_PCT}% y +{FAIR_PRICE_BAND_PCT}% se considera en precio: ningún modelo es más preciso que eso.</p>
                   </div>
                 </TooltipContent>
               </Tooltip>
@@ -209,32 +219,33 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
         ) : !isAnomaly && spread !== null && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Badge
-                variant={isUndervalued ? "default" : "destructive"}
-                className={`text-sm px-3 py-1 shadow-sm ${isUndervalued ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
-              >
-                {isUndervalued ? <TrendingUp className="w-4 h-4 mr-2" /> : <TrendingDown className="w-4 h-4 mr-2" />}
-                {isUndervalued ? "Infravalorada" : "Sobrevalorada"}
-              </Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className={`text-sm px-3 py-1 text-white shadow-sm ${verdictStyle.badge}`}>
+                  <verdictStyle.Icon className="w-4 h-4 mr-2" />
+                  {verdictStyle.label}
+                </Badge>
+                <Badge variant="outline" className="text-[11px] font-medium" title={confidenceHint}>{confidenceLabel}</Badge>
+              </div>
 
-              {showDetails && <span className={`text-2xl font-bold tabular-nums ${isUndervalued ? 'text-green-600' : 'text-red-600'}`}>
+              {showDetails && <span className={`text-2xl font-bold tabular-nums ${verdictStyle.text}`}>
                 {spread > 0 ? '+' : ''}{spread.toFixed(2)}%
               </span>}
             </div>
 
             {showDetails && <div className="relative h-2 w-full bg-secondary rounded-full overflow-hidden">
               <div
-                className={`absolute top-0 bottom-0 transition-all duration-1000 ease-out rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] ${isUndervalued ? 'bg-green-500 left-0' : 'bg-red-500 right-0'}`}
+                className={`absolute top-0 bottom-0 transition-all duration-1000 ease-out rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] ${verdictStyle.bar}`}
                 style={{ width: `${Math.min(Math.abs(spread), 100)}%` }}
               />
             </div>}
 
             <p className="text-xs text-muted-foreground text-center pt-1 font-medium">
-              {!showDetails
+              {verdict === 'en-precio'
+                ? 'Según nuestros modelos, cotiza cerca de su valor justo.'
+                : !showDetails
                 ? `Según nuestros modelos, cotiza por ${isUndervalued ? 'debajo' : 'encima'} de su valor justo.`
-                : isUndervalued
-                ? `El activo cotiza un ${Math.abs(spread).toFixed(0)}% por debajo del valor justo estimado por los modelos.`
-                : `El activo cotiza un ${Math.abs(spread).toFixed(0)}% por encima del valor justo estimado por los modelos.`}
+                : `El activo cotiza un ${Math.abs(spread).toFixed(0)}% por ${isUndervalued ? 'debajo' : 'encima'} del valor justo estimado por los modelos.`}
+              {' '}{confidenceHint}
             </p>
           </div>
         )}
@@ -254,6 +265,7 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold">{model.name}</p>
+                    {model.capped && <Badge variant="outline" className="text-[10px] font-medium" title="El resultado era más extremo; cuenta en el límite aceptado.">Acotado</Badge>}
                     <Badge variant="outline" className="text-[10px] font-medium">
                       {categoryLabels[model.category] ?? model.category}
                     </Badge>
@@ -271,7 +283,7 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
         {asset.dataSource === 'Yahoo Finance' && (
           <p className="mt-3 text-[10px] italic text-muted-foreground">
             Modelos calculados por FinDash con datos de {asset.fundamentalsSource ?? 'Yahoo Finance'}
-            {asset.dcf.length > 0 ? `; DCF a ${asset.dcf.length} años con WACC ${asset.dcf[0].wacc.toFixed(1)}%` : ''}.
+            {context.stageGrowthPct !== null ? `; crecimiento inicial ${context.stageGrowthPct.toFixed(1)}% y descuento ${context.adjustedCostOfEquityPct.toFixed(1)}%` : ''}.
             Es una estimación, no una recomendación.
           </p>
         )}

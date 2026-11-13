@@ -1,7 +1,9 @@
 // src/features/asset-detail/lib/valuation-models.ts
 
-import type { AssetAnalystEstimates, AssetData, AssetPeerValuation } from '../../../types/dashboard';
+import type { AssetData, AssetPeerValuation } from '../../../types/dashboard';
 import type { RiskPremiumData } from '../../risk-premium/types/risk-premium.types';
+import { DAMODARAN_COUNTRIES, MATURE_MARKET_ERP } from '../../../data/damodaran-country-risk';
+import { getTerminalGrowth } from '../../../services/api/yahoo-fundamentals';
 
 export interface ValuationModel {
   name: string;
@@ -9,6 +11,8 @@ export interface ValuationModel {
   weight: number;
   category: 'intrinsic' | 'relative' | 'asset-based' | 'analyst';
   description: string;
+  /** The model's raw result was beyond the accepted band and counts at its edge. */
+  capped?: boolean;
 }
 
 export interface ValuationContext {
@@ -24,7 +28,12 @@ export interface ValuationContext {
   benchmarkPe: number;
   forwardEpsGrowthPct: number | null;
   epsAnalystCount: number;
+  /** Growth used for the first projected years, before it fades to the long-term rate. */
+  stageGrowthPct: number | null;
 }
+
+export type ValuationVerdict = 'infravalorada' | 'en-precio' | 'sobrevalorada';
+export type ValuationConfidence = 'alta' | 'media' | 'baja';
 
 export interface BlendedValuationResult {
   fairValue: number | null;
@@ -32,6 +41,9 @@ export interface BlendedValuationResult {
   modelsUsed: ValuationModel[];
   isAnomaly: boolean;
   spread: number | null; // percentage difference from price
+  /** Null when there are not enough models to give one. */
+  verdict: ValuationVerdict | null;
+  confidence: ValuationConfidence | null;
   context: ValuationContext;
 }
 
@@ -40,6 +52,34 @@ export interface BusinessProfile {
   riskLevel: 'bajo' | 'moderado' | 'alto';
   description: string;
   riskFactors: string[];
+}
+
+/** No model is precise enough to call a few percent a mispricing. */
+export const FAIR_PRICE_BAND_PCT = 10;
+const PROJECTION_YEARS = 10;
+const DEFAULT_RISK_FREE_RATE = 0.042;
+const MAX_STAGE_GROWTH = 0.2;
+/** Growth reported in a high-inflation currency overstates what the dollar price will see. */
+const MAX_STAGE_GROWTH_FOREIGN_CURRENCY = 0.1;
+const UNKNOWN_COUNTRY_RISK_PREMIUM = 0.02;
+/** Results count at these edges instead of being dropped, so a strong signal is never lost. */
+const MIN_VALUE_RATIO = 0.4;
+const MAX_VALUE_RATIO = 2;
+/** Beyond this the inputs are broken (mixed currencies, stale targets), not the company cheap. */
+const DATA_ERROR_RATIO = 5;
+/** A perpetuity priced closer than this to its growth rate is worth almost anything; keep the gap. */
+const MIN_TERMINAL_SPREAD = 0.04;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function isPositive(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+function isNumber(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
 }
 
 function weightedQuantile(models: ValuationModel[], quantile: number): number {
@@ -56,374 +96,8 @@ function weightedQuantile(models: ValuationModel[], quantile: number): number {
   return sorted[sorted.length - 1]?.value ?? 0;
 }
 
-// ============================================================================
-// CONFIGURACIÓN DE SECTOR E INDUSTRIA (Benchmarks de Mercado Calibrados)
-// ============================================================================
-
-interface SectorBenchmark {
-  fairPE: number;             // Múltiplo P/E base justo
-  fairEvEbitda: number;       // Múltiplo EV/EBITDA base justo (0 si no aplica, ej. Bancos)
-  fairEvEbit: number;
-  fairEvSales: number;
-  fairPS: number;
-  fairPB: number;             // Múltiplo P/B base justo
-  requiredFcfYield: number;   // Yield de FCF exigido base (sin riesgo país)
-  baseCostOfEquity: number;   // Costo de equity base (Ke) para US
-  typicalRoe: number;         // ROE promedio esperado del sector
-  maxPerpetualGrowth: number; // Tasa de crecimiento terminal sostenible (g)
-}
-
-const SECTOR_BENCHMARKS: Record<string, SectorBenchmark> = {
-  'Energy': {
-    fairPE: 7.5,
-    fairEvEbitda: 4.8,
-    fairEvEbit: 7.0,
-    fairEvSales: 1.2,
-    fairPS: 0.9,
-    fairPB: 1.1,
-    requiredFcfYield: 0.11, // 11% FCF yield exigido por ciclicidad y transición energética
-    baseCostOfEquity: 0.115,
-    typicalRoe: 0.12,
-    maxPerpetualGrowth: 0.02
-  },
-  'Basic Materials': {
-    fairPE: 9.0,
-    fairEvEbitda: 5.8,
-    fairEvEbit: 8.0,
-    fairEvSales: 2.0,
-    fairPS: 1.5,
-    fairPB: 1.3,
-    requiredFcfYield: 0.095,
-    baseCostOfEquity: 0.110,
-    typicalRoe: 0.11,
-    maxPerpetualGrowth: 0.025
-  },
-  'Financial Services': {
-    fairPE: 9.5,
-    fairEvEbitda: 0, // No aplica EV/EBITDA a bancos por depósitos y pasivos operativos
-    fairEvEbit: 0,
-    fairEvSales: 0,
-    fairPS: 1.8,
-    fairPB: 1.1,
-    requiredFcfYield: 0, // No aplica FCF tradicional
-    baseCostOfEquity: 0.110,
-    typicalRoe: 0.13,
-    maxPerpetualGrowth: 0.03
-  },
-  'Financial': {
-    fairPE: 9.5,
-    fairEvEbitda: 0,
-    fairEvEbit: 0,
-    fairEvSales: 0,
-    fairPS: 1.8,
-    fairPB: 1.1,
-    requiredFcfYield: 0,
-    baseCostOfEquity: 0.110,
-    typicalRoe: 0.13,
-    maxPerpetualGrowth: 0.03
-  },
-  'Technology': {
-    fairPE: 24.0,
-    fairEvEbitda: 17.5,
-    fairEvEbit: 20.0,
-    fairEvSales: 6.5,
-    fairPS: 6.5,
-    fairPB: 4.5,
-    requiredFcfYield: 0.045,
-    baseCostOfEquity: 0.090,
-    typicalRoe: 0.20,
-    maxPerpetualGrowth: 0.038
-  },
-  'Utilities': {
-    fairPE: 13.5,
-    fairEvEbitda: 8.5,
-    fairEvEbit: 12.0,
-    fairEvSales: 4.0,
-    fairPS: 2.0,
-    fairPB: 1.4,
-    requiredFcfYield: 0.065,
-    baseCostOfEquity: 0.085,
-    typicalRoe: 0.095,
-    maxPerpetualGrowth: 0.02
-  },
-  'Communication Services': {
-    fairPE: 15.0,
-    fairEvEbitda: 7.5,
-    fairEvEbit: 10.0,
-    fairEvSales: 3.0,
-    fairPS: 2.3,
-    fairPB: 2.0,
-    requiredFcfYield: 0.070,
-    baseCostOfEquity: 0.095,
-    typicalRoe: 0.13,
-    maxPerpetualGrowth: 0.025
-  },
-  'Consumer Cyclical': {
-    fairPE: 15.5,
-    fairEvEbitda: 9.5,
-    fairEvEbit: 12.0,
-    fairEvSales: 2.2,
-    fairPS: 1.8,
-    fairPB: 2.5,
-    requiredFcfYield: 0.065,
-    baseCostOfEquity: 0.100,
-    typicalRoe: 0.15,
-    maxPerpetualGrowth: 0.028
-  },
-  'Consumer Discretionary': {
-    fairPE: 15.5,
-    fairEvEbitda: 9.5,
-    fairEvEbit: 12.0,
-    fairEvSales: 2.2,
-    fairPS: 1.8,
-    fairPB: 2.5,
-    requiredFcfYield: 0.065,
-    baseCostOfEquity: 0.100,
-    typicalRoe: 0.15,
-    maxPerpetualGrowth: 0.028
-  },
-  'Consumer Defensive': {
-    fairPE: 17.5,
-    fairEvEbitda: 11.5,
-    fairEvEbit: 14.0,
-    fairEvSales: 2.5,
-    fairPS: 2.0,
-    fairPB: 3.0,
-    requiredFcfYield: 0.055,
-    baseCostOfEquity: 0.085,
-    typicalRoe: 0.16,
-    maxPerpetualGrowth: 0.025
-  },
-  'Healthcare': {
-    fairPE: 18.5,
-    fairEvEbitda: 13.0,
-    fairEvEbit: 16.0,
-    fairEvSales: 4.0,
-    fairPS: 3.5,
-    fairPB: 3.2,
-    requiredFcfYield: 0.055,
-    baseCostOfEquity: 0.090,
-    typicalRoe: 0.15,
-    maxPerpetualGrowth: 0.03
-  },
-  'Industrials': {
-    fairPE: 16.0,
-    fairEvEbitda: 10.5,
-    fairEvEbit: 13.0,
-    fairEvSales: 2.5,
-    fairPS: 2.0,
-    fairPB: 2.7,
-    requiredFcfYield: 0.060,
-    baseCostOfEquity: 0.095,
-    typicalRoe: 0.14,
-    maxPerpetualGrowth: 0.025
-  },
-  'Real Estate': {
-    fairPE: 16.0, // P/FFO proxy
-    fairEvEbitda: 14.0,
-    fairEvEbit: 0,
-    fairEvSales: 0,
-    fairPS: 0,
-    fairPB: 1.2,
-    requiredFcfYield: 0.065,
-    baseCostOfEquity: 0.090,
-    typicalRoe: 0.08,
-    maxPerpetualGrowth: 0.02
-  }
-};
-
-const DEFAULT_SECTOR_BENCHMARK: SectorBenchmark = {
-  fairPE: 15.0,
-  fairEvEbitda: 10.0,
-  fairEvEbit: 12.0,
-  fairEvSales: 2.0,
-  fairPS: 2.0,
-  fairPB: 2.2,
-  requiredFcfYield: 0.065,
-  baseCostOfEquity: 0.095,
-  typicalRoe: 0.13,
-  maxPerpetualGrowth: 0.025
-};
-
-// ============================================================================
-// CONFIGURACIÓN DE RIESGO PAÍS Y GEOGRAFÍA (Damodaran Country Risk Model)
-// ============================================================================
-
-interface CountryProfile {
-  countryRiskPremium: number; // Prima de riesgo país adicional sobre Ke de EE.UU.
-  valuationDiscount: number;  // Descuento estructural sobre múltiplos de mercado
-  regionName: string;
-}
-
-const COUNTRY_PROFILES: Record<string, CountryProfile> = {
-  'US': { countryRiskPremium: 0.000, valuationDiscount: 0.00, regionName: 'Estados Unidos' },
-  'USA': { countryRiskPremium: 0.000, valuationDiscount: 0.00, regionName: 'Estados Unidos' },
-  'CA': { countryRiskPremium: 0.000, valuationDiscount: 0.00, regionName: 'Canadá' },
-  'GB': { countryRiskPremium: 0.005, valuationDiscount: 0.03, regionName: 'Reino Unido' },
-  'DE': { countryRiskPremium: 0.004, valuationDiscount: 0.02, regionName: 'Alemania' },
-  'FR': { countryRiskPremium: 0.006, valuationDiscount: 0.04, regionName: 'Francia' },
-  'CH': { countryRiskPremium: 0.000, valuationDiscount: 0.00, regionName: 'Suiza' },
-  'NL': { countryRiskPremium: 0.003, valuationDiscount: 0.02, regionName: 'Países Bajos' },
-  'JP': { countryRiskPremium: 0.004, valuationDiscount: 0.05, regionName: 'Japón' },
-  'AU': { countryRiskPremium: 0.002, valuationDiscount: 0.02, regionName: 'Australia' },
-  
-  // Mercados Emergentes - América Latina
-  'BR': { countryRiskPremium: 0.042, valuationDiscount: 0.22, regionName: 'Brasil (Mercado Emergente)' },
-  'AR': { countryRiskPremium: 0.120, valuationDiscount: 0.45, regionName: 'Argentina (Alto Riesgo País)' },
-  'MX': { countryRiskPremium: 0.028, valuationDiscount: 0.15, regionName: 'México (Mercado Emergente)' },
-  'CL': { countryRiskPremium: 0.022, valuationDiscount: 0.12, regionName: 'Chile' },
-  'CO': { countryRiskPremium: 0.038, valuationDiscount: 0.20, regionName: 'Colombia' },
-  'PE': { countryRiskPremium: 0.032, valuationDiscount: 0.18, regionName: 'Perú' },
-  
-  // Asia y otros emergentes
-  'CN': { countryRiskPremium: 0.026, valuationDiscount: 0.20, regionName: 'China (Riesgo Geopolítico/Regulatorio)' },
-  'IN': { countryRiskPremium: 0.022, valuationDiscount: 0.10, regionName: 'India' },
-  'KR': { countryRiskPremium: 0.012, valuationDiscount: 0.08, regionName: 'Corea del Sur' },
-  'TW': { countryRiskPremium: 0.014, valuationDiscount: 0.10, regionName: 'Taiwán' },
-  'ZA': { countryRiskPremium: 0.045, valuationDiscount: 0.25, regionName: 'Sudáfrica' }
-};
-
-const DEFAULT_EMERGING_PROFILE: CountryProfile = {
-  countryRiskPremium: 0.035,
-  valuationDiscount: 0.18,
-  regionName: 'Internacional / Emergente'
-};
-
-const DEFAULT_UNKNOWN_COUNTRY_PROFILE: CountryProfile = {
-  countryRiskPremium: 0.02,
-  valuationDiscount: 0.10,
-  regionName: 'País no informado'
-};
-
-/**
- * Obtiene el benchmark del sector/industria
- */
-function getSectorBenchmark(sectorName?: string, industryName?: string): SectorBenchmark {
-  if (!sectorName) return DEFAULT_SECTOR_BENCHMARK;
-  
-  // Match exacto o aproximado de sector
-  for (const [key, benchmark] of Object.entries(SECTOR_BENCHMARKS)) {
-    if (sectorName.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(sectorName.toLowerCase())) {
-      // Ajuste especial por industria si es Oil & Gas
-      if (industryName && (industryName.toLowerCase().includes('oil') || industryName.toLowerCase().includes('gas'))) {
-        return {
-          ...benchmark,
-          fairPE: Math.min(benchmark.fairPE, 7.0),
-          fairEvEbitda: Math.min(benchmark.fairEvEbitda, 4.5),
-          requiredFcfYield: Math.max(benchmark.requiredFcfYield, 0.12)
-        };
-      }
-      return benchmark;
-    }
-  }
-
-  return DEFAULT_SECTOR_BENCHMARK;
-}
-
-/**
- * Obtiene el perfil de riesgo país según el código de país o si es ADR
- */
-function getCountryRisk(
-  countryCode?: string,
-  isAdr?: boolean,
-  riskPremiumData: RiskPremiumData[] = [],
-): CountryProfile {
-  if (!countryCode) {
-    return isAdr ? DEFAULT_EMERGING_PROFILE : DEFAULT_UNKNOWN_COUNTRY_PROFILE;
-  }
-  
-  const normalized = countryCode.toUpperCase().trim();
-  const fallbackProfile = COUNTRY_PROFILES[normalized] ?? DEFAULT_EMERGING_PROFILE;
-  const countryName = getCountryName(countryCode);
-  const riskPremium = riskPremiumData.find((entry) =>
-    normalizeCountryName(entry.country) === normalizeCountryName(countryName)
-  );
-
-  if (!riskPremium || !Number.isFinite(riskPremium.countryRiskPremium) || riskPremium.countryRiskPremium < 0) {
-    return fallbackProfile;
-  }
-
-  return {
-    ...fallbackProfile,
-    countryRiskPremium: riskPremium.countryRiskPremium / 100,
-    regionName: riskPremium.country,
-  };
-}
-
-function getEvBasedFairValue(
-  currentPrice: number,
-  actualMultiple: number,
-  targetMultiple: number,
-  enterpriseValue: number,
-  marketCap: number,
-): number {
-  if (enterpriseValue > 0 && marketCap > 0) {
-    const sharesOutstanding = marketCap / currentPrice;
-    const targetEnterpriseValue = enterpriseValue * (targetMultiple / actualMultiple);
-    return (marketCap + targetEnterpriseValue - enterpriseValue) / sharesOutstanding;
-  }
-
-  return currentPrice * (targetMultiple / actualMultiple);
-}
-
-function getDiscountedForecastEvValue(
-  currentPrice: number,
-  forecastMetric: number,
-  targetMultiple: number,
-  enterpriseValue: number,
-  marketCap: number,
-  forecastYears: number,
-  costOfCapital: number,
-): number {
-  if (currentPrice <= 0 || forecastMetric <= 0 || targetMultiple <= 0 || enterpriseValue <= 0 || marketCap <= 0) return 0;
-
-  const sharesOutstanding = marketCap / currentPrice;
-  const netDebt = enterpriseValue - marketCap;
-  const presentEnterpriseValue = forecastMetric * targetMultiple / Math.pow(1 + costOfCapital, forecastYears);
-  return (presentEnterpriseValue - netDebt) / sharesOutstanding;
-}
-
-function getDiscountedForecastPsValue(
-  currentPrice: number,
-  forecastRevenue: number,
-  targetMultiple: number,
-  marketCap: number,
-  forecastYears: number,
-  costOfEquity: number,
-): number {
-  if (currentPrice <= 0 || forecastRevenue <= 0 || targetMultiple <= 0 || marketCap <= 0) return 0;
-
-  const sharesOutstanding = marketCap / currentPrice;
-  return forecastRevenue * targetMultiple / sharesOutstanding / Math.pow(1 + costOfEquity, forecastYears);
-}
-
-interface PeerMedian {
-  value: number | null;
-  count: number;
-}
-
-function getPeerMedian(
-  peers: AssetPeerValuation[],
-  metric: keyof AssetPeerValuation,
-  minValue: number,
-  maxValue: number,
-): PeerMedian {
-  const values = peers
-    .map((peer) => peer[metric])
-    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value >= minValue && value <= maxValue)
-    .sort((left, right) => left - right);
-
-  if (values.length < 3) return { value: null, count: values.length };
-  const middle = Math.floor(values.length / 2);
-  const value = values.length % 2 === 0
-    ? (values[middle - 1] + values[middle]) / 2
-    : values[middle];
-
-  return { value, count: values.length };
-}
-
 function normalizeCountryName(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '');
+  return value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]/g, '');
 }
 
 function getCountryName(countryCodeOrName: string): string {
@@ -435,6 +109,44 @@ function getCountryName(countryCodeOrName: string): string {
   } catch {
     return countryCodeOrName;
   }
+}
+
+/** Damodaran's country risk premium as a fraction; callers may pass a fresher table. */
+function getCountryRisk(country: string, riskPremiumData: RiskPremiumData[]): { name: string; premium: number } {
+  if (!country) return { name: 'Sin país informado', premium: UNKNOWN_COUNTRY_RISK_PREMIUM };
+  const name = getCountryName(country);
+  const table = riskPremiumData.length > 0 ? riskPremiumData : DAMODARAN_COUNTRIES;
+  const entry = table.find((item) => normalizeCountryName(item.country) === normalizeCountryName(name));
+  if (!entry || !isNumber(entry.countryRiskPremium) || entry.countryRiskPremium < 0) {
+    return { name, premium: UNKNOWN_COUNTRY_RISK_PREMIUM };
+  }
+  return { name: entry.country, premium: entry.countryRiskPremium / 100 };
+}
+
+/**
+ * Present value, per unit of the starting cash flow, of a stream whose growth fades linearly
+ * from `startGrowth` to `terminalGrowth` over ten years, plus its terminal value.
+ * `payout` is the share of each year's flow that reaches shareholders.
+ */
+export function fadingGrowthMultiple(
+  startGrowth: number,
+  discountRate: number,
+  terminalGrowth: number,
+  options: { baseIsTrailing: boolean; payout?: (growth: number) => number },
+): number | null {
+  if (discountRate <= MIN_TERMINAL_SPREAD) return null;
+  const longTermGrowth = Math.min(terminalGrowth, discountRate - MIN_TERMINAL_SPREAD);
+  const payout = options.payout ?? (() => 1);
+  let flow = 1;
+  let value = 0;
+  for (let year = 1; year <= PROJECTION_YEARS; year += 1) {
+    const growth = startGrowth + (longTermGrowth - startGrowth) * ((year - 1) / (PROJECTION_YEARS - 1));
+    // A forward figure already is year one; a trailing figure has to grow into it.
+    if (year > 1 || options.baseIsTrailing) flow *= 1 + growth;
+    value += flow * payout(growth) / (1 + discountRate) ** year;
+  }
+  const terminal = flow * (1 + longTermGrowth) * payout(longTermGrowth) / (discountRate - longTermGrowth);
+  return value + terminal / (1 + discountRate) ** PROJECTION_YEARS;
 }
 
 export function classifyBusinessProfile(asset: AssetData, context: ValuationContext): BusinessProfile {
@@ -512,620 +224,240 @@ export function classifyBusinessProfile(asset: AssetData, context: ValuationCont
 }
 
 /**
- * Calcula un Valor Justo (Fair Value) robusto, inmune a distorsiones de divisas / ADRs
- * y completamente calibrado por Sector, Industria y Geografía.
+ * Fair value from a few independent views of the company: its cash flows, its earnings,
+ * how its sector is priced and what analysts expect. Every view uses the same growth and
+ * the same discount rate, and works on ratios so ADRs and foreign currencies cannot distort it.
  */
 export function calculateBlendedFairValue(
   asset: AssetData,
   riskPremiumData: RiskPremiumData[] = [],
 ): BlendedValuationResult {
   const currentPrice = asset.quote?.price ?? 0;
-  
-  const emptyContext: ValuationContext = {
-    sector: asset.profile?.sector || 'General',
-    industry: asset.profile?.industry || 'General',
-    country: asset.profile?.country || 'US',
-    currency: asset.profile?.currency || 'USD',
-    isAdr: Boolean(asset.profile?.isAdr),
-    countryRiskPremiumPct: 0,
-    valuationDiscountPct: 0,
-    adjustedCostOfEquityPct: 9.5,
-    benchmarkEvEbitda: 10,
-    benchmarkPe: 15,
-    forwardEpsGrowthPct: null,
-    epsAnalystCount: 0,
-  };
-
-  if (currentPrice <= 0) {
-    return { fairValue: null, fairValueRange: null, modelsUsed: [], isAnomaly: false, spread: null, context: emptyContext };
-  }
-
-  // --- Parámetros de Calibración ---
+  const metrics = asset.yahooMetrics ?? {};
   const sectorName = asset.profile?.sector || '';
   const industryName = asset.profile?.industry || '';
-  const countryCode = asset.profile?.country || '';
-  const isFinancialCompany = /financial|bank|credit|fintech|payment|consumer finance/i.test(
-    `${sectorName} ${industryName}`
-  );
-  const isAdr = Boolean(asset.profile?.isAdr);
-  const isStateOwned = /petrobras|ypf|ecopetrol|saudi|gazprom|rosneft|sinpec|petrochina/i.test(asset.profile?.companyName || '') ||
-                       /petrobras|ypf|ecopetrol/i.test(asset.symbol || '');
+  const sectorStats = asset.valuationInputs?.sector ?? null;
+  const countryRisk = getCountryRisk(asset.profile?.country || '', riskPremiumData);
 
-  const sectorBenchmark = getSectorBenchmark(sectorName, industryName);
-  const countryRisk = getCountryRisk(countryCode, isAdr, riskPremiumData);
+  const riskFreeRate = isPositive(asset.valuationInputs?.riskFreeRate) && asset.valuationInputs.riskFreeRate < 0.15
+    ? asset.valuationInputs.riskFreeRate
+    : DEFAULT_RISK_FREE_RATE;
+  // Blume-adjusted beta, bounded: raw betas of thinly traded ADRs are often meaningless.
+  const rawBeta = isPositive(asset.profile?.beta) && asset.profile.beta < 4 ? asset.profile.beta : 1;
+  const beta = clamp(0.67 * rawBeta + 0.33, 0.75, 1.75);
+  const costOfEquity = riskFreeRate + beta * MATURE_MARKET_ERP + countryRisk.premium;
+  const terminalGrowth = getTerminalGrowth(riskFreeRate);
+  // A multiple is worth less where capital costs more: scale sector multiples by the ratio of rates.
+  const matureCostOfEquity = riskFreeRate + MATURE_MARKET_ERP;
+  const countryFactor = matureCostOfEquity / (matureCostOfEquity + countryRisk.premium);
 
-  // Prima de riesgo país y descuento de valuación
-  let countryRiskPremium = countryRisk.countryRiskPremium;
-  let valuationDiscount = countryRisk.valuationDiscount;
+  const epsGrowth = metrics['earningsTrend.+1y.growth'];
+  const revenueGrowth = metrics['earningsTrend.+1y.revenue.growth'];
+  // Sales are the anchor: one year of earnings growth is often a rebound, so it adds at most five points.
+  const stageGrowth = isNumber(revenueGrowth)
+    ? clamp(revenueGrowth + (isNumber(epsGrowth) ? clamp(epsGrowth - revenueGrowth, -0.05, 0.05) : 0), -0.05, MAX_STAGE_GROWTH)
+    : isNumber(epsGrowth)
+      ? clamp(epsGrowth, -0.05, 0.15)
+      : null;
+  const analystCount = metrics['financialData.numberOfAnalystOpinions'] ?? 0;
 
-  // Ajuste adicional para empresas estatales en emergentes (riesgo de gobernanza / dividendos)
-  if (isStateOwned && countryCode !== 'US') {
-    countryRiskPremium += 0.015; // +1.5% extra Ke
-    valuationDiscount = Math.min(valuationDiscount + 0.08, 0.40); // Descuento de gobernanza
-  }
-
-  // Costo de capital ajustado por país y beta del activo
-  const assetBeta = asset.profile?.beta && asset.profile.beta > 0.3 && asset.profile.beta < 3.0 ? asset.profile.beta : 1.0;
-  const adjustedCostOfEquity = (sectorBenchmark.baseCostOfEquity + countryRiskPremium) * (0.7 + 0.3 * assetBeta);
-  const adjustedFcfRequiredYield = (sectorBenchmark.requiredFcfYield + countryRiskPremium) * (0.8 + 0.2 * assetBeta);
-
-  // Múltiplos calibrados por sector y descontados por riesgo geográfico
-  const adjustedFairPe = Math.max(sectorBenchmark.fairPE * (1 - valuationDiscount), 4.0);
-  const adjustedFairEvEbitda = sectorBenchmark.fairEvEbitda > 0 ? Math.max(sectorBenchmark.fairEvEbitda * (1 - valuationDiscount), 3.0) : 0;
-  const adjustedFairEvEbit = sectorBenchmark.fairEvEbit > 0 ? Math.max(sectorBenchmark.fairEvEbit * (1 - valuationDiscount), 4.0) : 0;
-  const adjustedFairEvSales = sectorBenchmark.fairEvSales > 0 ? Math.max(sectorBenchmark.fairEvSales * (1 - valuationDiscount), 0.5) : 0;
-  const adjustedFairPS = sectorBenchmark.fairPS > 0 ? Math.max(sectorBenchmark.fairPS * (1 - valuationDiscount), 0.5) : 0;
-  const peers = asset.peerValuations ?? [];
-  const peerPe = getPeerMedian(peers, 'priceToEarningsRatio', 1, 100);
-  const peerPb = getPeerMedian(peers, 'priceToBookRatio', 0.1, 30);
-  const peerPs = getPeerMedian(peers, 'priceToSalesRatio', 0.1, 100);
-  const peerEvEbitda = getPeerMedian(peers, 'evToEBITDA', 0.5, 100);
-  const peerEvEbit = getPeerMedian(peers, 'evToEBIT', 0.5, 200);
-  const peerEvSales = getPeerMedian(peers, 'evToSales', 0.1, 100);
-  const peerEbitMargin = getPeerMedian(peers, 'ebitMargin', 0.005, 0.8);
-  const currentEbitMargin = asset.ratios?.length
-    ? [...asset.ratios]
-      .sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())[0]?.ebitMargin ?? 0
-    : 0;
-  const salesMarginAdjustment = currentEbitMargin > 0 && peerEbitMargin.value
-    ? Math.min(Math.max(currentEbitMargin / peerEbitMargin.value, 0.75), 1.5)
-    : 1;
-  const fairPeBenchmark = peerPe.value ?? adjustedFairPe;
-  const fairPbBenchmark = peerPb.value ?? sectorBenchmark.fairPB * (1 - valuationDiscount);
-  const fairPsBenchmark = (peerPs.value ?? adjustedFairPS) * salesMarginAdjustment;
-  const fairEvEbitdaBenchmark = peerEvEbitda.value ?? adjustedFairEvEbitda;
-  const fairEvEbitBenchmark = peerEvEbit.value ?? adjustedFairEvEbit;
-  const fairEvSalesBenchmark = (peerEvSales.value ?? adjustedFairEvSales) * salesMarginAdjustment;
-  const benchmarkSource = (peer: PeerMedian) => peer.value !== null
-    ? `mediana de ${peer.count} pares`
-    : 'benchmark de sector';
   const context: ValuationContext = {
     sector: sectorName || 'General',
     industry: industryName || 'General',
-    country: countryRisk.regionName,
+    country: countryRisk.name,
     currency: asset.profile?.currency || 'USD',
-    isAdr,
-    countryRiskPremiumPct: countryRiskPremium * 100,
-    valuationDiscountPct: valuationDiscount * 100,
-    adjustedCostOfEquityPct: adjustedCostOfEquity * 100,
-    benchmarkEvEbitda: fairEvEbitdaBenchmark,
-    benchmarkPe: fairPeBenchmark,
-    forwardEpsGrowthPct: null,
-    epsAnalystCount: 0,
+    isAdr: Boolean(asset.profile?.isAdr),
+    countryRiskPremiumPct: countryRisk.premium * 100,
+    valuationDiscountPct: (1 - countryFactor) * 100,
+    adjustedCostOfEquityPct: costOfEquity * 100,
+    benchmarkEvEbitda: 0,
+    benchmarkPe: sectorStats?.forwardPe ?? 0,
+    forwardEpsGrowthPct: isNumber(epsGrowth) ? epsGrowth * 100 : null,
+    epsAnalystCount: analystCount,
+    stageGrowthPct: stageGrowth === null ? null : stageGrowth * 100,
   };
-
-  // --- Helpers de Sanidad ---
-  const isSane = (val: number, isAnalyst = false) => {
-    if (isNaN(val) || !isFinite(val) || val <= 0) return false;
-    if (isAnalyst) return true; // Wall Street consensus ya está en la moneda de cotización
-    const ratio = val / currentPrice;
-    // Rango aceptable: entre -75% y +150% del precio actual para evitar distorsiones absurdas
-    return ratio > 0.25 && ratio < 2.50;
+  const empty: BlendedValuationResult = {
+    fairValue: null, fairValueRange: null, modelsUsed: [], isAnomaly: false, spread: null, verdict: null, confidence: null, context,
   };
+  if (currentPrice <= 0) return empty;
 
-  // Obtener ratios más recientes
-  const latestRatios = asset.ratios && asset.ratios.length > 0
-    ? [...asset.ratios].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
-    : null;
+  // Statements and per-share estimates must be in the quote's currency to be compared with the price.
+  // Yahoo's own P/E is currency-safe, so price ÷ (P/E × EPS) reveals a mismatch even when labels agree.
+  const statementCurrency = asset.ratios?.[0]?.reportedCurrency?.trim().toUpperCase();
+  const quoteCurrency = asset.profile?.currency?.trim().toUpperCase();
+  const forwardPe = metrics['summaryDetail.forwardPE'] ?? metrics['keyStatistics.forwardPE'];
+  const forwardEps = metrics['keyStatistics.forwardEps'];
+  const impliedConversion = isPositive(forwardPe) && isPositive(forwardEps) ? currentPrice / (forwardPe * forwardEps) : null;
+  const amountsMatchPrice = (!statementCurrency || !quoteCurrency || statementCurrency === quoteCurrency)
+    && (impliedConversion === null || (impliedConversion > 0.85 && impliedConversion < 1.15));
 
-  const sortedFutureEstimates = asset.analystEstimates && asset.analystEstimates.length > 0
-    ? [...asset.analystEstimates]
-      .filter((estimate) => new Date(estimate.date).getTime() >= Date.now())
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    : [];
-  const findNearestEstimate = (hasValue: (estimate: AssetAnalystEstimates) => boolean) =>
-    sortedFutureEstimates.find(hasValue) ?? null;
-  const forwardEstimates = findNearestEstimate((estimate) => (estimate.epsAvg ?? 0) > 0);
-  const forwardRevenueEstimates = findNearestEstimate((estimate) => (estimate.revenueAvg ?? 0) > 0);
-  const forwardEbitdaEstimates = findNearestEstimate((estimate) => (estimate.ebitdaAvg ?? 0) > 0);
-  const forwardEbitEstimates = findNearestEstimate((estimate) => (estimate.ebitAvg ?? 0) > 0);
-  const currentEps = latestRatios?.netIncomePerShare;
-  const rawForwardEpsGrowth = currentEps && currentEps > 0 && forwardEstimates
-    ? ((forwardEstimates.epsAvg ?? 0) / currentEps) - 1
-    : null;
-  const forwardEpsGrowthPct = rawForwardEpsGrowth !== null && Number.isFinite(rawForwardEpsGrowth)
-    ? rawForwardEpsGrowth * 100
-    : null;
-  const epsAnalystCount = forwardEstimates?.numAnalystsEps ?? 0;
-  context.forwardEpsGrowthPct = forwardEpsGrowthPct;
-  context.epsAnalystCount = epsAnalystCount;
+  const isFinancial = /financial|bank|credit|fintech|payment|consumer finance/i.test(`${sectorName} ${industryName}`);
+  const isRealEstate = /real estate|reit/i.test(`${sectorName} ${industryName}`);
+  const growth = Math.min(stageGrowth ?? 0.04, amountsMatchPrice ? MAX_STAGE_GROWTH : MAX_STAGE_GROWTH_FOREIGN_CURRENCY);
+  const growthLabel = stageGrowth === null
+    ? 'crecimiento inicial 4% (sin estimaciones)'
+    : `crecimiento inicial ${(growth * 100).toFixed(1)}%`;
+  const rateLabel = `descuento ${(costOfEquity * 100).toFixed(1)}%`;
 
   const models: ValuationModel[] = [];
-  const currentMarketCap = asset.keyMetrics?.marketCap || asset.quote?.marketCap || asset.profile?.marketCap || 0;
-  const currentEnterpriseValue = asset.keyMetrics?.enterpriseValueTTM ?? 0;
-  const rawDcfWacc = asset.dcf?.find((projection) => projection.wacc > 0)?.wacc;
-  const dcfWacc = rawDcfWacc && rawDcfWacc > 1 ? rawDcfWacc / 100 : rawDcfWacc;
-  const hasDcfWacc = Boolean(dcfWacc && dcfWacc > 0.02 && dcfWacc < 0.5);
-  const adjustedCostOfCapital = hasDcfWacc && dcfWacc
-    ? dcfWacc + countryRiskPremium
-    : adjustedCostOfEquity;
-  const enterpriseDiscountLabel = hasDcfWacc ? 'WACC' : 'Ke (proxy)';
-  const reportingCurrency = latestRatios?.reportedCurrency?.trim().toUpperCase();
-  const quoteCurrency = asset.profile?.currency?.trim().toUpperCase();
-  const hasComparableCurrency = Boolean(reportingCurrency && quoteCurrency && reportingCurrency === quoteCurrency);
-  const estimateWeight = (forwardRevenueEstimates?.numAnalystsRevenue ?? 0) >= 5 ? 0.55 : 0.35;
-  const forecastYears = (date: string) => Math.max((new Date(date).getTime() - Date.now()) / (365.25 * 24 * 60 * 60 * 1000), 0);
-
-  if (hasComparableCurrency && forwardRevenueEstimates && fairPsBenchmark > 0) {
-    const years = forecastYears(forwardRevenueEstimates.date);
-    const value = getDiscountedForecastPsValue(
-      currentPrice,
-      forwardRevenueEstimates.revenueAvg ?? 0,
-      fairPsBenchmark,
-      currentMarketCap,
-      years,
-      adjustedCostOfEquity,
-    );
-    if (isSane(value)) {
-      models.push({
-        name: 'P/S Forward por ventas estimadas',
-        value,
-        weight: estimateWeight,
-        category: 'relative',
-        description: `Ventas estimadas ${new Date(forwardRevenueEstimates.date).getFullYear()} × P/S objetivo ${fairPsBenchmark.toFixed(1)}x (${benchmarkSource(peerPs)}; margen EBIT ajustado ${salesMarginAdjustment.toFixed(2)}x), descontado a Ke ${(adjustedCostOfEquity * 100).toFixed(1)}%`
-      });
-    }
-  }
-
-  if (hasComparableCurrency && !isFinancialCompany && currentEnterpriseValue > 0 && currentMarketCap > 0) {
-    const forwardEvModels = [
-      {
-        estimate: forwardRevenueEstimates,
-        metric: forwardRevenueEstimates?.revenueAvg ?? 0,
-        targetMultiple: fairEvSalesBenchmark,
-        name: 'EV/Ventas Forward por consenso',
-        label: 'ventas',
-        peer: peerEvSales,
-        marginAdjustment: salesMarginAdjustment
-      },
-      {
-        estimate: forwardEbitdaEstimates,
-        metric: forwardEbitdaEstimates?.ebitdaAvg ?? 0,
-        targetMultiple: fairEvEbitdaBenchmark,
-        name: 'EV/EBITDA Forward por consenso',
-        label: 'EBITDA',
-        peer: peerEvEbitda,
-        marginAdjustment: 1
-      },
-      {
-        estimate: forwardEbitEstimates,
-        metric: forwardEbitEstimates?.ebitAvg ?? 0,
-        targetMultiple: fairEvEbitBenchmark,
-        name: 'EV/EBIT Forward por consenso',
-        label: 'EBIT',
-        peer: peerEvEbit,
-        marginAdjustment: 1
-      },
-    ];
-
-    for (const forwardModel of forwardEvModels) {
-      if (!forwardModel.estimate || forwardModel.metric <= 0 || forwardModel.targetMultiple <= 0) continue;
-      const years = forecastYears(forwardModel.estimate.date);
-      const value = getDiscountedForecastEvValue(
-        currentPrice,
-        forwardModel.metric,
-        forwardModel.targetMultiple,
-        currentEnterpriseValue,
-        currentMarketCap,
-        years,
-        adjustedCostOfCapital,
-      );
-      if (isSane(value)) {
-        models.push({
-          name: forwardModel.name,
-          value,
-          weight: estimateWeight,
-          category: 'relative',
-          description: `${forwardModel.label} estimado ${new Date(forwardModel.estimate.date).getFullYear()} × múltiplo objetivo ${forwardModel.targetMultiple.toFixed(1)}x (${benchmarkSource(forwardModel.peer)}${forwardModel.marginAdjustment !== 1 ? `; margen EBIT ajustado ${forwardModel.marginAdjustment.toFixed(2)}x` : ''}); deuda neta actual y descuento a ${enterpriseDiscountLabel} ${(adjustedCostOfCapital * 100).toFixed(1)}%`
-        });
-      }
-    }
-  }
-
-  // ============================================================================
-  // MODELO 1: Consenso de Analistas de Wall Street
-  // Los analistas ya ajustan moneda, ADRs y riesgo soberano en su precio objetivo.
-  // El target es una referencia de sentimiento, no un modelo intrínseco.
-  // Se mantiene con influencia baja porque los modelos de DCF/múltiplos llevan el peso principal.
-  // ============================================================================
-  if (asset.priceTargetConsensus?.targetConsensus) {
-    const target = asset.priceTargetConsensus.targetConsensus;
-    if (isSane(target, true)) {
-      models.push({
-        name: 'Consenso de Analistas',
-        value: target,
-        weight: 0.25,
-        category: 'analyst',
-        description: `Precio objetivo consenso de analistas (ajustado por moneda y riesgo)`
-      });
-    }
-  } else {
-    const legacyConsensusTarget = (asset.priceTarget as unknown as { targetConsensus?: unknown } | undefined)?.targetConsensus;
-    if (typeof legacyConsensusTarget === 'number' && isSane(legacyConsensusTarget, true)) {
-      models.push({
-        name: 'Consenso de Analistas',
-        value: legacyConsensusTarget,
-        weight: 0.25,
-        category: 'analyst',
-        description: `Precio objetivo consenso de analistas (ajustado por moneda y riesgo)`
-      });
-    }
-  }
-
-  // ============================================================================
-  // MODELO 2: Multiplicador EV/EBITDA Calibrado por Sector & Geografía
-  // Fórmula: FV = currentPrice × (Múltiplo Justo / Múltiplo Actual)
-  // 100% Inmune a divisas (es un ratio adimensional).
-  // Peso: 1.3
-  // ============================================================================
-  if (fairEvEbitdaBenchmark > 0 && asset.keyMetrics?.evToEBITDATTM && asset.keyMetrics.evToEBITDATTM > 0) {
-    const actualEvEbitda = asset.keyMetrics.evToEBITDATTM;
-    
-    // Ajuste de calidad por ROE relativo al sector
-    const currentRoe = asset.keyMetrics?.returnOnEquityTTM ?? sectorBenchmark.typicalRoe;
-    const roeQualityMultiplier = currentRoe > 0 ? Math.min(Math.max(currentRoe / sectorBenchmark.typicalRoe, 0.75), 1.35) : 1.0;
-    const targetEvEbitda = fairEvEbitdaBenchmark * roeQualityMultiplier;
-
-    if (actualEvEbitda > 1.0 && actualEvEbitda < 80) {
-      const marketCap = asset.keyMetrics?.marketCap || asset.quote?.marketCap || 0;
-      const evEbitdaFairValue = getEvBasedFairValue(
-        currentPrice,
-        actualEvEbitda,
-        targetEvEbitda,
-        asset.keyMetrics?.enterpriseValueTTM ?? 0,
-        marketCap,
-      );
-      if (isSane(evEbitdaFairValue)) {
-        models.push({
-          name: peerEvEbitda.value !== null ? 'EV/EBITDA por Pares' : 'EV/EBITDA por Sector',
-          value: evEbitdaFairValue,
-          weight: 1.3,
-          category: 'relative',
-          description: `Múltiplo objetivo ${targetEvEbitda.toFixed(1)}x vs ${actualEvEbitda.toFixed(1)}x actual (${benchmarkSource(peerEvEbitda)}; ${sectorName || 'Sector'}, ${countryRisk.regionName})`
-        });
-      }
-    }
-  }
-
-  const actualPs = latestRatios?.priceToSalesRatio;
-  if (fairPsBenchmark > 0 && actualPs && actualPs > 0.1 && actualPs < 100) {
-    const psFairValue = currentPrice * (fairPsBenchmark / actualPs);
-    if (isSane(psFairValue)) {
-      models.push({
-        name: peerPs.value !== null ? 'Precio/Ventas por Pares' : 'Precio/Ventas por Sector',
-        value: psFairValue,
-        weight: 0.65,
-        category: 'relative',
-        description: `P/S objetivo ${fairPsBenchmark.toFixed(1)}x vs ${actualPs.toFixed(1)}x actual (${benchmarkSource(peerPs)}; margen EBIT ajustado ${salesMarginAdjustment.toFixed(2)}x; ${sectorName || 'Sector'})`
-      });
-    }
-  }
-
-  const actualEvSales = asset.keyMetrics?.evToSalesTTM;
-  const marketCap = asset.keyMetrics?.marketCap || asset.quote?.marketCap || 0;
-  if (!isFinancialCompany && fairEvSalesBenchmark > 0 && actualEvSales && actualEvSales > 0.1 && actualEvSales < 100) {
-    const evSalesFairValue = getEvBasedFairValue(
-      currentPrice,
-      actualEvSales,
-      fairEvSalesBenchmark,
-      asset.keyMetrics?.enterpriseValueTTM ?? 0,
-      marketCap,
-    );
-    if (isSane(evSalesFairValue)) {
-      models.push({
-        name: peerEvSales.value !== null ? 'EV/Ventas por Pares' : 'EV/Ventas por Sector',
-        value: evSalesFairValue,
-        weight: 0.65,
-        category: 'relative',
-        description: `EV/Ventas objetivo ${fairEvSalesBenchmark.toFixed(1)}x vs ${actualEvSales.toFixed(1)}x actual (${benchmarkSource(peerEvSales)}; margen EBIT ajustado ${salesMarginAdjustment.toFixed(2)}x; ${sectorName || 'Sector'})`
-      });
-    }
-  }
-
-  const ebitMargin = latestRatios?.ebitMargin;
-  const actualEvEbit = actualEvSales && ebitMargin && ebitMargin > 0.01 ? actualEvSales / ebitMargin : 0;
-  if (!isFinancialCompany && fairEvEbitBenchmark > 0 && actualEvEbit > 1 && actualEvEbit < 150) {
-    const evEbitFairValue = getEvBasedFairValue(
-      currentPrice,
-      actualEvEbit,
-      fairEvEbitBenchmark,
-      asset.keyMetrics?.enterpriseValueTTM ?? 0,
-      marketCap,
-    );
-    if (isSane(evEbitFairValue)) {
-      models.push({
-        name: peerEvEbit.value !== null ? 'EV/EBIT por Pares' : 'EV/EBIT por Sector',
-        value: evEbitFairValue,
-        weight: 0.65,
-        category: 'relative',
-        description: `EV/EBIT estimado ${actualEvEbit.toFixed(1)}x vs objetivo ${fairEvEbitBenchmark.toFixed(1)}x (${benchmarkSource(peerEvEbit)}; ${sectorName || 'Sector'})`
-      });
-    }
-  }
-
-  // ============================================================================
-  // MODELO 3: P/E forward ajustado por crecimiento estimado, ROE y riesgo.
-  // Las financieras de alto crecimiento pueden justificar múltiplos mayores, pero con un tope explícito.
-  // ============================================================================
-  const actualPe = latestRatios?.priceToEarningsRatio && latestRatios.priceToEarningsRatio > 0
-    ? latestRatios.priceToEarningsRatio
-    : (asset.keyMetrics?.earningsYieldTTM && asset.keyMetrics.earningsYieldTTM > 0 ? 1 / asset.keyMetrics.earningsYieldTTM : 0);
-
-  if (actualPe > 1.0 && actualPe < 150) {
-    let targetPe = fairPeBenchmark;
-    const currentRoe = asset.keyMetrics?.returnOnEquityTTM ?? sectorBenchmark.typicalRoe;
-    if (currentRoe > sectorBenchmark.typicalRoe * 1.3) targetPe *= 1.15;
-    else if (currentRoe < sectorBenchmark.typicalRoe * 0.7) targetPe *= 0.85;
-
-    if (forwardEpsGrowthPct !== null) {
-      const boundedGrowthPct = Math.min(Math.max(forwardEpsGrowthPct, -30), 60);
-      if (isFinancialCompany) {
-        if (boundedGrowthPct > 0) {
-          const riskAdjustedPeg = Math.max(0.65, 1 - valuationDiscount * 0.5);
-          targetPe = Math.max(targetPe, boundedGrowthPct * riskAdjustedPeg);
-        } else {
-          targetPe *= 1 + (boundedGrowthPct / 100) * 0.5;
-        }
-      } else {
-        targetPe *= 1 + (boundedGrowthPct / 100) * 0.75;
-      }
-    }
-    targetPe = Math.min(Math.max(targetPe, 4), 40);
-
-    const peFairValue = currentPrice * (targetPe / actualPe);
-    if (isSane(peFairValue)) {
-      const coverageWeight = epsAnalystCount >= 5 ? 1 : epsAnalystCount >= 3 ? 0.75 : 0.5;
-      models.push({
-        name: 'P/E por EPS estimado',
-        value: peFairValue,
-        weight: forwardEpsGrowthPct !== null
-          ? (isFinancialCompany && forwardEpsGrowthPct >= 20 ? 2.0 : 1.2) * coverageWeight
-          : 1.2,
-        category: 'relative',
-        description: forwardEpsGrowthPct !== null
-          ? `EPS forward: ${forwardEpsGrowthPct.toFixed(1)}% con ${epsAnalystCount} analistas; P/E objetivo ${targetPe.toFixed(1)}x vs ${actualPe.toFixed(1)}x actual (${benchmarkSource(peerPe)}).`
-          : `P/E objetivo ${targetPe.toFixed(1)}x vs ${actualPe.toFixed(1)}x actual (${benchmarkSource(peerPe)}; ${sectorName || 'Sector'}); sin estimación forward válida.`
-      });
-    }
-  }
-
-  // ============================================================================
-  // MODELO 4: Rendimiento FCF Yield Calibrado por Riesgo País & Beta
-  // Fórmula: FV = currentPrice × (FCF Yield Actual / Yield Exigido)
-  // Inmune a divisas y ADRs.
-  // Peso: 1.1
-  // ============================================================================
-  const fcfYield = asset.keyMetrics?.freeCashFlowYieldTTM && asset.keyMetrics.freeCashFlowYieldTTM > 0
-    ? asset.keyMetrics.freeCashFlowYieldTTM
-    : (latestRatios?.priceToFreeCashFlowRatio && latestRatios.priceToFreeCashFlowRatio > 0 ? 1 / latestRatios.priceToFreeCashFlowRatio : 0);
-
-  if (fcfYield > 0.01 && fcfYield < 0.60 && adjustedFcfRequiredYield > 0.02) {
-    const fcfFairValue = currentPrice * (fcfYield / adjustedFcfRequiredYield);
-    if (isSane(fcfFairValue)) {
-      models.push({
-        name: 'Rendimiento FCF Ajustado',
-        value: fcfFairValue,
-        weight: 1.0,
-        category: 'intrinsic',
-        description: `FCF Yield actual ${(fcfYield * 100).toFixed(1)}% vs ${(adjustedFcfRequiredYield * 100).toFixed(1)}% exigido por riesgo`
-      });
-    }
-  }
-
-  // ============================================================================
-  // MODELO 5: Earnings Power Value (EPV) Inmune a Moneda
-  // Fórmula: FV = currentPrice × (Earnings Yield / Costo de Capital WACC)
-  // Mide el valor intrínseco de ganancias estables capitalizadas al costo de equity soberano.
-  // Peso: 1.0
-  // ============================================================================
-  const earningsYield = asset.keyMetrics?.earningsYieldTTM && asset.keyMetrics.earningsYieldTTM > 0
-    ? asset.keyMetrics.earningsYieldTTM
-    : (actualPe > 0 ? 1 / actualPe : 0);
-
-  if (earningsYield > 0.01 && earningsYield < 0.60 && adjustedCostOfEquity > 0.04) {
-    const epvFairValue = currentPrice * (earningsYield / adjustedCostOfEquity);
-    if (isSane(epvFairValue)) {
-      models.push({
-        name: 'Earnings Power Value (EPV)',
-        value: epvFairValue,
-        weight: isFinancialCompany && (forwardEpsGrowthPct ?? 0) >= 20 ? 0.45 : 0.9,
-        category: 'intrinsic',
-        description: `Ganancias normalizadas capitalizadas a Ke ${(adjustedCostOfEquity * 100).toFixed(1)}% (Riesgo ${countryRisk.regionName})`
-      });
-    }
-  }
-
-  // ============================================================================
-  // MODELO 6: Residual Income (Edwards-Bell-Ohlson) Adimensional
-  // Fórmula: FV = currentPrice × [1 + (ROE - Ke) / (Ke - g)] / actualPB
-  // Mide el valor de mercado derivado de la creación de valor económico sobre capital contable.
-  // Peso: 0.95
-  // ============================================================================
-  const actualPb = latestRatios?.priceToBookRatio && latestRatios.priceToBookRatio > 0
-    ? latestRatios.priceToBookRatio
-    : (asset.rating?.priceToBookScore ? 1.0 : 0);
-
-  const roe = asset.keyMetrics?.returnOnEquityTTM ?? latestRatios?.returnOnEquity;
-
-  if (!isFinancialCompany && fairPbBenchmark > 0 && actualPb > 0.2 && actualPb < 25) {
-    const currentRoe = roe ?? sectorBenchmark.typicalRoe;
-    const roeQualityMultiplier = currentRoe > 0
-      ? Math.min(Math.max(currentRoe / sectorBenchmark.typicalRoe, 0.65), 1.4)
-      : 1;
-    const targetPb = Math.max(fairPbBenchmark * roeQualityMultiplier, 0.4);
-    const pbFairValue = currentPrice * (targetPb / actualPb);
-    if (isSane(pbFairValue)) {
-      models.push({
-        name: peerPb.value !== null ? 'Precio/Valor Contable por Pares' : 'Precio/Valor Contable por Sector',
-        value: pbFairValue,
-        weight: 0.65,
-        category: 'relative',
-        description: `P/B objetivo ${targetPb.toFixed(1)}x vs ${actualPb.toFixed(1)}x actual; ${benchmarkSource(peerPb)}, ajustado por ROE`
-      });
-    }
-  }
-
-  if (actualPb > 0.2 && actualPb < 25 && roe && roe > 0.02 && roe < 1.0) {
-    const payoutRatio = latestRatios?.dividendPayoutRatio ?? 0.4;
-    const retentionRate = Math.max(0, Math.min(1, 1 - payoutRatio));
-    const g = Math.min(roe * retentionRate, sectorBenchmark.maxPerpetualGrowth);
-    const ke = adjustedCostOfEquity;
-
-    if (ke > g) {
-      const economicSpread = roe - ke;
-      const targetPb = 1 + economicSpread / (ke - g);
-      if (targetPb > 0.2 && targetPb < 15) {
-        const riFairValue = currentPrice * (targetPb / actualPb);
-        if (isSane(riFairValue)) {
-          models.push({
-            name: 'Ingreso Residual (EBO)',
-            value: riFairValue,
-            weight: isFinancialCompany && (forwardEpsGrowthPct ?? 0) >= 20 ? 0.5 : 0.8,
-            category: 'intrinsic',
-            description: `P/B teórico ${targetPb.toFixed(2)}x vs ${actualPb.toFixed(2)}x (ROE ${(roe * 100).toFixed(1)}% vs Ke ${(ke * 100).toFixed(1)}%)`
-          });
-        }
-      }
-    }
-  }
-
-  // ============================================================================
-  // MODELO 7: Descuento de Dividendos (Gordon Growth Model) Inmune a Moneda
-  // Fórmula: FV = currentPrice × [Dividend Yield × (1 + g) / (Ke - g)]
-  // Solo aplica para empresas pagadoras de dividendos.
-  // Peso: 0.8
-  // ============================================================================
-  const dividendYield = latestRatios?.dividendYield && latestRatios.dividendYield > 0
-    ? latestRatios.dividendYield
-    : (asset.profile?.lastDividend && asset.profile.lastDividend > 0 && currentPrice > 0 ? asset.profile.lastDividend / currentPrice : 0);
-
-  if (dividendYield > 0.015 && dividendYield < 0.35) {
-    const roeVal = roe && roe > 0 ? roe : sectorBenchmark.typicalRoe;
-    const payout = latestRatios?.dividendPayoutRatio ?? 0.5;
-    const g = Math.min(Math.max(roeVal * (1 - payout), 0.01), sectorBenchmark.maxPerpetualGrowth);
-    const ke = adjustedCostOfEquity;
-
-    if (ke > g) {
-      const ddmFairValue = currentPrice * (dividendYield * (1 + g) / (ke - g));
-      if (isSane(ddmFairValue)) {
-        models.push({
-          name: 'Descuento de Dividendos (DDM)',
-          value: ddmFairValue,
-          weight: 0.8,
-          category: 'intrinsic',
-          description: `Yield ${(dividendYield * 100).toFixed(1)}% proyectado a tasa g ${(g * 100).toFixed(1)}% descontado a ${(ke * 100).toFixed(1)}%`
-        });
-      }
-    }
-  }
-
-  // ============================================================================
-  // MODELO 9: DCF de la API (solo si está en la misma moneda o validado)
-  // ============================================================================
-  let dcfVal: number | null = null;
-  const levered = asset.dcfLevered as { equityValuePerShare?: number; dcf?: number } | undefined;
-  if (levered) {
-    if (typeof levered.equityValuePerShare === 'number') dcfVal = levered.equityValuePerShare;
-    else if (typeof levered.dcf === 'number') dcfVal = levered.dcf;
-  }
-
-  // Solo incluir DCF nominal si es para activos de US o si está en rango estricto
-  if (dcfVal !== null && !isAdr && isSane(dcfVal)) {
-    models.push({
-      name: 'DCF Apalancado',
-      value: dcfVal,
-      weight: 1.0,
-      category: 'intrinsic',
-      description: 'Flujo de caja descontado proyectado con WACC'
-    });
-  }
-
-  const advancedDcf = asset.dcf
-    ?.filter((projection) => Number.isFinite(projection.equityValuePerShare) && projection.equityValuePerShare > 0)
-    .sort((left, right) => Number(right.year) - Number(left.year))[0];
-  if (advancedDcf && !isAdr && isSane(advancedDcf.equityValuePerShare)) {
-    models.push({
-      name: 'DCF Avanzado',
-      value: advancedDcf.equityValuePerShare,
-      weight: 1.1,
-      category: 'intrinsic',
-      description: `DCF avanzado hasta ${advancedDcf.year}, con proyección explícita, WACC y valor terminal`
-    });
-  }
-
-  // --- Promedio Ponderado Final ---
-
-  if (models.length === 0) {
-    // Si no hay modelos válidos, devolver null seguro
-    return {
-      fairValue: null,
-      fairValueRange: null,
-      modelsUsed: [],
-      isAnomaly: true,
-      spread: null,
-      context
-    };
-  }
-
-  // Filtrar outliers con IQR si hay 4 o más modelos
-  let filteredModels = [...models];
-  if (models.length >= 4) {
-    const values = models.map(m => m.value).sort((a, b) => a - b);
-    const q1 = values[Math.floor(values.length * 0.25)];
-    const q3 = values[Math.floor(values.length * 0.75)];
-    const iqr = q3 - q1;
-    const lowerBound = q1 - 1.5 * iqr;
-    const upperBound = q3 + 1.5 * iqr;
-
-    const nonOutliers = models.filter(m => m.value >= lowerBound && m.value <= upperBound);
-    if (nonOutliers.length >= Math.ceil(models.length * 0.5)) {
-      filteredModels = nonOutliers;
-    }
-  }
-
-  let totalWeight = 0;
-  let weightedSum = 0;
-
-  for (const model of filteredModels) {
-    totalWeight += model.weight;
-    weightedSum += model.value * model.weight;
-  }
-
-  const fairValue = weightedSum / totalWeight;
-  const fairValueRange = {
-    low: weightedQuantile(filteredModels, 0.2),
-    high: weightedQuantile(filteredModels, 0.8),
+  const addModel = (model: Omit<ValuationModel, 'value' | 'capped'>, valueRatio: number | null) => {
+    if (valueRatio === null || !Number.isFinite(valueRatio) || valueRatio <= 0 || valueRatio > DATA_ERROR_RATIO) return;
+    const bounded = clamp(valueRatio, MIN_VALUE_RATIO, MAX_VALUE_RATIO);
+    models.push({ ...model, value: currentPrice * bounded, ...(bounded !== valueRatio ? { capped: true } : {}) });
   };
+
+  // --- Cash flows ---
+  const dcfRow = (asset.yahooDataVersion ?? 0) >= 4 && amountsMatchPrice
+    ? asset.dcf?.find((row) => isPositive(row.equityValuePerShare))
+    : undefined;
+  if (dcfRow && !isFinancial) {
+    addModel({
+      name: 'DCF a 10 años',
+      weight: 1,
+      category: 'intrinsic',
+      description: `Flujos de caja proyectados 10 años con sus márgenes históricos, descontados al ${dcfRow.wacc.toFixed(1)}% (WACC) más valor terminal`,
+    }, dcfRow.equityValuePerShare / currentPrice);
+  }
+
+  const marketCap = metrics['summaryDetail.marketCap'] ?? metrics['price.marketCap'] ?? asset.quote?.marketCap;
+  // One year of free cash flow swings with investment cycles: average it with what the last three
+  // years' margin would produce on today's sales.
+  const revenue = metrics['financialData.totalRevenue'];
+  const fcfMargins = (asset.yahooInsights?.annualStatements ?? []).slice(0, 3).flatMap((period) => {
+    const { FreeCashFlow: cash, TotalRevenue: sales } = period.values;
+    return isNumber(cash) && isPositive(sales) ? [cash / sales] : [];
+  });
+  const averageFcfMargin = fcfMargins.length > 0 ? fcfMargins.reduce((sum, value) => sum + value, 0) / fcfMargins.length : null;
+  const fcfYields = isPositive(marketCap)
+    ? [
+      asset.keyMetrics?.freeCashFlowYieldTTM,
+      averageFcfMargin !== null && isPositive(revenue) ? averageFcfMargin * revenue / marketCap : null,
+    ].filter(isNumber)
+    : [];
+  const fcfYield = fcfYields.length > 0 ? fcfYields.reduce((sum, value) => sum + value, 0) / fcfYields.length : null;
+  // Both cash views tell the same story; this simpler one steps in only when the DCF cannot be built.
+  if (!dcfRow && !isFinancial && !isRealEstate && amountsMatchPrice && fcfYield !== null && fcfYield > 0.005 && fcfYield < 0.25) {
+    const fcfGrowth = clamp(isNumber(revenueGrowth) ? revenueGrowth : growth, -0.05, 0.15);
+    const multiple = fadingGrowthMultiple(fcfGrowth, costOfEquity, terminalGrowth, { baseIsTrailing: true });
+    addModel({
+      name: 'Flujo de caja libre con crecimiento',
+      weight: 1,
+      category: 'intrinsic',
+      description: `Flujo de caja libre normalizado con los últimos tres años (${(fcfYield * 100).toFixed(1)}% del valor de mercado), crecimiento inicial ${(fcfGrowth * 100).toFixed(1)}% que converge al ${(terminalGrowth * 100).toFixed(1)}%, ${rateLabel}`,
+    }, multiple === null ? null : fcfYield * multiple);
+  }
+
+  // --- Earnings ---
+  const hasForwardPe = isPositive(forwardPe) && forwardPe > 2 && forwardPe < 500;
+  if (hasForwardPe && !isRealEstate) {
+    const returnOnEquity = clamp(metrics['financialData.returnOnEquity'] ?? 0.15, 0.08, 0.5);
+    // Growth has to be financed: the part of earnings that must be reinvested is not the shareholder's.
+    const justifiedPe = fadingGrowthMultiple(growth, costOfEquity, terminalGrowth, {
+      baseIsTrailing: false,
+      payout: (rate) => clamp(1 - rate / returnOnEquity, 0.25, 1),
+    });
+    addModel({
+      name: 'Ganancias con crecimiento',
+      weight: 1.2,
+      category: 'intrinsic',
+      description: justifiedPe === null ? '' : `P/E justificado ${justifiedPe.toFixed(1)}x vs ${forwardPe.toFixed(1)}x actual sobre ganancias estimadas: ${growthLabel} que converge al ${(terminalGrowth * 100).toFixed(1)}%, ${rateLabel}`,
+    }, justifiedPe === null ? null : justifiedPe / forwardPe);
+  }
+
+  const dividendYield = metrics['summaryDetail.dividendYield'];
+  if (isRealEstate && isPositive(dividendYield) && dividendYield > 0.01 && dividendYield < 0.15) {
+    const dividendGrowth = clamp(isNumber(revenueGrowth) ? revenueGrowth : 0.03, 0, 0.06);
+    const multiple = fadingGrowthMultiple(dividendGrowth, costOfEquity, terminalGrowth, { baseIsTrailing: true });
+    addModel({
+      name: 'Dividendos con crecimiento',
+      weight: 1.2,
+      category: 'intrinsic',
+      description: `Dividendo actual ${(dividendYield * 100).toFixed(1)}%, crecimiento inicial ${(dividendGrowth * 100).toFixed(1)}%, ${rateLabel}. En inmobiliarias la ganancia contable subestima la caja`,
+    }, multiple === null ? null : dividendYield * multiple);
+  }
+
+  // --- Sector ---
+  if (hasForwardPe && sectorStats && isPositive(sectorStats.forwardPe) && sectorStats.count >= 10) {
+    // Trailing over forward P/E is the earnings growth the market expects, measured the same way for
+    // the company and its sector. About three years of that gap separate their multiples.
+    const trailingPe = metrics['summaryDetail.trailingPE'];
+    const impliedGrowth = isPositive(trailingPe) && trailingPe < 150 ? clamp(trailingPe / forwardPe - 1, -0.1, 0.4) : null;
+    const growthAdjustment = impliedGrowth !== null && isNumber(sectorStats.growth)
+      ? clamp(((1 + impliedGrowth) / (1 + sectorStats.growth)) ** 3, 0.8, 1.25)
+      : 1;
+    const sectorPe = sectorStats.forwardPe * growthAdjustment * countryFactor;
+    // Part of any gap with the sector is earned (quality, leverage, cyclicality): assume half of it closes.
+    const targetPe = Math.sqrt(sectorPe * forwardPe);
+    addModel({
+      name: 'P/E frente al sector',
+      weight: 0.7,
+      category: 'relative',
+      description: `P/E objetivo ${targetPe.toFixed(1)}x vs ${forwardPe.toFixed(1)}x actual, a mitad de camino del P/E agregado de ${sectorStats.count} empresas del sector (${sectorStats.forwardPe.toFixed(1)}x), ajustado por crecimiento (${growthAdjustment.toFixed(2)}x)${countryFactor < 0.99 ? ` y riesgo país (${countryFactor.toFixed(2)}x)` : ''}`,
+    }, targetPe / forwardPe);
+  }
+
+  // --- Analysts ---
+  const target = asset.priceTargetConsensus?.targetConsensus;
+  if (isPositive(target) && target / currentPrice > 0.2) {
+    addModel({
+      name: 'Consenso de analistas',
+      weight: analystCount >= 5 ? 0.8 : 0.4,
+      category: 'analyst',
+      description: analystCount > 0
+        ? `Precio objetivo promedio de ${analystCount} analistas a 12 meses`
+        : 'Precio objetivo promedio de analistas a 12 meses',
+    }, target / currentPrice);
+  }
+
+  // One view alone is an opinion, not a valuation.
+  if (models.length < 2) return { ...empty, isAnomaly: models.length === 0 };
+
+  const totalWeight = models.reduce((sum, model) => sum + model.weight, 0);
+  const fairValue = models.reduce((sum, model) => sum + model.value * model.weight, 0) / totalWeight;
+  const values = models.map((model) => model.value);
+  const dispersion = (Math.max(...values) - Math.min(...values)) / fairValue;
+  const confidence: ValuationConfidence = models.length >= 4 && dispersion <= 0.6
+    ? 'alta'
+    : models.length >= 3 && dispersion <= 1
+      ? 'media'
+      : 'baja';
   const spread = ((fairValue - currentPrice) / currentPrice) * 100;
 
   return {
     fairValue,
-    fairValueRange,
-    modelsUsed: filteredModels,
+    fairValueRange: { low: weightedQuantile(models, 0.2), high: weightedQuantile(models, 0.8) },
+    modelsUsed: models,
     isAnomaly: false,
     spread,
-    context
+    verdict: spread >= FAIR_PRICE_BAND_PCT ? 'infravalorada' : spread <= -FAIR_PRICE_BAND_PCT ? 'sobrevalorada' : 'en-precio',
+    confidence,
+    context,
   };
+}
+
+interface PeerMedian {
+  value: number | null;
+  count: number;
+}
+
+function getPeerMedian(
+  peers: AssetPeerValuation[],
+  metric: keyof AssetPeerValuation,
+  minValue: number,
+  maxValue: number,
+): PeerMedian {
+  const values = peers
+    .map((peer) => peer[metric])
+    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value >= minValue && value <= maxValue)
+    .sort((left, right) => left - right);
+
+  if (values.length < 3) return { value: null, count: values.length };
+  const middle = Math.floor(values.length / 2);
+  const value = values.length % 2 === 0
+    ? (values[middle - 1] + values[middle]) / 2
+    : values[middle];
+
+  return { value, count: values.length };
 }
 
 export interface ContextualRatingScores {
@@ -1166,12 +498,10 @@ export function calculateContextualRatingScores(
   const valuation = calculateBlendedFairValue(asset, riskPremiumData);
   const currentPrice = asset.quote?.price ?? 0;
   const models = valuation.modelsUsed;
-  const dcfModel = models.find((model) => model.name === 'DCF Avanzado')
-    ?? models.find((model) => model.name === 'DCF Apalancado');
-  const peModel = models.find((model) => model.name === 'P/E por EPS estimado');
-  const pbModel = models.find((model) => model.name.startsWith('Precio/Valor Contable'))
-    ?? models.find((model) => model.name === 'Ingreso Residual (EBO)');
-
+  const dcfModel = models.find((model) => model.name === 'DCF a 10 años');
+  const peModel = models.find((model) => model.name === 'P/E frente al sector')
+    ?? models.find((model) => model.name === 'Ganancias con crecimiento');
+  
   const latestRatios = asset.ratios?.length
     ? [...asset.ratios].sort((left, right) => new Date(right.date).getTime() - new Date(left.date).getTime())[0]
     : null;
@@ -1193,7 +523,7 @@ export function calculateContextualRatingScores(
       ?? (isValidRatingScore(fallback?.discountedCashFlowScore) ? fallback.discountedCashFlowScore : null),
     priceToEarnings: scoreFairValueRatio(peModel?.value ?? 0, currentPrice)
       ?? (isValidRatingScore(fallback?.priceToEarningsScore) ? fallback.priceToEarningsScore : null),
-    priceToBook: scoreFairValueRatio(pbPeerFairValue ?? pbModel?.value ?? 0, currentPrice)
+    priceToBook: scoreFairValueRatio(pbPeerFairValue ?? 0, currentPrice)
       ?? (isValidRatingScore(fallback?.priceToBookScore) ? fallback.priceToBookScore : null),
     debtToEquity: isFinancialCompany
       ? null

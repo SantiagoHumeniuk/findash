@@ -1,261 +1,123 @@
 import { describe, expect, it } from 'vitest';
 import type { AssetData } from '../../../types/dashboard';
-import type { Holding } from '../../../types/portfolio';
-import { calculateBlendedFairValue, calculateContextualRatingScores, classifyBusinessProfile } from './valuation-models';
+import {
+  calculateBlendedFairValue,
+  calculateContextualRatingScores,
+  classifyBusinessProfile,
+  fadingGrowthMultiple,
+} from './valuation-models';
 import { generateAdvisory } from '../../portfolio/lib/advisory-engine';
 import { toInsightItem } from '../../insights/lib/helpers';
 
-function makeFintechAsset(forwardEps: number): AssetData {
+interface AssetOptions {
+  sector?: string;
+  industry?: string;
+  country?: string;
+  beta?: number;
+  metrics?: Record<string, number | null>;
+  dcfValue?: number | null;
+  target?: number;
+  dataVersion?: number;
+}
+
+/** A US software company at $100 whose every view lands close to its price. */
+function makeAsset(options: AssetOptions = {}): AssetData {
+  const dcfValue = options.dcfValue === undefined ? 105 : options.dcfValue;
   return {
-    symbol: 'NU',
+    symbol: 'TECH',
+    yahooDataVersion: options.dataVersion ?? 4,
     profile: {
-      symbol: 'NU', companyName: 'Nu Holdings', sector: 'Financial Services', industry: 'Credit Services',
-      country: 'KY', currency: 'USD', beta: 1.2, marketCap: 100_000_000_000,
+      symbol: 'TECH', companyName: 'Technology Co', sector: options.sector ?? 'Technology',
+      industry: options.industry ?? 'Software', country: options.country ?? 'United States',
+      currency: 'USD', beta: options.beta ?? 1, marketCap: 50_000_000_000,
     },
-    quote: { symbol: 'NU', name: 'Nu Holdings', price: 100 },
-    keyMetrics: {
-      symbol: 'NU', evToEBITDATTM: 0, returnOnEquityTTM: 0.3,
-      earningsYieldTTM: 0.04, freeCashFlowYieldTTM: 0,
+    quote: { symbol: 'TECH', name: 'Technology Co', price: 100, marketCap: 50_000_000_000 },
+    keyMetrics: { symbol: 'TECH', returnOnEquityTTM: 0.25, netDebtToEBITDATTM: 1, freeCashFlowYieldTTM: 0.045 },
+    ratios: [{ symbol: 'TECH', date: '2026-06-30', reportedCurrency: 'USD', priceToBookRatio: 4 }],
+    dcf: dcfValue === null ? [] : [{ year: '2027', equityValuePerShare: dcfValue, wacc: 9.2 }],
+    priceTargetConsensus: { symbol: 'TECH', targetHigh: 0, targetLow: 0, targetConsensus: options.target ?? 108, targetMedian: 0 },
+    valuationInputs: {
+      riskFreeRate: 0.045,
+      sector: { sector: 'Technology', count: 60, forwardPe: 22, growth: 0.12, priceToBook: 5 },
     },
-    ratios: [{
-      symbol: 'NU', date: '2026-06-30', priceToEarningsRatio: 25,
-      netIncomePerShare: 4, priceToBookRatio: 5, dividendYield: 0,
-    }],
-    analystEstimates: [{
-      symbol: 'NU', date: '2027-12-31', epsAvg: forwardEps, numAnalystsEps: 8,
-      revenueAvg: 20_000_000_000, numAnalystsRevenue: 8,
-    }],
+    yahooMetrics: {
+      'summaryDetail.forwardPE': 22,
+      'summaryDetail.trailingPE': 24.6,
+      'keyStatistics.forwardEps': 100 / 22,
+      'summaryDetail.marketCap': 50_000_000_000,
+      'financialData.totalRevenue': 10_000_000_000,
+      'financialData.returnOnEquity': 0.25,
+      'financialData.numberOfAnalystOpinions': 20,
+      'earningsTrend.+1y.growth': 0.12,
+      'earningsTrend.+1y.revenue.growth': 0.1,
+      ...options.metrics,
+    },
   } as unknown as AssetData;
 }
 
-describe('growth-aware financial valuation', () => {
-  it('uses forward EPS growth to value a high-growth financial company', () => {
-    const highGrowth = calculateBlendedFairValue(makeFintechAsset(6.4));
-    const lowGrowth = calculateBlendedFairValue(makeFintechAsset(4.2));
-    const highGrowthPe = highGrowth.modelsUsed.find((model) => model.name === 'P/E por EPS estimado');
-    const lowGrowthPe = lowGrowth.modelsUsed.find((model) => model.name === 'P/E por EPS estimado');
+const model = (asset: AssetData, name: string) =>
+  calculateBlendedFairValue(asset).modelsUsed.find((item) => item.name === name);
 
-    expect(highGrowthPe).toBeDefined();
-    expect(lowGrowthPe).toBeDefined();
-    expect(highGrowthPe!.value).toBeGreaterThan(lowGrowthPe!.value * 1.5);
-    expect(highGrowth.context.forwardEpsGrowthPct).toBeCloseTo(60);
-    expect(highGrowth.fairValueRange?.high).toBeGreaterThan(highGrowth.fairValueRange!.low);
+describe('fadingGrowthMultiple', () => {
+  it('equals a growing perpetuity when growth never changes', () => {
+    expect(fadingGrowthMultiple(0.03, 0.09, 0.03, { baseIsTrailing: false })).toBeCloseTo(1 / (0.09 - 0.03), 6);
   });
 
-  it('does not treat historical earnings-yield changes as forward EPS growth', () => {
-    const asset = makeFintechAsset(6.4);
-    asset.analystEstimates = [];
-    asset.keyMetricsYearly = [
-      { symbol: 'NU', date: '2024-12-31', earningsYield: 0.02 },
-      { symbol: 'NU', date: '2025-12-31', earningsYield: 0.04 },
-    ] as AssetData['keyMetricsYearly'];
-
-    const result = calculateBlendedFairValue(asset);
-
-    expect('confidence' in result).toBe(false);
-    expect(result.modelsUsed.some((model) => model.name === 'PEG de Peter Lynch')).toBe(false);
+  it('keeps four points between the discount rate and long-term growth', () => {
+    const bounded = fadingGrowthMultiple(0.02, 0.06, 0.04, { baseIsTrailing: false });
+    expect(bounded).toBeCloseTo(fadingGrowthMultiple(0.02, 0.06, 0.02, { baseIsTrailing: false })!, 6);
+    expect(fadingGrowthMultiple(0.02, 0.04, 0.03, { baseIsTrailing: false })).toBeNull();
   });
 
-  it('reduces a financial fair multiple when forward EPS is expected to contract', () => {
-    const noGrowth = calculateBlendedFairValue(makeFintechAsset(4));
-    const declining = calculateBlendedFairValue(makeFintechAsset(2.8));
-    const noGrowthPe = noGrowth.modelsUsed.find((model) => model.name === 'P/E por EPS estimado');
-    const decliningPe = declining.modelsUsed.find((model) => model.name === 'P/E por EPS estimado');
-
-    expect(decliningPe!.value).toBeLessThan(noGrowthPe!.value);
-  });
-
-  it('keeps the signal neutral when positive growth still falls short of the valuation threshold', () => {
-    const asset = makeFintechAsset(6.4);
-    const recommendation = generateAdvisory('NU', { NU: asset }, []);
-
-    expect(recommendation.status).toBe('HOLD');
-    expect(recommendation.reasons.some((reason) => reason.text.includes('umbral mínimo de ±20%'))).toBe(true);
-    expect(recommendation.reasons.some((reason) => reason.text.toLowerCase().includes('crecimiento'))).toBe(true);
-    expect(recommendation.reasons.some((reason) => reason.text.toLowerCase().includes('depósitos'))).toBe(true);
-  });
-
-  it('does not recommend buying a low-growth financial company on P/E alone', () => {
-    const recommendation = generateAdvisory('NU', { NU: makeFintechAsset(4.2) }, []);
-
-    expect(recommendation.status).not.toBe('BUY');
-  });
-
-  it('uses Yahoo target consensus only when analyst coverage is sufficient', () => {
-    const asset = makeTechnologyAsset('US');
-    asset.quote.price = 100;
-    asset.yahooMetrics = {
-      'financialData.targetMeanPrice': 70,
-      'financialData.numberOfAnalystOpinions': 6,
-    };
-
-    const coveredRecommendation = generateAdvisory('TECH', { TECH: asset }, []);
-    expect(coveredRecommendation.reasons.some((reason) =>
-      reason.text.includes('objetivo medio') && reason.type === 'negative'
-    )).toBe(true);
-
-    asset.yahooMetrics['financialData.numberOfAnalystOpinions'] = 2;
-    const sparseRecommendation = generateAdvisory('TECH', { TECH: asset }, []);
-    expect(sparseRecommendation.reasons.some((reason) =>
-      reason.text.includes('cobertura insuficiente') && reason.type === 'neutral'
-    )).toBe(true);
-  });
-
-  it('does not calculate sector concentration across mixed quote currencies', () => {
-    const usdAsset = makeFintechAsset(6.4);
-    const arsAsset = {
-      ...makeFintechAsset(6.4),
-      symbol: 'LOCAL',
-      profile: { ...usdAsset.profile, symbol: 'LOCAL', currency: 'ARS' },
-      quote: { ...usdAsset.quote, symbol: 'LOCAL' },
-    } as AssetData;
-    const holdings: Holding[] = [
-      { symbol: 'NU', quantity: 1, totalCost: 100, avgPurchasePrice: 100, assetData: usdAsset },
-      { symbol: 'LOCAL', quantity: 1, totalCost: 100, avgPurchasePrice: 100, assetData: arsAsset },
-    ];
-
-    const recommendation = generateAdvisory('NU', { NU: usdAsset, LOCAL: arsAsset }, holdings);
-
-    expect(recommendation.impact.currentAllocationPercent).toBeNull();
-    expect(recommendation.impact.simulatedAllocationPercent).toBeNull();
-    expect(recommendation.reasons.some((reason) => reason.text.includes('distintas monedas'))).toBe(true);
-  });
-
-  it('recommends SELL when severe overvaluation and independent financial risks agree', () => {
-    const asset = makeTechnologyAsset('US');
-    asset.profile.beta = 2.2;
-    asset.quote.price = 100;
-    asset.quote.forwardPE = 70;
-    asset.quote.priceAvg50 = 120;
-    asset.quote.priceAvg200 = 130;
-    asset.keyMetrics.returnOnEquityTTM = -0.1;
-    asset.keyMetrics.netDebtToEBITDATTM = 6;
-    asset.keyMetrics.evToEBITDATTM = 40;
-    asset.keyMetrics.evToSalesTTM = 6;
-    asset.ratios[0] = {
-      ...asset.ratios[0],
-      priceToEarningsRatio: 50,
-      priceToSalesRatio: 6,
-      priceToBookRatio: 15,
-      debtToEquityRatio: 5,
-      currentRatio: 0.5,
-      interestCoverageRatio: 0.5,
-      operatingProfitMargin: -0.15,
-    };
-    asset.analystEstimates = [{
-      ...makeFintechAsset(4).analystEstimates[0],
-      symbol: 'TECH',
-      date: '2027-12-31',
-      epsAvg: 1,
-      numAnalystsEps: 8,
-      revenueAvg: 20_000_000_000,
-      numAnalystsRevenue: 8,
-    }];
-    asset.priceTargetConsensus = {
-      symbol: 'TECH',
-      targetHigh: 0,
-      targetLow: 0,
-      targetConsensus: 0,
-      targetMedian: 0,
-    };
-
-    const recommendation = generateAdvisory('TECH', { TECH: asset }, []);
-
-    expect(recommendation.status, JSON.stringify(recommendation, null, 2)).toBe('SELL');
-    expect(recommendation.reasons.filter((reason) => reason.type === 'negative').length).toBeGreaterThanOrEqual(3);
-  });
-
-  it('does not score fintech debt/equity and recalculates valuation stars from forward models', () => {
-    const asset = makeFintechAsset(6.4);
-    asset.rating = {
-      symbol: 'NU', rating: 'B-', overallScore: 2,
-      discountedCashFlowScore: 1, returnOnEquityScore: 5, returnOnAssetsScore: 4,
-      debtToEquityScore: 1, priceToEarningsScore: 1, priceToBookScore: 1,
-    };
-
-    const scores = calculateContextualRatingScores(asset);
-
-    expect(scores.debtToEquity).toBeNull();
-    expect(scores.priceToEarnings).toBe(5);
-    expect(scores.priceToBook).toBeGreaterThanOrEqual(1);
-    expect(scores.priceToBook).toBeLessThanOrEqual(5);
-  });
-
-  it('leaves unavailable valuation scores unscored instead of assigning zero stars', () => {
-    const asset = makeFintechAsset(6.4);
-    asset.rating = {
-      symbol: 'NU', rating: 'B-', overallScore: 2,
-      discountedCashFlowScore: 0, returnOnEquityScore: 5, returnOnAssetsScore: 4,
-      debtToEquityScore: 0, priceToEarningsScore: 0, priceToBookScore: 0,
-    };
-
-    const scores = calculateContextualRatingScores(asset);
-
-    expect(scores.discountedCashFlow).toBeNull();
-    expect(scores.debtToEquity).toBeNull();
-    expect(scores.priceToEarnings).toBeGreaterThanOrEqual(1);
-    expect(scores.priceToBook).toBeGreaterThanOrEqual(1);
+  it('is worth more with faster growth and less when earnings must be reinvested', () => {
+    const slow = fadingGrowthMultiple(0.04, 0.09, 0.03, { baseIsTrailing: false })!;
+    const fast = fadingGrowthMultiple(0.15, 0.09, 0.03, { baseIsTrailing: false })!;
+    const reinvesting = fadingGrowthMultiple(0.15, 0.09, 0.03, { baseIsTrailing: false, payout: () => 0.5 })!;
+    expect(fast).toBeGreaterThan(slow);
+    expect(reinvesting).toBeCloseTo(fast / 2, 6);
   });
 });
 
-function makeTechnologyAsset(country: string): AssetData {
-  return {
-    symbol: 'TECH',
-    profile: {
-      symbol: 'TECH', companyName: 'Technology Co', sector: 'Technology', industry: 'Software',
-      country, currency: 'USD', beta: 1, marketCap: 1_000,
-    },
-    quote: { symbol: 'TECH', name: 'Technology Co', price: 100, marketCap: 1_000 },
-    keyMetrics: {
-      symbol: 'TECH', marketCap: 1_000, enterpriseValueTTM: 1_200,
-      evToEBITDATTM: 12, evToSalesTTM: 5, returnOnEquityTTM: 0.2,
-      earningsYieldTTM: 0.04, freeCashFlowYieldTTM: 0.04,
-    },
-    ratios: [{
-      symbol: 'TECH', date: '2026-06-30', priceToEarningsRatio: 25,
-      priceToBookRatio: 4, priceToSalesRatio: 8, ebitMargin: 0.15,
-      netIncomePerShare: 4, dividendYield: 0, reportedCurrency: 'USD',
-    }],
-  } as unknown as AssetData;
-}
+describe('calculateBlendedFairValue', () => {
+  it('blends cash flows, earnings, the sector and analysts into one value with a range', () => {
+    const result = calculateBlendedFairValue(makeAsset());
 
-describe('sector and country comparable valuation', () => {
-  it('includes available sales and EBIT multiples and bridges EV through net debt', () => {
-    const result = calculateBlendedFairValue(makeTechnologyAsset('US'));
-    const evEbitda = result.modelsUsed.find((model) => model.name === 'EV/EBITDA por Sector');
-
-    expect(evEbitda).toBeDefined();
-    expect(evEbitda!.value).toBeCloseTo(155);
-    expect(result.modelsUsed.some((model) => model.name === 'Precio/Ventas por Sector')).toBe(true);
-    expect(result.modelsUsed.map((model) => model.name)).toContain('EV/Ventas por Sector');
-    expect(result.modelsUsed.find((model) => model.name === 'EV/Ventas por Sector')!.value).toBeCloseTo(136);
-    expect(result.modelsUsed.some((model) => model.name === 'EV/EBIT por Sector')).toBe(true);
-    expect(result.modelsUsed.some((model) => model.name === 'Precio/Valor Contable por Sector')).toBe(true);
+    expect(result.modelsUsed.map((item) => item.name)).toEqual([
+      'DCF a 10 años', 'Ganancias con crecimiento', 'P/E frente al sector', 'Consenso de analistas',
+    ]);
+    const values = result.modelsUsed.map((item) => item.value);
+    expect(result.fairValue).toBeGreaterThanOrEqual(Math.min(...values));
+    expect(result.fairValue).toBeLessThanOrEqual(Math.max(...values));
+    expect(result.fairValueRange!.low).toBeLessThanOrEqual(result.fairValueRange!.high);
+    expect(result.spread).toBeCloseTo(result.fairValue! - 100);
   });
 
-  it('applies the issuer country adjustment alongside sector benchmarks', () => {
-    const result = calculateBlendedFairValue(makeTechnologyAsset('BR'));
-
-    expect(result.context.sector).toBe('Technology');
-    expect(result.context.country).toContain('Brasil');
-    expect(result.context.countryRiskPremiumPct).toBeCloseTo(4.2);
-    expect(result.context.valuationDiscountPct).toBeCloseTo(22);
+  it('values faster expected growth higher', () => {
+    const slow = model(makeAsset({ metrics: { 'earningsTrend.+1y.growth': 0.03, 'earningsTrend.+1y.revenue.growth': 0.03 } }), 'Ganancias con crecimiento')!;
+    const fast = model(makeAsset({ metrics: { 'earningsTrend.+1y.growth': 0.2, 'earningsTrend.+1y.revenue.growth': 0.18 } }), 'Ganancias con crecimiento')!;
+    expect(fast.value).toBeGreaterThan(slow.value * 1.2);
   });
 
-  it('keeps Insights mispricing aligned with the blended fair value, not the standalone provider DCF', () => {
-    const asset = makeTechnologyAsset('US');
-    asset.dcfLevered = { symbol: 'TECH', date: '2026-01-01', dcf: 50, 'Stock Price': 100 };
-    const valuation = calculateBlendedFairValue(asset);
-    const insight = toInsightItem(asset);
-
-    expect(insight).toBeDefined();
-    expect(insight!.dcf).toBe(valuation.fairValue);
-    expect(insight!.mispricingPct).toBe(valuation.spread);
-    expect(insight!.dcf).not.toBe(50);
+  it('anchors growth on sales, so a one-year earnings rebound adds at most five points', () => {
+    const result = calculateBlendedFairValue(makeAsset({
+      metrics: { 'earningsTrend.+1y.growth': 0.9, 'earningsTrend.+1y.revenue.growth': 0.04 },
+    }));
+    expect(result.context.stageGrowthPct).toBeCloseTo(9);
+    expect(result.context.forwardEpsGrowthPct).toBeCloseTo(90);
   });
 
-  it('uses the country risk premium dataset instead of the static fallback when available', () => {
-    const result = calculateBlendedFairValue(makeTechnologyAsset('BR'), [{
+  it('charges the dataset country premium: minimal for a US company, large for an Argentine one', () => {
+    const local = calculateBlendedFairValue(makeAsset());
+    const argentine = calculateBlendedFairValue(makeAsset({ country: 'Argentina' }));
+
+    expect(local.context.countryRiskPremiumPct).toBeLessThan(0.5);
+    expect(argentine.context.countryRiskPremiumPct).toBeGreaterThan(3);
+    expect(argentine.context.adjustedCostOfEquityPct).toBeGreaterThan(local.context.adjustedCostOfEquityPct + 3);
+    expect(argentine.fairValue!).toBeLessThan(local.fairValue!);
+  });
+
+  it('prefers a risk table passed by the caller', () => {
+    const result = calculateBlendedFairValue(makeAsset({ country: 'BR' }), [{
       country: 'Brazil', continent: 'South America', countryRiskPremium: 6.5, totalEquityRiskPremium: 11.2,
     }]);
 
@@ -263,62 +125,140 @@ describe('sector and country comparable valuation', () => {
     expect(result.context.countryRiskPremiumPct).toBeCloseTo(6.5);
   });
 
-  it('keeps analyst targets as a low-weight reference and includes the advanced DCF', () => {
-    const asset = makeTechnologyAsset('US');
-    asset.priceTargetConsensus = {
-      symbol: 'TECH', targetHigh: 130, targetLow: 95, targetConsensus: 112, targetMedian: 110,
-    };
-    asset.dcf = [{ year: '2030', equityValuePerShare: 125 }] as AssetData['dcf'];
-
-    const result = calculateBlendedFairValue(asset);
-    const analystTarget = result.modelsUsed.find((model) => model.name === 'Consenso de Analistas');
-    const advancedDcf = result.modelsUsed.find((model) => model.name === 'DCF Avanzado');
-
-    expect(analystTarget?.weight).toBe(0.25);
-    expect(advancedDcf?.value).toBe(125);
+  it('keeps an extreme model at the edge of the band instead of dropping it', () => {
+    const earnings = model(makeAsset({ metrics: { 'summaryDetail.forwardPE': 300, 'keyStatistics.forwardEps': 100 / 300 } }), 'Ganancias con crecimiento')!;
+    expect(earnings.value).toBeCloseTo(40);
+    expect(earnings.capped).toBe(true);
   });
 
-  it('uses median peer multiples when at least three peers provide each ratio', () => {
-    const asset = makeTechnologyAsset('US');
-    asset.peerValuations = [
-      { symbol: 'P1', companyName: 'Peer One', price: 10, marketCap: 100, priceToEarningsRatio: 15, priceToBookRatio: 2, priceToSalesRatio: 2, priceToFreeCashFlowRatio: 20, ebitMargin: 0.1, evToEBITDA: 10, evToEBIT: 20, evToSales: 3 },
-      { symbol: 'P2', companyName: 'Peer Two', price: 10, marketCap: 100, priceToEarningsRatio: 20, priceToBookRatio: 3, priceToSalesRatio: 3, priceToFreeCashFlowRatio: 25, ebitMargin: 0.1, evToEBITDA: 12, evToEBIT: 22, evToSales: 4 },
-      { symbol: 'P3', companyName: 'Peer Three', price: 10, marketCap: 100, priceToEarningsRatio: 25, priceToBookRatio: 4, priceToSalesRatio: 4, priceToFreeCashFlowRatio: 30, ebitMargin: 0.1, evToEBITDA: 14, evToEBIT: 24, evToSales: 5 },
-    ];
-    asset.ratios[0].ebitMargin = 0.3;
-
-    const result = calculateBlendedFairValue(asset);
-    const evEbitda = result.modelsUsed.find((model) => model.name === 'EV/EBITDA por Pares');
-
-    expect(evEbitda).toBeDefined();
-    expect(evEbitda!.value).toBeCloseTo(100);
-    expect(result.modelsUsed.find((model) => model.name === 'P/E por EPS estimado')!.description).toContain('mediana de 3 pares');
-    expect(result.modelsUsed.some((model) => model.name === 'Precio/Ventas por Pares')).toBe(true);
-    expect(result.modelsUsed.find((model) => model.name === 'EV/Ventas por Pares')!.description).toContain('margen EBIT ajustado 1.50x');
-    expect(result.context.forwardEpsGrowthPct).toBeNull();
+  it('discards results that can only come from broken data', () => {
+    expect(model(makeAsset({ target: 900 }), 'Consenso de analistas')).toBeUndefined();
+    expect(model(makeAsset({ dcfValue: 5_400 }), 'DCF a 10 años')).toBeUndefined();
   });
 
-  it('classifies a profitable large company as consolidated and low risk when indicators support it', () => {
-    const asset = makeTechnologyAsset('US');
-    asset.profile.beta = 0.8;
-    asset.profile.marketCap = 50_000_000_000;
-    asset.keyMetrics.returnOnEquityTTM = 0.2;
-    asset.keyMetrics.netDebtToEBITDATTM = 1.2;
+  it('ignores statement-based models when amounts are in another currency, and tempers growth', () => {
+    // Forward EPS reported in pesos: price ÷ (P/E × EPS) is far from one although the labels say USD.
+    const result = calculateBlendedFairValue(makeAsset({
+      country: 'Argentina',
+      metrics: { 'keyStatistics.forwardEps': 4_500, 'earningsTrend.+1y.revenue.growth': 0.6, 'earningsTrend.+1y.growth': 0.6 },
+    }));
 
+    expect(result.modelsUsed.some((item) => item.name === 'DCF a 10 años')).toBe(false);
+    expect(result.modelsUsed.some((item) => item.name === 'Ganancias con crecimiento')).toBe(true);
+    expect(result.modelsUsed.find((item) => item.name === 'Ganancias con crecimiento')!.description).toContain('crecimiento inicial 10.0%');
+  });
+
+  it('falls back to normalized free cash flow when there is no DCF', () => {
+    const result = calculateBlendedFairValue(makeAsset({ dcfValue: null }));
+    expect(result.modelsUsed.some((item) => item.name === 'Flujo de caja libre con crecimiento')).toBe(true);
+    expect(calculateBlendedFairValue(makeAsset()).modelsUsed.some((item) => item.name === 'Flujo de caja libre con crecimiento')).toBe(false);
+  });
+
+  it('does not use a DCF saved before the ten-year model', () => {
+    expect(model(makeAsset({ dataVersion: 3 }), 'DCF a 10 años')).toBeUndefined();
+  });
+
+  it('values banks without cash flow models and real estate on dividends', () => {
+    const bank = calculateBlendedFairValue(makeAsset({ sector: 'Financial Services', industry: 'Banks - Diversified' }));
+    expect(bank.modelsUsed.map((item) => item.name)).toEqual([
+      'Ganancias con crecimiento', 'P/E frente al sector', 'Consenso de analistas',
+    ]);
+
+    const reit = calculateBlendedFairValue(makeAsset({
+      sector: 'Real Estate', industry: 'REIT - Retail', metrics: { 'summaryDetail.dividendYield': 0.05 },
+    }));
+    expect(reit.modelsUsed.some((item) => item.name === 'Dividendos con crecimiento')).toBe(true);
+    expect(reit.modelsUsed.some((item) => item.name === 'Ganancias con crecimiento')).toBe(false);
+  });
+
+  it('calls it fairly priced inside the band and names the direction outside it', () => {
+    const fair = calculateBlendedFairValue(makeAsset());
+    expect(Math.abs(fair.spread!)).toBeLessThan(10);
+    expect(fair.verdict).toBe('en-precio');
+
+    const cheap = calculateBlendedFairValue(makeAsset({
+      dcfValue: 170, target: 160, metrics: { 'summaryDetail.forwardPE': 10, 'keyStatistics.forwardEps': 10 },
+    }));
+    expect(cheap.verdict).toBe('infravalorada');
+
+    const expensive = calculateBlendedFairValue(makeAsset({
+      dcfValue: 55, target: 80, metrics: { 'summaryDetail.forwardPE': 60, 'keyStatistics.forwardEps': 100 / 60 },
+    }));
+    expect(expensive.verdict).toBe('sobrevalorada');
+  });
+
+  it('reports high confidence when the views agree and low when they contradict each other', () => {
+    expect(calculateBlendedFairValue(makeAsset()).confidence).toBe('alta');
+    expect(calculateBlendedFairValue(makeAsset({ dcfValue: 30, target: 190 })).confidence).toBe('baja');
+  });
+
+  it('gives no value from a single view', () => {
+    const result = calculateBlendedFairValue(makeAsset({
+      dcfValue: null,
+      metrics: { 'summaryDetail.forwardPE': null, 'keyStatistics.forwardPE': null },
+    }));
+    // Without a P/E only analysts and free cash flow remain; removing the latter leaves one view.
+    expect(result.modelsUsed.length).toBe(2);
+
+    const single = makeAsset({ dcfValue: null, metrics: { 'summaryDetail.forwardPE': null, 'keyStatistics.forwardPE': null } });
+    single.keyMetrics.freeCashFlowYieldTTM = 0;
+    single.yahooMetrics!['financialData.totalRevenue'] = null;
+    const alone = calculateBlendedFairValue(single);
+    expect(alone.fairValue).toBeNull();
+    expect(alone.verdict).toBeNull();
+  });
+
+  it('still works on assets saved without sector figures', () => {
+    const asset = makeAsset();
+    delete asset.valuationInputs;
+    const result = calculateBlendedFairValue(asset);
+    expect(result.modelsUsed.some((item) => item.name === 'P/E frente al sector')).toBe(false);
+    expect(result.fairValue).not.toBeNull();
+  });
+});
+
+describe('consumers of the fair value', () => {
+  it('keeps Insights aligned with the blended value', () => {
+    const asset = makeAsset();
     const valuation = calculateBlendedFairValue(asset);
-    const profile = classifyBusinessProfile(asset, valuation.context);
+    const insight = toInsightItem(asset);
+
+    expect(insight!.dcf).toBe(valuation.fairValue);
+    expect(insight!.mispricingPct).toBe(valuation.spread);
+  });
+
+  it('passes the model confidence to portfolio recommendations', () => {
+    const asset = makeAsset({ dcfValue: 30, target: 190 });
+    const recommendation = generateAdvisory('TECH', { TECH: asset }, []);
+    expect(recommendation.valuation.confidence).toBe('baja');
+  });
+
+  it('scores the DCF and P/E stars from the models and skips debt for financials', () => {
+    const scores = calculateContextualRatingScores(makeAsset({ dcfValue: 150 }));
+    expect(scores.discountedCashFlow).toBe(5);
+    expect(scores.priceToEarnings).toBeGreaterThanOrEqual(1);
+
+    const bank = calculateContextualRatingScores(makeAsset({ sector: 'Financial Services', industry: 'Banks - Diversified' }));
+    expect(bank.discountedCashFlow).toBeNull();
+    expect(bank.debtToEquity).toBeNull();
+  });
+});
+
+describe('classifyBusinessProfile', () => {
+  it('classifies a profitable large company as consolidated and low risk when indicators support it', () => {
+    const asset = makeAsset({ beta: 0.8, metrics: { 'earningsTrend.+1y.growth': 0.08 } });
+    const profile = classifyBusinessProfile(asset, calculateBlendedFairValue(asset).context);
 
     expect(profile.typeLabel).toBe('Empresa consolidada y rentable');
     expect(profile.riskLevel).toBe('bajo');
   });
 
-  it('classifies fast-growing financial companies without calling model count confidence', () => {
-    const asset = makeFintechAsset(6.4);
-    asset.profile.country = 'BR';
-    asset.profile.beta = 2.1;
-
-    const valuation = calculateBlendedFairValue(asset);
-    const profile = classifyBusinessProfile(asset, valuation.context);
+  it('classifies fast-growing financial companies as high risk when volatility and country risk agree', () => {
+    const asset = makeAsset({
+      sector: 'Financial Services', industry: 'Credit Services', country: 'Brazil', beta: 2.1,
+      metrics: { 'earningsTrend.+1y.growth': 0.6 },
+    });
+    const profile = classifyBusinessProfile(asset, calculateBlendedFairValue(asset).context);
 
     expect(profile.typeLabel).toBe('Financiera de alto crecimiento');
     expect(profile.riskLevel).toBe('alto');
@@ -326,48 +266,10 @@ describe('sector and country comparable valuation', () => {
   });
 
   it('identifies cyclical sectors and does not infer low risk without supporting data', () => {
-    const asset = makeTechnologyAsset('US');
-    asset.profile.sector = 'Energy';
-    asset.profile.beta = 1.3;
-
-    const valuation = calculateBlendedFairValue(asset);
-    const profile = classifyBusinessProfile(asset, valuation.context);
+    const asset = makeAsset({ sector: 'Energy', industry: 'Oil & Gas Integrated', beta: 1.3 });
+    const profile = classifyBusinessProfile(asset, calculateBlendedFairValue(asset).context);
 
     expect(profile.typeLabel).toBe('Negocio cíclico');
     expect(profile.riskLevel).toBe('moderado');
-  });
-
-  it('uses forward analyst revenue, EBITDA, and EBIT estimates when currencies match', () => {
-    const asset = makeTechnologyAsset('US');
-    asset.analystEstimates = [{
-      symbol: 'TECH', date: '2027-12-31', revenueAvg: 175,
-      ebitdaAvg: 55, ebitAvg: 50, epsAvg: 4.5,
-      numAnalystsRevenue: 8, numAnalystsEps: 8,
-    }] as AssetData['analystEstimates'];
-    asset.dcf = [{ year: '2027', wacc: 10 }] as AssetData['dcf'];
-
-    const years = (new Date('2027-12-31').getTime() - Date.now()) / (365.25 * 24 * 60 * 60 * 1000);
-    const result = calculateBlendedFairValue(asset);
-    const forwardEvEbitda = result.modelsUsed.find((model) => model.name === 'EV/EBITDA Forward por consenso');
-
-    expect(result.modelsUsed.some((model) => model.name === 'P/S Forward por ventas estimadas')).toBe(true);
-    expect(result.modelsUsed.some((model) => model.name === 'EV/Ventas Forward por consenso')).toBe(true);
-    expect(forwardEvEbitda).toBeDefined();
-    expect(forwardEvEbitda!.value).toBeCloseTo((55 * 17.5 / Math.pow(1.1, years) - 200) / 10, 2);
-    expect(result.modelsUsed.some((model) => model.name === 'EV/EBIT Forward por consenso')).toBe(true);
-  });
-
-  it('does not combine forward estimates reported in a different currency', () => {
-    const asset = makeTechnologyAsset('US');
-    asset.profile.currency = 'EUR';
-    asset.analystEstimates = [{
-      symbol: 'TECH', date: '2027-12-31', revenueAvg: 175,
-      ebitdaAvg: 55, ebitAvg: 50, epsAvg: 4.5,
-      numAnalystsRevenue: 8, numAnalystsEps: 8,
-    }] as AssetData['analystEstimates'];
-
-    const result = calculateBlendedFairValue(asset);
-
-    expect(result.modelsUsed.some((model) => model.name.includes('Forward'))).toBe(false);
   });
 });

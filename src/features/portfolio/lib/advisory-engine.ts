@@ -89,13 +89,7 @@ export function generateAdvisory(
     `${sector} ${asset.profile?.industry ?? ''}`
   );
   const valuation = calculateBlendedFairValue(asset);
-  const valuationConfidence = valuation.isAnomaly
-    ? 'baja'
-    : valuation.modelsUsed.length >= 4
-      ? 'alta'
-      : valuation.modelsUsed.length > 0
-        ? 'media'
-        : 'baja';
+  const valuationConfidence = valuation.confidence ?? 'baja';
   const upsidePct = valuation.spread;
   const forwardEpsGrowthPct = valuation.context.forwardEpsGrowthPct;
   const yahooTargetPrice = asset.yahooMetrics?.['financialData.targetMeanPrice'];

@@ -135,6 +135,79 @@ export async function runScreener(request: ScreenerRequest, session: YahooSessio
   return await postScreener(buildScreenerQuery(request), session);
 }
 
+export type SectorStats = {
+  sector: string;
+  count: number;
+  forwardPe: number | null;
+  growth: number | null;
+  priceToBook: number | null;
+};
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+}
+
+const isUsableMultiple = (value: number | null): value is number => value !== null && value > 2 && value < 150;
+
+/**
+ * Sector multiples the way index providers publish them: total market value over total
+ * earnings, so each company weighs by its size and one distorted year barely moves them.
+ */
+export function summarizeSector(sector: string, rows: Record<string, unknown>[]): SectorStats {
+  let count = 0;
+  let forwardValue = 0;
+  let forwardEarnings = 0;
+  let bothValue = 0;
+  let bothForwardEarnings = 0;
+  let bothTrailingEarnings = 0;
+  const priceToBook: number[] = [];
+  for (const row of rows) {
+    const marketCap = getNumber(row.marketCap);
+    const forwardPe = getNumber(row.forwardPE);
+    const trailingPe = getNumber(row.trailingPE);
+    const book = getNumber(row.priceToBook);
+    if (book !== null && book > 0.1 && book < 60) priceToBook.push(book);
+    if (marketCap === null || marketCap <= 0 || !isUsableMultiple(forwardPe)) continue;
+    count += 1;
+    forwardValue += marketCap;
+    forwardEarnings += marketCap / forwardPe;
+    if (isUsableMultiple(trailingPe)) {
+      bothValue += marketCap;
+      bothForwardEarnings += marketCap / forwardPe;
+      bothTrailingEarnings += marketCap / trailingPe;
+    }
+  }
+  return {
+    sector,
+    count,
+    forwardPe: forwardEarnings > 0 ? forwardValue / forwardEarnings : null,
+    // Forward over trailing earnings of the same companies: the growth the market expects.
+    growth: bothValue > 0 && bothTrailingEarnings > 0
+      ? Math.min(Math.max(bothForwardEarnings / bothTrailingEarnings - 1, -0.1), 0.4)
+      : null,
+    priceToBook: median(priceToBook),
+  };
+}
+
+const SECTOR_STATS_COMPANIES = 100;
+
+/** Valuation medians of the largest US companies of one sector. */
+export async function fetchSectorStats(sector: string, session: YahooSession): Promise<SectorStats> {
+  const { rows } = await runScreener({
+    region: "us",
+    sector,
+    filters: [],
+    sortField: "marketCap",
+    sortDescending: true,
+    offset: 0,
+    size: SECTOR_STATS_COMPANIES,
+  }, session);
+  return summarizeSector(sector, rows);
+}
+
 const HEATMAP_COMPANIES_PER_SECTOR = 12;
 
 /** Largest US companies of each sector, for the market map. */

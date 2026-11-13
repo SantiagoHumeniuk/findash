@@ -2095,8 +2095,10 @@ function buildStockPriceChange(symbol, history, price, dailyChangePercent) {
     max: first ? (price / first.close - 1) * 100 : 0
   };
 }
-var PROJECTION_YEARS = 5;
-var TERMINAL_GROWTH = 0.025;
+var PROJECTION_YEARS = 10;
+function getTerminalGrowth(riskFreeRate) {
+  return Math.min(Math.max(riskFreeRate, 0.025), 0.04);
+}
 var DEFAULT_RISK_FREE_RATE = 0.042;
 function buildFinDashDcf({ symbol, price, beta, riskFreeRate, financials, quote }) {
   const emptyLevered = { symbol, date: "", dcf: 0, "Stock Price": price };
@@ -2116,7 +2118,9 @@ function buildFinDashDcf({ symbol, price, beta, riskFreeRate, financials, quote 
     });
     return shares2.length > 0 ? shares2.reduce((total, value) => total + value, 0) / shares2.length : fallback;
   };
-  const ebitdaMargin = meanShare((items) => items.ebitda, 0);
+  const latestEbitdaMargin = ratio(latest.ebitda, latest.revenue);
+  const averageEbitdaMargin = meanShare((items) => items.ebitda, 0);
+  const ebitdaMargin = latestEbitdaMargin !== null && latestEbitdaMargin > 0 ? (latestEbitdaMargin + averageEbitdaMargin) / 2 : averageEbitdaMargin;
   const depreciationShare = meanShare((items) => items.depreciation, 0.03);
   const capexShare = meanShare((items) => abs(items.capex), depreciationShare);
   const workingCapitalShare = meanShare((items) => items.workingCapital, 0);
@@ -2134,7 +2138,7 @@ function buildFinDashDcf({ symbol, price, beta, riskFreeRate, financials, quote 
   const taxRate = taxRates.length > 0 ? taxRates.reduce((total, value) => total + value, 0) / taxRates.length : 0.21;
   const rf = riskFreeRate !== null && riskFreeRate > 0 && riskFreeRate < 0.15 ? riskFreeRate : DEFAULT_RISK_FREE_RATE;
   const rawBeta = beta !== null && beta > 0 && beta < 4 ? beta : 1;
-  const assetBeta = 0.67 * rawBeta + 0.33;
+  const assetBeta = Math.min(Math.max(0.67 * rawBeta + 0.33, 0.75), 1.75);
   const costOfEquity = rf + assetBeta * MATURE_MARKET_ERP;
   const totalDebt = latest.totalDebt ?? 0;
   const costOfDebt = clamp(ratio(latest.interestExpense, totalDebt) ?? rf + 0.015, 0.02, 0.15);
@@ -2144,8 +2148,13 @@ function buildFinDashDcf({ symbol, price, beta, riskFreeRate, financials, quote 
   const debtWeighting = totalCapital > 0 ? totalDebt / totalCapital : 0;
   const equityWeighting = 1 - debtWeighting;
   const wacc = equityWeighting * costOfEquity + debtWeighting * afterTaxCostOfDebt;
-  const longTermGrowthRate = Math.min(TERMINAL_GROWTH, wacc - 0.02);
+  const longTermGrowthRate = Math.min(getTerminalGrowth(rf), wacc - 0.04);
   if (wacc <= longTermGrowthRate) return { dcf: [], dcfLevered: emptyLevered };
+  const actualFcffShare = meanShare(
+    (items) => items.freeCashFlow === null ? null : items.freeCashFlow + (items.interestExpense ?? 0) * (1 - taxRate),
+    0
+  );
+  const maxUfcfShare = actualFcffShare > 0 ? actualFcffShare * 1.5 : null;
   const baseYear = Number(quote.fundamentals.annual[0].date.slice(0, 4));
   let revenue = baseRevenue;
   let previousWorkingCapital = baseRevenue * workingCapitalShare;
@@ -2161,7 +2170,8 @@ function buildFinDashDcf({ symbol, price, beta, riskFreeRate, financials, quote 
     const changeInWorkingCapital = workingCapital - previousWorkingCapital;
     previousWorkingCapital = workingCapital;
     const ebiat = ebit * (1 - taxRate);
-    const ufcf = ebiat + depreciation + capitalExpenditure - changeInWorkingCapital;
+    const builtUfcf = ebiat + depreciation + capitalExpenditure - changeInWorkingCapital;
+    const ufcf = maxUfcfShare === null ? builtUfcf : Math.min(builtUfcf, revenue * maxUfcfShare);
     sumPvUfcf += ufcf / (1 + wacc) ** (index + 1);
     return { year: String(baseYear + index + 1), revenue, ebitda, ebit, depreciation, capitalExpenditure, ebiat, ufcf };
   });
@@ -2277,7 +2287,7 @@ function buildFinDashRating(symbol, latestRatios, dcfValuePerShare, price) {
 
 // src/services/api/yahoo-asset-builder.ts
 var YAHOO_MARKET_INDEX_SYMBOLS = /* @__PURE__ */ new Set(["SPY", "QQQ", "DIA", "IWM"]);
-var YAHOO_DATA_VERSION = 3;
+var YAHOO_DATA_VERSION = 4;
 function getYahooMarketIndexName(symbol, fallback) {
   const knownNames = {
     SPY: "SPDR S&P 500 ETF Trust",
@@ -2493,6 +2503,7 @@ function createYahooAssetData(symbol, yahoo, fetchedAt, riskFreeRate = null) {
     },
     dataFetchedAt: fetchedAt,
     yahooMetrics: yahoo.metrics,
+    valuationInputs: { riskFreeRate, sector: yahoo.sectorStats ?? null },
     yahooAttemptedAt: fetchedAt,
     yahooQuoteAttemptedAt: fetchedAt,
     yahooError: yahoo.error

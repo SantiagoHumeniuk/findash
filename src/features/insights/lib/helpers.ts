@@ -1,7 +1,7 @@
 import type { AssetData } from "../../../types/dashboard";
 import type { RiskPremiumData } from "../../risk-premium/types/risk-premium.types";
 import type { InsightItem } from "../types/insights.types";
-import { calculateBlendedFairValue } from "../../asset-detail/lib/valuation-models";
+import { calculateBlendedFairValue, FAIR_PRICE_BAND_PCT } from "../../asset-detail/lib/valuation-models";
 
 /**
  * Construye un InsightItem a partir de AssetData.
@@ -44,7 +44,7 @@ export function toInsightItem(a: AssetData, riskPremiumData: RiskPremiumData[] =
  */
 export function sortUndervalued(items: InsightItem[]): InsightItem[] {
   return items
-    .filter(i => typeof i.mispricingPct === 'number' && i.mispricingPct > 0)
+    .filter(i => typeof i.mispricingPct === 'number' && i.mispricingPct >= FAIR_PRICE_BAND_PCT)
     .sort((a, b) => (b.mispricingPct! - a.mispricingPct!));
 }
 
@@ -53,6 +53,6 @@ export function sortUndervalued(items: InsightItem[]): InsightItem[] {
  */
 export function sortOvervalued(items: InsightItem[]): InsightItem[] {
   return items
-    .filter(i => typeof i.mispricingPct === 'number' && i.mispricingPct < 0)
+    .filter(i => typeof i.mispricingPct === 'number' && i.mispricingPct <= -FAIR_PRICE_BAND_PCT)
     .sort((a, b) => (a.mispricingPct! - b.mispricingPct!));
 }
