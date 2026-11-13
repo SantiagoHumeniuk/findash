@@ -344,13 +344,25 @@ export async function refreshYahooAssetQuote(symbol: string): Promise<AssetData>
   return (await invokeYahooAction({ action: 'assetQuote', symbol }) as { asset: AssetData }).asset;
 }
 
+/** The message the Edge Function sent with a non-2xx answer, such as a plan limit. */
+async function readFunctionError(error: unknown): Promise<string | null> {
+  const response = (error as { context?: unknown }).context;
+  if (!(response instanceof Response)) return null;
+  try {
+    const payload = await response.clone().json() as { error?: unknown };
+    return typeof payload.error === 'string' ? payload.error : null;
+  } catch {
+    return null;
+  }
+}
+
 async function invokeYahooAction(
   body: Record<string, unknown>,
 ): Promise<unknown> {
   const { data, error } = await supabase.functions.invoke('yahoo-finance-proxy', { body });
   if (error) {
     console.error('Error fetching Yahoo Finance data:', error);
-    throw new Error('No se pudieron consultar datos de Yahoo Finance.');
+    throw new Error(await readFunctionError(error) ?? 'No se pudieron consultar datos de Yahoo Finance.');
   }
   if (
     typeof data === 'object' &&

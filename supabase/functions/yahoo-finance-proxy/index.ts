@@ -12,6 +12,7 @@ import {
   type YahooSession,
 } from "./http.ts";
 import { readCache, withCache, writeCache } from "./cache.ts";
+import { getSignedInUserId } from "../_shared/admin.ts";
 import {
   createYahooAssetData,
   hasUsableYahooData,
@@ -973,18 +974,31 @@ function jsonResponse(body: unknown, status = 200, extraHeaders: Record<string, 
   return Response.json(body, { status, headers: { ...corsHeaders, ...extraHeaders } });
 }
 
-/** Rebuilding assets costs Yahoo requests, so only people with an account can trigger it. */
-async function isSignedIn(request: Request): Promise<boolean> {
+/**
+ * Spends one of the user's daily requests (the plan limit lives in the database). A failure to
+ * reach the database lets the request through: an outage should not lock everyone out.
+ */
+async function consumeApiCall(userId: string): Promise<boolean> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const authorization = request.headers.get("Authorization");
-  if (!supabaseUrl || !anonKey || !authorization) return false;
-  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
-    headers: { apikey: anonKey, Authorization: authorization },
-    signal: AbortSignal.timeout(5_000),
-  });
-  await response.body?.cancel();
-  return response.ok;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) return true;
+  try {
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/consume_api_call`, {
+      method: "POST",
+      headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_user: userId }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!response.ok) {
+      console.warn(`Could not count a request: HTTP ${response.status}`);
+      await response.body?.cancel();
+      return true;
+    }
+    return await response.json() !== false;
+  } catch (error) {
+    console.warn("Could not count a request:", error);
+    return true;
+  }
 }
 
 type SavedAsset = Record<string, unknown> & { yahooQuoteAttemptedAt?: string };
@@ -1084,10 +1098,16 @@ serve(async (request) => {
       if (typeof symbol !== "string" || !symbolPattern.test(symbol)) {
         return badRequest("Envía un símbolo bursátil válido en mayúsculas");
       }
-      if (!await isSignedIn(request)) {
+      // Rebuilding assets costs Yahoo requests, so only people with an account can trigger it.
+      const userId = await getSignedInUserId(request);
+      if (!userId) {
         return jsonResponse({ error: "Iniciá sesión para actualizar este activo." }, 401);
       }
-      return action === "asset" ? await buildAsset(symbol) : await refreshAssetQuote(symbol);
+      if (action === "assetQuote") return await refreshAssetQuote(symbol);
+      if (!await consumeApiCall(userId)) {
+        return jsonResponse({ error: "Llegaste al límite diario de consultas de tu plan. Mañana se renueva." }, 429);
+      }
+      return await buildAsset(symbol);
     }
 
     if (action === "sectorStats") {
@@ -1284,6 +1304,11 @@ serve(async (request) => {
           ? "Envía entre 1 y 20 símbolos bursátiles válidos en mayúsculas"
           : "Envía entre 1 y 8 símbolos bursátiles válidos en mayúsculas",
       );
+    }
+
+    // Full quotes cost about ten Yahoo requests each; the app builds assets through "asset" instead.
+    if (!marketDataOnly && !await getSignedInUserId(request)) {
+      return jsonResponse({ error: "Iniciá sesión para consultar datos completos." }, 401);
     }
 
     const normalizedSymbols = [...new Set(symbols.map((symbol) => symbol.toUpperCase()))];

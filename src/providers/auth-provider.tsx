@@ -30,6 +30,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const abortControllerRef = useRef<AbortController | null>(null); // ✅ Cancelar requests pendientes
   const fetchInProgressRef = useRef(false); // ✅ Prevenir llamadas concurrentes
   const initPromiseRef = useRef<Promise<unknown> | null>(null); // ✅ Evitar doble inicialización
+  const initialUserIdRef = useRef<string | null>(null);
 
   const fetchProfile = useCallback(async (user: User | null, signal?: AbortSignal) => {
     if (!user) {
@@ -139,6 +140,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
         
         setSession(initialSession);
+        initialUserIdRef.current = initialSession?.user?.id ?? null;
         await fetchProfile(initialSession?.user ?? null, abortController.signal);
         
         if (abortController.signal.aborted) {
@@ -159,33 +161,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       // 2. Se suscribe a los cambios de autenticación.
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (_event, newSession) => {
-          // ✅ Verificar si el componente sigue montado
+      // The callback must stay synchronous: Supabase runs it while holding its auth lock, and any
+      // Supabase query awaited inside waits for that same lock. Since the session refreshes about
+      // once an hour, an open tab used to lock up and every request (searches included) hung until
+      // the page was reloaded. The profile is loaded right after the callback returns instead.
+      let currentUserId = initialUserIdRef.current;
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+        if (abortController.signal.aborted) return;
+        setSession(newSession);
+        const nextUserId = newSession?.user?.id ?? null;
+        // A token refresh keeps the same user: no reason to reload the profile or show a spinner.
+        if (event === 'TOKEN_REFRESHED' || (event !== 'SIGNED_OUT' && nextUserId === currentUserId && event !== 'USER_UPDATED')) {
+          return;
+        }
+        currentUserId = nextUserId;
+        setTimeout(() => {
           if (abortController.signal.aborted) return;
-          
-          // Cada vez que la sesión cambie (login/logout), se actualiza todo.
           setLoading(true);
           setError(null);
-          try {
-            setSession(newSession);
-            await fetchProfile(newSession?.user ?? null, abortController.signal);
-            
-            if (abortController.signal.aborted) return;
-            setIsLoaded(true);
-          } catch (err: unknown) {
-            if (abortController.signal.aborted) return;
-            const msg = err instanceof Error ? err.message : 'Fallo al manejar cambio de autenticación';
-            void logger.error('AUTH_STATE_CHANGE_FAILED', msg);
-            setError('Ocurrió un problema actualizando tu sesión.');
-          } finally {
-            if (!abortController.signal.aborted) {
-              setLoading(false);
-            }
-          }
-        }
-      );
-      
+          fetchProfile(newSession?.user ?? null, abortController.signal)
+            .then(() => {
+              if (!abortController.signal.aborted) setIsLoaded(true);
+            })
+            .catch((err: unknown) => {
+              if (abortController.signal.aborted) return;
+              const msg = err instanceof Error ? err.message : 'Fallo al manejar cambio de autenticación';
+              void logger.error('AUTH_STATE_CHANGE_FAILED', msg);
+              setError('Ocurrió un problema actualizando tu sesión.');
+            })
+            .finally(() => {
+              if (!abortController.signal.aborted) setLoading(false);
+            });
+        }, 0);
+      });
+
       return subscription;
     };
 
