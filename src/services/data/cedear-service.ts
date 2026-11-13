@@ -17,8 +17,8 @@ export const fetchCedearRatios = async (): Promise<Record<string, number>> => {
 
     // Convertimos el array de objetos en un mapa para un acceso más eficiente (ej: ratios['AAPL'])
     const ratiosMap = data.reduce((acc: Record<string, number>, item: { symbol: string; ratio: number }) => {
-      const symbol = item.symbol.replace(/[^a-zA-Z]/g, '').toUpperCase();
-      acc[symbol] = item.ratio;
+      const symbol = item.symbol.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      if (Number.isFinite(item.ratio) && item.ratio > 0) acc[symbol] = item.ratio;
       return acc;
     }, {});
 

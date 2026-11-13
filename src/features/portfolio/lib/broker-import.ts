@@ -16,14 +16,17 @@ export const ASSET_KIND_LABELS: Record<AssetKind, string> = {
   'us-stock': 'Acción o ETF de EE. UU.',
   cedear: 'CEDEAR',
   'ar-stock': 'Acción argentina',
-  bond: 'Bono, ON o letra',
+  bond: 'Renta fija (próximamente)',
   cash: 'Efectivo o caución',
   fund: 'Fondo común',
   unknown: 'Sin identificar',
 };
 
-/** Kinds FinDash can value; the rest are listed but not imported. */
-export const IMPORTABLE_KINDS: AssetKind[] = ['us-stock', 'cedear', 'ar-stock', 'bond'];
+/**
+ * Kinds the portfolio takes for now: equities only. Bonds, ONs and letters are recognised and listed
+ * but not imported until fixed income is supported end to end.
+ */
+export const IMPORTABLE_KINDS: AssetKind[] = ['cedear', 'us-stock', 'ar-stock'];
 
 export interface BrokerRow {
   /** Row number in the file (1-based), for messages. */
@@ -411,12 +414,14 @@ export function classifyRow(row: BrokerRow, context: ClassifyContext): Classifie
     } else if (bestByPrice) {
       kind = bestByPrice;
       reason = 'Su precio coincide con la cotización de este mercado';
+    } else if (prices.cedear !== undefined && row.currency !== 'USD' && sectionHint !== 'bond') {
+      // Most users hold CEDEARs: a ticker that trades as one in pesos is a CEDEAR unless the file
+      // clearly says otherwise (dollars, or a fixed income section).
+      kind = 'cedear';
+      reason = 'Cotiza como CEDEAR en pesos';
     } else if (sectionHint) {
       kind = sectionHint;
       reason = `Sección "${row.section}" del archivo`;
-    } else if (prices.cedear !== undefined && row.currency !== 'USD') {
-      kind = 'cedear';
-      reason = 'Tiene ratio de CEDEAR y está en pesos';
     } else if (prices['ar-stock'] !== undefined) {
       kind = 'ar-stock';
       reason = 'Cotiza en el mercado argentino';
@@ -451,9 +456,13 @@ export function finalizeRow(
     ?? (kind === 'us-stock' ? 'USD' : kind === 'bond' && isDollarQuotedLocal(row.symbol, context.local) ? 'USD' : 'ARS');
   let ratio: number | null = null;
   if (kind === 'cedear') {
-    ratio = override.ratio !== undefined ? override.ratio : context.cedearRatios[row.symbol] ?? null;
+    const stored = context.cedearRatios[row.symbol] ?? null;
+    const market = stored === null ? marketRatio(row.symbol, context) : null;
+    ratio = override.ratio !== undefined ? override.ratio : stored ?? market;
     if (!ratio) warnings.push('Falta el ratio del CEDEAR: cargalo para convertirlo bien.');
+    else if (override.ratio === undefined && stored === null) warnings.push(`Ratio ${ratio}:1 deducido de los precios de hoy; confirmalo si tenés el dato del broker.`);
   }
+  if (kind === 'bond') warnings.push('La renta fija todavía no se carga en el portafolio: la vamos a sumar más adelante.');
   if (kind === 'bond') {
     // Per 100 nominal unless the file clearly uses per-unit prices.
     const market = candidatePrices(row, context).bond;
@@ -481,6 +490,22 @@ export function finalizeRow(
 }
 
 const toArs = (amount: number, currency: Currency, ccl: number) => (currency === 'USD' ? amount * ccl : amount);
+
+/** Ratios are whole numbers of CEDEARs per share, or one CEDEAR per whole number of shares. */
+export function snapRatio(implied: number): number {
+  if (!(implied > 0)) return 0;
+  if (implied >= 1) return Math.max(1, Math.round(implied));
+  return 1 / Math.round(1 / implied);
+}
+
+/** Ratio implied by today's prices (US price × CCL ÷ CEDEAR price), for CEDEARs not yet in the table. */
+function marketRatio(symbol: string, context: ClassifyContext): number | null {
+  const local = context.local.get(symbol);
+  const us = context.usPrices.get(symbol);
+  if (local?.kind !== 'cedear' || !us || !(context.ccl > 0)) return null;
+  const ratio = snapRatio((us * context.ccl) / local.price);
+  return ratio > 0 ? ratio : null;
+}
 
 /** What the position is worth today in pesos, by FinDash's own prices. */
 function valueInArs(row: Pick<ClassifiedRow, 'symbol' | 'quantity' | 'kind' | 'currency' | 'ratio'>, context: ClassifyContext): number | null {

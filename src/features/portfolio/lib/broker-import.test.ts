@@ -61,7 +61,10 @@ describe('IOL holdings export', () => {
     const rows = classifyAll(file);
     expect(rows.map((row) => row.kind)).toEqual(['cedear', 'ar-stock', 'bond']);
     expect(rows[2].ratio).toBe(100);
-    for (const row of rows) expect(row.warnings).toEqual([]);
+    expect(rows[0].warnings).toEqual([]);
+    expect(rows[1].warnings).toEqual([]);
+    // Fixed income is recognised but left out of the portfolio for now.
+    expect(rows[2].warnings.join(' ')).toContain('renta fija');
   });
 
   it('values each position like the broker', () => {
@@ -79,10 +82,7 @@ describe('IOL holdings export', () => {
     const ggal = transactions.find((tx) => tx.symbol === 'GGAL.BA')!;
     expect(ggal.quantity).toBe(100);
     expect(ggal.purchase_price).toBeCloseTo(5_000 / CCL);
-    const bond = transactions.find((tx) => tx.symbol === 'AL30.BA')!;
-    expect(bond.quantity).toBe(1000);
-    // Cost of the position is preserved: 1.000 nominal at $70.000 per 100.
-    expect(bond.quantity * bond.purchase_price * CCL).toBeCloseTo(700_000);
+    expect(transactions.some((tx) => tx.symbol === 'AL30.BA')).toBe(false);
   });
 });
 
@@ -106,10 +106,7 @@ describe('Balanz holdings by section', () => {
     expect(rows.map((row) => [row.symbol, row.kind])).toEqual([['AAPL', 'cedear'], ['AL30D', 'bond'], ['ARS', 'cash']]);
     expect(rows[1].currency).toBe('USD');
     const transactions = toTransactions(rows, 1, CCL, '2026-11-15');
-    expect(transactions.map((tx) => tx.symbol)).toEqual(['AAPL', 'AL30D.BA']);
-    // Dollar bond: 500 nominal at US$50 per 100 → US$250 of cost.
-    const bond = transactions[1];
-    expect(bond.quantity * bond.purchase_price).toBeCloseTo(250);
+    expect(transactions.map((tx) => tx.symbol)).toEqual(['AAPL']);
   });
 });
 
@@ -169,5 +166,29 @@ describe('Excel files', () => {
     const classified = parsed.rows.map((row) => classifyRow(row, context));
     expect(classified.map((row) => row.kind)).toEqual(['cedear', 'bond']);
     expect(classified[1].findashValueArs).toBeCloseTo(7_500_000);
+  });
+});
+
+describe('CEDEARs by default', () => {
+  it('treats a CEDEAR filed under "Acciones" as a CEDEAR', () => {
+    const rows = classifyAll(['Acciones', 'Ticker;Cantidad;PPC', 'MELI;10;18.000'].join('\n'));
+    expect(rows[0].kind).toBe('cedear');
+    expect(rows[0].ratio).toBe(120);
+  });
+
+  it('deduces a missing ratio from today\'s prices and says so', () => {
+    const withoutRatio = { ...context, cedearRatios: {} };
+    const parsed = parseCsv(['Ticker;Cantidad;Último precio;PPC', 'MELI;10;22.000;18.000'].join('\n'));
+    const row = classifyRow(parsed.rows[0], withoutRatio);
+    expect(row.kind).toBe('cedear');
+    // US$1.760 × CCL 1.500 ÷ $22.000 = 120.
+    expect(row.ratio).toBe(120);
+    expect(row.warnings.join(' ')).toContain('deducido de los precios');
+    expect(toTransactions([row], 1, CCL)[0].quantity).toBeCloseTo(10 / 120);
+  });
+
+  it('keeps US shares when the file is in dollars', () => {
+    const rows = classifyAll(['Ticker;Cantidad;PPC;Moneda', 'MELI;2;1500;USD'].join('\n'));
+    expect(rows[0].kind).toBe('us-stock');
   });
 });
