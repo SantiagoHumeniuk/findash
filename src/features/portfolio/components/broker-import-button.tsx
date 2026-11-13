@@ -359,8 +359,9 @@ export function BrokerImportButton() {
             </ul>
             <p className="text-muted-foreground">
               Reconocemos el ticker, la cantidad, el precio de compra (PPC o precio promedio) y el precio o valor actual, aunque las columnas
-              tengan otros nombres o el archivo traiga títulos y secciones. CEDEARs, acciones argentinas, bonos, ONs, letras y acciones de EE. UU.
-              se identifican fila por fila; el efectivo, las cauciones y los fondos se muestran pero no se importan.
+              tengan otros nombres o el archivo traiga títulos y secciones. Cada fila se identifica sola: CEDEARs (con su ratio, que se
+              actualiza todos los días), acciones argentinas y acciones de EE. UU. Por ahora el portafolio es solo de renta variable: los
+              bonos, ONs y letras se reconocen pero no se importan, igual que el efectivo, las cauciones y los fondos.
             </p>
             <p className="text-muted-foreground">
               Los montos en pesos se pasan a dólares con el CCL de hoy, el mismo que se usa para valuar, así que la ganancia o pérdida en

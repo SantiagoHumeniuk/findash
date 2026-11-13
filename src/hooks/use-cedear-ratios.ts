@@ -1,28 +1,21 @@
 // src/hooks/use-cedear-ratios.ts
 
-import { useState, useEffect } from 'react';
-// ✅ Importamos la nueva función del servicio
+import { useQuery } from '@tanstack/react-query';
 import { fetchCedearRatios } from '../services/data/cedear-service';
 
 /**
- * Hook personalizado para obtener y cachear los ratios de conversión de CEDEARs.
- * * @returns {{ ratios: Record<string, number>, loading: boolean }} - Un objeto con los ratios y el estado de carga.
+ * CEDEAR conversion ratios (CEDEARs per underlying share). The table is checked against market
+ * prices every business day by the cedear-ratios-sync Edge Function, so ratio changes and new
+ * CEDEARs arrive on their own; one copy is shared by every screen for the session.
  */
 export function useCedearRatios() {
-  const [ratios, setRatios] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Usamos una función autoejecutable para poder usar async/await dentro del useEffect.
-    const loadRatios = async () => {
-      setLoading(true);
-      const fetchedRatios = await fetchCedearRatios();
-      setRatios(fetchedRatios);
-      setLoading(false);
-    };
-
-    void loadRatios();
-  }, []); // El array vacío asegura que esto se ejecute solo una vez.
-
-  return { ratios, loading };
+  const { data, isLoading } = useQuery({
+    queryKey: ['cedear-ratios'],
+    queryFn: fetchCedearRatios,
+    staleTime: 6 * 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
+  });
+  return { ratios: data ?? EMPTY, loading: isLoading };
 }
+
+const EMPTY: Record<string, number> = {};
