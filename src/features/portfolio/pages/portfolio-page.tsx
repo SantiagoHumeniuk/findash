@@ -31,7 +31,7 @@ import {
   SellTransactionModal,
   PortfolioSkeleton,
   PortfolioSelector,
-  CsvImportButton,
+  BrokerImportButton,
 } from '../components';
 import { ErrorBoundary } from '../../../components/error-boundary';
 import { ErrorScreen } from '../../../components/ui/error-screen';
@@ -257,7 +257,7 @@ function PortfolioPageContent() {
           <div className="flex items-center gap-3">
             <BuyAssetDialog onChoose={(ticker, price) => setAddModalInfo({ isOpen: true, ticker, price })} />
             <PortfolioSelector />
-            <CsvImportButton />
+            <BrokerImportButton />
             <Button 
                 onClick={() => void handleExportPdf()} 
                 disabled={exportingPdf || holdingsWithMetrics.length === 0} 

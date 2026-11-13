@@ -13,6 +13,9 @@ import { toast } from 'sonner';
 import { logger } from '../lib/logger';
 import { errorToString } from '../utils/type-guards';
 import { fetchTickerData } from '../services/api/asset-api';
+import { fetchLocalMarket } from '../services/api/local-market-api';
+import { fetchCclRate } from '../hooks/use-ccl-rate';
+import { buildLocalAsset, isLocalPortfolioSymbol } from '../features/portfolio/lib/local-assets';
 import type { Config } from '../types/config';
 import type { Profile } from '../types/auth';
 import type { User } from '@supabase/supabase-js';
@@ -70,7 +73,27 @@ const fetchPortfolioData = async (
 
     // Use shared cache first; only cache misses use a plan-metered asset lookup.
     // A few at a time: concurrent enough to be fast, gentle enough on the Edge Function.
+    // Local stocks and bonds are priced with Buenos Aires quotes (one request for all of them).
+    const localSymbols = symbols.filter(isLocalPortfolioSymbol);
+    if (localSymbols.length > 0) {
+        try {
+            const [market, ccl] = await Promise.all([fetchLocalMarket(), fetchCclRate()]);
+            for (const symbol of localSymbols) {
+                const asset = buildLocalAsset(symbol, market, ccl.rate);
+                if (asset) portfolioData[symbol] = asset;
+            }
+        } catch (error) {
+            void logger.error('PORTFOLIO_LOCAL_PRICES_FAILED', errorToString(error));
+        }
+    }
+
     const loadSymbol = async (symbol: string) => {
+        if (portfolioData[symbol]) return;
+        if (isLocalPortfolioSymbol(symbol) && localSymbols.length > 0 && !portfolioData[symbol]) {
+            // Not listed today (e.g. a matured bond): shown at cost rather than as a total loss.
+            unavailableSymbols.push(symbol);
+            return;
+        }
         try {
             portfolioData[symbol] = await fetchTickerData({
                 queryKey: ['assetData', symbol, config, user, profile],
@@ -232,9 +255,25 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         return null;
     };
 
-    const importTransactions = async (transactionsToImport: Omit<Transaction, 'id' | 'user_id'>[]) => {
+    const importTransactions = async (
+        transactionsToImport: Omit<Transaction, 'id' | 'user_id'>[],
+        options: { replacePortfolioId?: number } = {},
+    ) => {
         if (!user) throw new Error('Debes iniciar sesión para importar transacciones.');
         if (transactionsToImport.length === 0) return [];
+
+        // Importing the same account twice used to double every position; a snapshot replaces it.
+        let removed: Transaction[] = [];
+        if (options.replacePortfolioId !== undefined) {
+            const deletion = await supabase
+                .from('transactions')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('portfolio_id', options.replacePortfolioId)
+                .select();
+            if (deletion.error) throw new Error(`No se pudo vaciar el portafolio: ${deletion.error.message}`);
+            removed = (deletion.data ?? []) as Transaction[];
+        }
 
         const result = await supabase
             .from('transactions')
@@ -244,7 +283,14 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
             })))
             .select();
 
-        if (result.error) throw new Error(result.error.message);
+        if (result.error) {
+            // Put back what was removed, so a failed import never leaves the portfolio empty.
+            if (removed.length > 0) {
+                await supabase.from('transactions').insert(removed.map(({ id: _id, ...transaction }) => transaction));
+            }
+            await queryClient.invalidateQueries({ queryKey: ['portfolio', user.id] });
+            throw new Error(result.error.message);
+        }
 
         await queryClient.invalidateQueries({ queryKey: ['portfolio', user.id] });
         return (result.data ?? []) as Transaction[];

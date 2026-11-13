@@ -1,6 +1,7 @@
 // src/features/portfolio/components/stats/portfolio-stats.tsx
 
 import { useMemo } from 'react';
+import { useCclRate } from '../../../../hooks/use-ccl-rate';
 import { Card } from "../../../../components/ui/card";
 import { Holding, PortfolioContextType } from '../../../../types/portfolio';
 import { AssetData } from '../../../../types/dashboard';
@@ -97,6 +98,8 @@ interface PortfolioStatsProps {
 }
 
 export function PortfolioStats({ holdings, totalPerformance, portfolioData, avgHoldingDays, historicalMetrics }: PortfolioStatsProps) {
+    const { data: ccl } = useCclRate();
+    const cclRate = ccl?.rate;
 
     const metrics = useMemo(() => {
         const baseMetrics = calculatePortfolioMetrics(holdings, portfolioData);
@@ -123,9 +126,18 @@ export function PortfolioStats({ holdings, totalPerformance, portfolioData, avgH
             {/* --- Fila 1: Estado Actual --- */}
             <StatCard 
                 label="Valor Actual" 
-                value={formatCurrency(metrics.currentValue)} 
+                value={
+                    <span className="block">
+                        {formatCurrency(metrics.currentValue)}
+                        {cclRate && (
+                            <span className="block text-xs font-medium text-muted-foreground">
+                                ≈ {(metrics.currentValue * cclRate).toLocaleString('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })}
+                            </span>
+                        )}
+                    </span>
+                }
                 icon={Wallet}
-                helpText="El valor de mercado actual de todas tus posiciones abiertas."
+                helpText="El valor de mercado actual de todas tus posiciones abiertas. En pesos, al dólar CCL de hoy, para compararlo con tu broker."
                 delay={0}
             />
             <StatCard 

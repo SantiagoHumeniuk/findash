@@ -29,7 +29,25 @@ export const PortfolioView = React.memo(function PortfolioView({ holdings, portf
     {
       accessorKey: 'symbol',
       header: 'Activo',
-      cell: ({ getValue }) => <span className="font-semibold">{getValue() as string}</span>,
+      cell: ({ row }) => {
+        const asset = row.original.assetData;
+        const symbol = row.original.symbol;
+        return (
+          <span className="block">
+            <span className="font-semibold">{symbol.replace(/.BA$/, '')}</span>
+            {asset.localMarket && (
+              <span className="block text-[11px] text-muted-foreground">
+                {asset.profile.industry} · $ {asset.localMarket.arsPrice.toLocaleString('es-AR', { maximumFractionDigits: 2 })}
+              </span>
+            )}
+            {asset.priceUnavailable && (
+              <span className="block text-[11px] text-amber-600 dark:text-amber-400" title="Sin cotización hoy: se muestra a precio de compra">
+                Sin cotización hoy
+              </span>
+            )}
+          </span>
+        );
+      },
     },
     {
       accessorKey: 'quantity',
