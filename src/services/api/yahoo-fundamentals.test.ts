@@ -162,14 +162,14 @@ describe('analyst builders', () => {
 });
 
 describe('buildFinDashDcf and buildFinDashRating', () => {
-  it('projects five years and values the equity per diluted share', () => {
+  it('projects ten years and values the equity per diluted share', () => {
     const yahoo = quote();
     const financials = buildYahooFinancials('ACME', yahoo, 6000);
     const { dcf, dcfLevered } = buildFinDashDcf({
       symbol: 'ACME', price: 60, beta: 1, riskFreeRate: 0.045, financials, quote: yahoo,
     });
 
-    expect(dcf.map(({ year }) => year)).toEqual(['2026', '2027', '2028', '2029', '2030']);
+    expect(dcf.map(({ year }) => year)).toEqual(['2026', '2027', '2028', '2029', '2030', '2031', '2032', '2033', '2034', '2035']);
     expect(dcf[0].wacc).toBeGreaterThan(4.5);
     expect(dcf[0].riskFreeRate).toBeCloseTo(4.5);
     expect(dcf[0].equityValuePerShare).toBeGreaterThan(0);

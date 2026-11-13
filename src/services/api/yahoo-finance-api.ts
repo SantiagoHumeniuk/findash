@@ -1,4 +1,4 @@
-import type { AssetData } from '../../types/dashboard';
+import type { AssetData, SectorValuationStats } from '../../types/dashboard';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -72,6 +72,8 @@ export interface YahooFinanceQuote {
   governance: YahooGovernance | null;
   /** Public URL of the company logo stored in Supabase Storage. */
   logoUrl: string | null;
+  /** Sector medians attached by the server when it builds an asset. */
+  sectorStats?: SectorValuationStats | null;
   error: string | null;
 }
 

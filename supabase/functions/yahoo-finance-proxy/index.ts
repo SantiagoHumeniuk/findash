@@ -39,7 +39,14 @@ import {
   parseVisualizationRows,
 } from "./insights.ts";
 import { ensureLogo } from "./logos.ts";
-import { fetchHeatmap, parseScreenerRequest, runScreener } from "./screener.ts";
+import {
+  fetchHeatmap,
+  fetchSectorStats,
+  parseScreenerRequest,
+  runScreener,
+  SCREENER_SECTORS,
+  type SectorStats,
+} from "./screener.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -183,6 +190,7 @@ type YahooQuote = {
   nextEarnings: NextEarnings | null;
   governance: Governance | null;
   logoUrl: string | null;
+  sectorStats?: SectorStats | null;
   error: string | null;
 };
 
@@ -992,6 +1000,22 @@ async function loadFullQuote(symbol: string): Promise<YahooQuote> {
   }
 }
 
+/** Sector medians change slowly, so every asset of a sector shares one daily computation. */
+async function loadSectorStats(sector: string | null): Promise<SectorStats | null> {
+  if (!sector || !SCREENER_SECTORS.includes(sector)) return null;
+  try {
+    const { data } = await withCache(
+      `yahoo:sector-stats:${sector}`,
+      24 * 60 * 60 * 1000,
+      async () => await fetchSectorStats(sector, await getYahooSession()),
+    );
+    return data;
+  } catch (error) {
+    console.warn(`Could not load the sector medians of ${sector}:`, error);
+    return null;
+  }
+}
+
 /** Builds an asset here and saves it: clients cannot write the shared cache. */
 async function buildAsset(symbol: string): Promise<Response> {
   const [quote, riskFreeRate] = await Promise.all([loadFullQuote(symbol), fetchRiskFreeRate()]);
@@ -1004,6 +1028,7 @@ async function buildAsset(symbol: string): Promise<Response> {
     }
     return jsonResponse({ error }, 502);
   }
+  quote.sectorStats = await loadSectorStats(quote.companyProfile.sector);
   const asset = createYahooAssetData(symbol, quote, fetchedAt, riskFreeRate as never);
   await writeCache(symbol, asset, fetchedAt);
   return jsonResponse({ asset }, 200, { "Cache-Control": "no-store" });
@@ -1063,6 +1088,12 @@ serve(async (request) => {
         return jsonResponse({ error: "Iniciá sesión para actualizar este activo." }, 401);
       }
       return action === "asset" ? await buildAsset(symbol) : await refreshAssetQuote(symbol);
+    }
+
+    if (action === "sectorStats") {
+      const sector = requestBody?.sector;
+      if (typeof sector !== "string" || !SCREENER_SECTORS.includes(sector)) return badRequest("Sector no permitido");
+      return jsonResponse(await loadSectorStats(sector));
     }
 
     if (action === "dividends") {

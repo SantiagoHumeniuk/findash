@@ -542,14 +542,23 @@ export interface DcfInputs {
   quote: YahooFinanceQuote;
 }
 
-const PROJECTION_YEARS = 5;
-const TERMINAL_GROWTH = 0.025;
+const PROJECTION_YEARS = 10;
+/**
+ * Long-term growth equals the risk-free rate, bounded: the equity risk premium used here is
+ * Damodaran's implied one, which is estimated under that same assumption, and no company
+ * outgrows the economy forever.
+ */
+export function getTerminalGrowth(riskFreeRate: number): number {
+  return Math.min(Math.max(riskFreeRate, 0.025), 0.04);
+}
 const DEFAULT_RISK_FREE_RATE = 0.042;
 
 /**
- * Five-year unlevered DCF in FMP's row format. Revenue growth starts from the
+ * Ten-year unlevered DCF in FMP's row format. Revenue growth starts from the
  * analysts' next-year estimate (or the historical CAGR) and fades linearly to
- * the terminal rate; margins and reinvestment use the last three fiscal years.
+ * the terminal rate: five years cut growing companies off too early. Margins
+ * weigh the latest year as much as the three-year average, so a business that
+ * improved is not valued on what it used to earn; reinvestment uses three years.
  * The WACC uses a Blume-adjusted beta and excludes country risk, which the
  * valuation engine adds later.
  */
@@ -575,7 +584,11 @@ export function buildFinDashDcf({ symbol, price, beta, riskFreeRate, financials,
     });
     return shares.length > 0 ? shares.reduce((total, value) => total + value, 0) / shares.length : fallback;
   };
-  const ebitdaMargin = meanShare((items) => items.ebitda, 0);
+  const latestEbitdaMargin = ratio(latest.ebitda, latest.revenue);
+  const averageEbitdaMargin = meanShare((items) => items.ebitda, 0);
+  const ebitdaMargin = latestEbitdaMargin !== null && latestEbitdaMargin > 0
+    ? (latestEbitdaMargin + averageEbitdaMargin) / 2
+    : averageEbitdaMargin;
   const depreciationShare = meanShare((items) => items.depreciation, 0.03);
   const capexShare = meanShare((items) => abs(items.capex), depreciationShare);
   const workingCapitalShare = meanShare((items) => items.workingCapital, 0);
@@ -601,7 +614,8 @@ export function buildFinDashDcf({ symbol, price, beta, riskFreeRate, financials,
   const rf = riskFreeRate !== null && riskFreeRate > 0 && riskFreeRate < 0.15 ? riskFreeRate : DEFAULT_RISK_FREE_RATE;
   // Blume-adjusted beta (0.67β + 0.33), the market convention that pulls raw betas toward 1.
   const rawBeta = beta !== null && beta > 0 && beta < 4 ? beta : 1;
-  const assetBeta = 0.67 * rawBeta + 0.33;
+  // Bounded like the fair value models: very low betas with heavy debt produce discount rates no investor accepts.
+  const assetBeta = Math.min(Math.max(0.67 * rawBeta + 0.33, 0.75), 1.75);
   const costOfEquity = rf + assetBeta * MATURE_MARKET_ERP;
   const totalDebt = latest.totalDebt ?? 0;
   const costOfDebt = clamp(ratio(latest.interestExpense, totalDebt) ?? rf + 0.015, 0.02, 0.15);
@@ -611,8 +625,17 @@ export function buildFinDashDcf({ symbol, price, beta, riskFreeRate, financials,
   const debtWeighting = totalCapital > 0 ? totalDebt / totalCapital : 0;
   const equityWeighting = 1 - debtWeighting;
   const wacc = equityWeighting * costOfEquity + debtWeighting * afterTaxCostOfDebt;
-  const longTermGrowthRate = Math.min(TERMINAL_GROWTH, wacc - 0.02);
+  // A perpetuity priced within four points of its growth rate is worth almost anything.
+  const longTermGrowthRate = Math.min(getTerminalGrowth(rf), wacc - 0.04);
   if (wacc <= longTermGrowthRate) return { dcf: [], dcfLevered: emptyLevered };
+
+  // Accounting can add back amortization that is not spending on fixed assets (content, leases):
+  // the projection may not convert sales into cash much better than the company actually has.
+  const actualFcffShare = meanShare(
+    (items) => items.freeCashFlow === null ? null : items.freeCashFlow + (items.interestExpense ?? 0) * (1 - taxRate),
+    0,
+  );
+  const maxUfcfShare = actualFcffShare > 0 ? actualFcffShare * 1.5 : null;
 
   const baseYear = Number(quote.fundamentals.annual[0].date.slice(0, 4));
   let revenue = baseRevenue;
@@ -629,7 +652,8 @@ export function buildFinDashDcf({ symbol, price, beta, riskFreeRate, financials,
     const changeInWorkingCapital = workingCapital - previousWorkingCapital;
     previousWorkingCapital = workingCapital;
     const ebiat = ebit * (1 - taxRate);
-    const ufcf = ebiat + depreciation + capitalExpenditure - changeInWorkingCapital;
+    const builtUfcf = ebiat + depreciation + capitalExpenditure - changeInWorkingCapital;
+    const ufcf = maxUfcfShare === null ? builtUfcf : Math.min(builtUfcf, revenue * maxUfcfShare);
     sumPvUfcf += ufcf / (1 + wacc) ** (index + 1);
     return { year: String(baseYear + index + 1), revenue, ebitda, ebit, depreciation, capitalExpenditure, ebiat, ufcf };
   });

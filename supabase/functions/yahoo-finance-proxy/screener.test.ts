@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { buildScreenerQuery, parseScreenerRequest } from "./screener.ts";
+import { buildScreenerQuery, parseScreenerRequest, summarizeSector } from "./screener.ts";
 
 Deno.test("screener requests only accept allowlisted fields and sectors", () => {
   assertEquals(parseScreenerRequest({ sortField: "__proto__" }), null);
@@ -24,4 +24,19 @@ Deno.test("empty filters are dropped and limits become Yahoo operators", () => {
     { operator: "gte", operands: ["peratio.lasttwelvemonths", 5] },
     { operator: "lte", operands: ["peratio.lasttwelvemonths", 20] },
   ]);
+});
+
+Deno.test("sector figures weigh companies by size and ignore unusable multiples", () => {
+  const stats = summarizeSector("Technology", [
+    { marketCap: 900, forwardPE: 30, trailingPE: 36, priceToBook: 10 },
+    { marketCap: 100, forwardPE: 10, trailingPE: 10, priceToBook: 2 },
+    { marketCap: 500, forwardPE: -4, trailingPE: null, priceToBook: 3 },
+    { marketCap: 500, forwardPE: 400, trailingPE: 20, priceToBook: null },
+  ]);
+  assertEquals(stats.count, 2);
+  // 1000 of value over 900/30 + 100/10 = 40 of earnings.
+  assertEquals(stats.forwardPe, 25);
+  // Forward earnings 40 against trailing 900/36 + 100/10 = 35.
+  assertEquals(Math.round((stats.growth ?? 0) * 1000), 143);
+  assertEquals(stats.priceToBook, 3);
 });

@@ -38,6 +38,8 @@ export interface AssetData {
     yahooInsights?: AssetYahooInsights;
     dataFetchedAt?: string;
     yahooMetrics?: Record<string, number | null>;
+    /** Market inputs for the fair value models, captured when the asset was built. */
+    valuationInputs?: AssetValuationInputs;
     yahooAttemptedAt?: string;
     yahooQuoteAttemptedAt?: string;
     yahooError?: string | null;
@@ -484,4 +486,20 @@ export interface DashboardContextType {
     /** False until the user's saved tickers were loaded. */
     tickersRestored: boolean;
     indicatorConfig: IndicatorConfig;
+}
+/** How the largest companies of a sector are priced, weighted by size like a sector index. */
+export interface SectorValuationStats {
+    sector: string;
+    /** Companies with a usable forward P/E behind the figures. */
+    count: number;
+    forwardPe: number | null;
+    /** Expected earnings growth of the sector (trailing to forward), as a fraction. */
+    growth: number | null;
+    priceToBook: number | null;
+}
+
+export interface AssetValuationInputs {
+    /** US 10-year Treasury yield as a fraction. */
+    riskFreeRate: number | null;
+    sector: SectorValuationStats | null;
 }
