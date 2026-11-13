@@ -94,7 +94,8 @@ function sendToAnalytics(metric: Metric) {
     });
   }
 
-  // Enviar al logger
+  // Only slow loads are worth a database row; good ones were most of the log table.
+  if (isGood) return;
   void logger.info('PERFORMANCE_METRIC', `${name} metric recorded`, {
     metric: name,
     value: Math.round(value * 100) / 100, // 2 decimales

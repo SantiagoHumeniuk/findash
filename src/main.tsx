@@ -336,6 +336,17 @@ const router = createBrowserRouter([
 // Inicializar monitoreo de performance
 initPerformanceMonitoring();
 
+// After a deploy, tabs opened before it ask for page files that no longer exist.
+// Reload once to pick up the new version instead of showing an error screen.
+window.addEventListener('vite:preloadError', (event) => {
+  const key = 'findash:chunk-reload-at';
+  const lastReload = Number(sessionStorage.getItem(key) ?? 0);
+  if (Date.now() - lastReload < 60_000) return;
+  sessionStorage.setItem(key, String(Date.now()));
+  event.preventDefault();
+  window.location.reload();
+});
+
 // Signed-in users almost always open these next; loading them while idle makes navigation instant.
 if (Object.keys(localStorage).some((key) => key.startsWith('sb-'))) {
     const preloadMainPages = () => {

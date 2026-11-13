@@ -50,7 +50,7 @@ function BookmarkedBlogsPage() {
           created_at,
           blog:blogs!blog_bookmarks_blog_id_fkey (
             *,
-            author:profiles!fk_author(first_name, last_name)
+            author:public_profiles!fk_author(first_name, last_name)
           )
         `)
         .eq('user_id', user.id)

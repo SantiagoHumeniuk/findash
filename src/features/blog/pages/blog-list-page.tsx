@@ -61,7 +61,7 @@ function BlogListPage() {
         .from('blogs')
         .select(`
           *,
-          author:profiles!fk_author(id, first_name, last_name, avatar_index:onboarding_profile->avatarIndex, avatar_image:onboarding_profile->avatarImage, can_upload_blog)
+          author:public_profiles!fk_author(id, first_name, last_name, avatar_index:onboarding_profile->avatarIndex, avatar_image:onboarding_profile->avatarImage, can_upload_blog)
         `)
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
