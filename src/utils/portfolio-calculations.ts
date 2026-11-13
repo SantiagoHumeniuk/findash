@@ -41,9 +41,13 @@ export function calculateHoldings(
   assetMap.forEach((asset, symbol) => {
     // Solo incluir activos con una cantidad positiva (evita errores de punto flotante)
     if (asset.quantity > 1e-9) {
+      // Without a price the position is shown at its cost (no gain or loss) and flagged, instead of
+      // counting as worth zero, which looked like the whole investment had been lost.
+      const costPerUnit = asset.quantity > 0 ? asset.totalCost / asset.quantity : 0;
       const assetData = portfolioData[symbol] || {
-        profile: { symbol, price: 0, marketCap: 0, beta: 0 } as AssetData['profile'],
-        quote: { symbol, name: symbol, price: 0, change: 0, changePercentage: 0 } as AssetData['quote'],
+        profile: { symbol, price: costPerUnit, marketCap: 0, beta: 0 } as AssetData['profile'],
+        quote: { symbol, name: symbol, price: costPerUnit, change: 0, changePercentage: 0 } as AssetData['quote'],
+        priceUnavailable: true,
       } as AssetData;
       
       holdingsArray.push({

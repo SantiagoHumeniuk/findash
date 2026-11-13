@@ -43,6 +43,10 @@ export interface AssetData {
     yahooAttemptedAt?: string;
     yahooQuoteAttemptedAt?: string;
     yahooError?: string | null;
+    /** Set for local stocks and bonds valued with Buenos Aires prices. */
+    localMarket?: { kind: string; arsPrice: number; ccl: number; fetchedAt: string };
+    /** No price today: the portfolio shows the position at cost. */
+    priceUnavailable?: boolean;
 }
 
 export interface AssetYahooInsights {

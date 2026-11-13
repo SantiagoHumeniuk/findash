@@ -192,7 +192,9 @@ describe('portfolio-calculations', () => {
       const holdings = calculateHoldings(transactions, {});
 
       expect(holdings).toHaveLength(1);
-      expect(holdings[0].assetData.quote?.price).toBe(0); // Default fallback should be 0
+      // Without a price the position is valued at cost and flagged, never as worth zero.
+      expect(holdings[0].assetData.quote?.price).toBe(150);
+      expect(holdings[0].assetData.priceUnavailable).toBe(true);
     });
   });
 
