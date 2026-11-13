@@ -16,8 +16,10 @@ export function calculateHoldings(
   const assetMap = new Map<string, { quantity: number; totalCost: number; symbol: string }>();
 
   // Ordenar transacciones cronológicamente para un cálculo correcto del costo.
+  // Same-day operations keep the order they were recorded in (ids grow), so a sale never
+  // replays before the purchase it closes.
   const sortedTransactions = [...transactions].sort(
-    (a, b) => new Date(a.purchase_date).getTime() - new Date(b.purchase_date).getTime()
+    (a, b) => new Date(a.purchase_date).getTime() - new Date(b.purchase_date).getTime() || a.id - b.id
   );
 
   for (const tx of sortedTransactions) {

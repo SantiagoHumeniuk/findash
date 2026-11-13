@@ -97,8 +97,8 @@ export async function fetchTickerData({
         .from('asset_data_cache')
         .select('data, last_updated_at')
         .eq('symbol', ticker)
-        .single();
-    if (cacheReadError && cacheReadError.code !== 'PGRST116') {
+        .maybeSingle();
+    if (cacheReadError) {
         void logger.warn('ASSET_CACHE_READ_FAILED', `Could not read cached data for ${ticker}`, {
             ticker,
             errorMessage: cacheReadError.message,
@@ -152,7 +152,8 @@ export async function fetchTickerData({
         return cachedAsset;
     }
 
-    // Expired but recent data also shows immediately while the full rebuild runs behind it.
+    // Fundamentals under a day old are still good: show them with a fresh quote (free) instead of a
+    // rebuild in the background, which would spend the user's daily requests without them asking.
     if (
         !forceRefresh &&
         cached &&
@@ -160,8 +161,11 @@ export async function fetchTickerData({
         ((cached.data as AssetData).yahooDataVersion ?? 1) >= YAHOO_DATA_VERSION &&
         Date.now() - new Date(cached.last_updated_at as string).getTime() < STALE_WHILE_REFRESH_MS
     ) {
-        runInBackground(ticker, () => fetchTickerData({ queryKey, forceRefresh: true, fromPortfolio: true }));
-        return cached.data as AssetData;
+        const cachedAsset = cached.data as AssetData;
+        if (shouldRefreshYahooQuote(cachedAsset, Date.now())) {
+            runInBackground(ticker, () => refreshYahooAssetQuote(ticker.trim().toUpperCase()));
+        }
+        return cachedAsset;
     }
 
     if (forceRefresh && cached && new Date(cached.last_updated_at as string) > twoHoursAgo) {

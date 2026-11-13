@@ -246,9 +246,9 @@ function ScreenerTable() {
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
-              <Label>Mercado</Label>
+              <Label htmlFor="screener-region">Mercado</Label>
               <Select value={draft.region} onValueChange={(value) => setDraft((current) => ({ ...current, region: value as 'us' | 'ar' }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="screener-region"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="us">Estados Unidos</SelectItem>
                   <SelectItem value="ar">Buenos Aires (incluye CEDEARs)</SelectItem>
@@ -256,9 +256,9 @@ function ScreenerTable() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Sector</Label>
+              <Label htmlFor="screener-sector">Sector</Label>
               <Select value={draft.sector} onValueChange={(value) => setDraft((current) => ({ ...current, sector: value }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="screener-sector"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   {Object.entries(SECTORS).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
@@ -266,9 +266,9 @@ function ScreenerTable() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Ordenar por</Label>
+              <Label htmlFor="screener-sort">Ordenar por</Label>
               <Select value={draft.sortField} onValueChange={(value) => setDraft((current) => ({ ...current, sortField: value }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="screener-sort"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {SORT_OPTIONS.map((option) => <SelectItem key={option.field} value={option.field}>{option.label}</SelectItem>)}
                 </SelectContent>

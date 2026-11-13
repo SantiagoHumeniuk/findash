@@ -9,6 +9,18 @@ type PortfolioAssetData = any;
 
 describe('portfolio-calculations', () => {
   describe('calculateHoldings', () => {
+    it('replays a same-day buy and sale in the order they were recorded', () => {
+      const base = { user_id: 'user1', portfolio_id: 1, symbol: 'AAPL', purchase_date: '2024-03-01' };
+      // Fetched newest first, as the portfolio query returns them.
+      const transactions: Transaction[] = [
+        { ...base, id: 2, quantity: 4, purchase_price: 120, transaction_type: 'sell' },
+        { ...base, id: 1, quantity: 10, purchase_price: 100, transaction_type: 'buy' },
+      ];
+      const holdings = calculateHoldings(transactions, { AAPL: { quote: { price: 110 } } as PortfolioAssetData });
+      expect(holdings[0].quantity).toBe(6);
+      expect(holdings[0].avgPurchasePrice).toBeCloseTo(100);
+    });
+
     it('should calculate holdings correctly for buy transactions', () => {
       const transactions: Transaction[] = [
         {

@@ -978,6 +978,23 @@ function jsonResponse(body: unknown, status = 200, extraHeaders: Record<string, 
  * Spends one of the user's daily requests (the plan limit lives in the database). A failure to
  * reach the database lets the request through: an outage should not lock everyone out.
  */
+async function refundApiCall(userId: string): Promise<void> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) return;
+  try {
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/refund_api_call`, {
+      method: "POST",
+      headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_user: userId }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    await response.body?.cancel();
+  } catch (error) {
+    console.warn("Could not give back a request:", error);
+  }
+}
+
 async function consumeApiCall(userId: string): Promise<boolean> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -1107,7 +1124,20 @@ serve(async (request) => {
       if (!await consumeApiCall(userId)) {
         return jsonResponse({ error: "Llegaste al límite diario de consultas de tu plan. Mañana se renueva." }, 429);
       }
-      return await buildAsset(symbol);
+      try {
+        const response = await buildAsset(symbol);
+        if (!response.ok) await refundApiCall(userId);
+        return response;
+      } catch (error) {
+        await refundApiCall(userId);
+        // Record the attempt so clients wait before retrying an asset that keeps failing.
+        const saved = await readCache<SavedAsset>(symbol, ANY_AGE);
+        if (saved) {
+          const message = error instanceof Error ? error.message : "Error desconocido";
+          await writeCache(symbol, { ...saved.data, yahooAttemptedAt: new Date().toISOString(), yahooError: message }, saved.updatedAt);
+        }
+        throw error;
+      }
     }
 
     if (action === "sectorStats") {

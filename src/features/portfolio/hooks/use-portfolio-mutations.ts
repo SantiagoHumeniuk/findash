@@ -3,11 +3,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../hooks/use-auth';
-import { toast } from 'sonner';
 import { Transaction, Portfolio } from '../../../types/portfolio';
 import { AssetData } from '../../../types/dashboard';
 import { logger } from '../../../lib/logger';
-import { errorToString } from '../../../utils/type-guards';
 
 interface PortfolioQueryData {
     transactions: Transaction[];
@@ -78,8 +76,6 @@ export function usePortfolioMutations() {
                 };
             });
 
-            toast.success(`Operación de ${newTransactionData.symbol} registrada localmente.`);
-
             // 4. Devolvemos la "instantánea" para poder restaurarla en caso de error.
             return { previousPortfolio };
         },
@@ -87,10 +83,8 @@ export function usePortfolioMutations() {
         // Si la mutación falla, usamos el contexto de onMutate para revertir el cambio.
         onError: (err, variables, context) => {
             if (context?.previousPortfolio) {
+                // The caller reports the error; here the optimistic row is only undone.
                 queryClient.setQueryData(['portfolio', user?.id], context.previousPortfolio);
-                toast.error('Falló la operación en el servidor. Revirtiendo cambios.', {
-                    description: errorToString(err),
-                });
                 void logger.error('ADD_TRANSACTION_FAILED', err.message, { variables });
             }
         },
