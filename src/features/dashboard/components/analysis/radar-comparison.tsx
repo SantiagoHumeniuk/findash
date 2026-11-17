@@ -215,9 +215,9 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
                     })}
                 </div>
                 <ChartContainer config={chartConfig} className="mx-auto w-full h-[350px] sm:h-[450px] lg:h-[500px]">
-                    <RadarChart data={chartData}>
+                    <RadarChart data={chartData} outerRadius="65%">
                         <PolarGrid />
-                        <PolarAngleAxis dataKey="metric" tick={{ fontSize: 12 }} />
+                        <PolarAngleAxis dataKey="metric" tick={{ fontSize: 10 }} />
                         <PolarRadiusAxis angle={30} domain={[0, 1]} tick={false} axisLine={false} />
                         <ChartTooltip
                             cursor={{ strokeDasharray: '3 3' }}

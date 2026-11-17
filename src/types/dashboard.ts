@@ -492,6 +492,8 @@ export interface AssetGradesConsensus {
 
 export interface DashboardContextType {
     selectedTickers: string[];
+    /** True when the user has saved or explicitly edited the ticker selection. */
+    hasSavedSelection: boolean;
     assetsData?: Record<string, AssetData>; // Opcional
     loading?: boolean; // Opcional
     error?: string; // Opcional

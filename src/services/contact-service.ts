@@ -136,31 +136,28 @@ class ContactService {
    * Solo disponible para usuarios autenticados
    */
   async getUserMessages(): Promise<ContactMessage[]> {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-      if (!user) {
-        return [];
-      }
-
-      const { data, error } = await supabase
-        .from('contact_messages')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching user messages:', error);
-        return [];
-      }
-
-      return data as ContactMessage[];
-    } catch (error) {
-      console.error('Error in getUserMessages:', error);
-      return [];
+    if (userError) {
+      throw userError;
     }
+
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('contact_messages')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return data as ContactMessage[];
   }
 
   /**
@@ -173,31 +170,48 @@ class ContactService {
       limit?: number;
     }
   ): Promise<ContactMessage[]> {
+    let query = supabase
+      .from('contact_messages')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (filters?.status) {
+      query = query.eq('status', filters.status);
+    }
+
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return data as ContactMessage[];
+  }
+
+  /**
+   * Elimina un mensaje de contacto
+   * Solo disponible para administradores según las políticas RLS
+   */
+  async deleteMessage(messageId: string): Promise<boolean> {
     try {
-      let query = supabase
+      const { error } = await supabase
         .from('contact_messages')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (filters?.status) {
-        query = query.eq('status', filters.status);
-      }
-
-      if (filters?.limit) {
-        query = query.limit(filters.limit);
-      }
-
-      const { data, error } = await query;
+        .delete()
+        .eq('id', messageId);
 
       if (error) {
-        console.error('Error fetching all messages:', error);
-        return [];
+        console.error('Error deleting contact message:', error);
+        return false;
       }
 
-      return data as ContactMessage[];
+      return true;
     } catch (error) {
-      console.error('Error in getAllMessages:', error);
-      return [];
+      console.error('Error in deleteMessage:', error);
+      return false;
     }
   }
 

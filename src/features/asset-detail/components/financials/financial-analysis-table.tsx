@@ -29,6 +29,21 @@ export interface MetricConfig {
     description?: string;
 }
 
+function formatMetricValue(value: unknown, format: MetricConfig['format']): string {
+    if (value === undefined || value === null || value === '') return '';
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return '';
+    if (format === 'compact') return formatLargeNumber(numericValue);
+    if (format === 'currency') return formatPrice(numericValue);
+    if (format === 'percent') return formatPercentage(numericValue * 100);
+    return numericValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function calculateYearOverYear(current: unknown, previous: unknown): number | null {
+    if (typeof current !== 'number' || typeof previous !== 'number' || previous === 0) return null;
+    return ((current - previous) / Math.abs(previous)) * 100;
+}
+
 interface FinancialAnalysisTableProps {
     data: any[]; // eslint-disable-line @typescript-eslint/no-explicit-any
     defaultMetrics: string[];
@@ -43,6 +58,7 @@ export function FinancialAnalysisTable({
     dateKey = 'date'
 }: FinancialAnalysisTableProps) {
     const [visibleMetrics, setVisibleMetrics] = useState<string[]>(defaultMetrics);
+    const [selectedMobileYear, setSelectedMobileYear] = useState('');
 
     // 1. Procesar y Ordenar Datos (Más reciente primero: 2024, 2023, 2022...)
     const sortedData = useMemo(() => {
@@ -66,6 +82,10 @@ export function FinancialAnalysisTable({
         // Si es solo año "2024" o fecha completa
         return typeof val === 'string' && val.length === 4 ? val : new Date(val).getFullYear().toString();
     });
+    const mobileYear = years.includes(selectedMobileYear) ? selectedMobileYear : years[0];
+    const mobileYearIndex = years.indexOf(mobileYear);
+    const mobileYearData = sortedData[mobileYearIndex];
+    const mobilePreviousYearData = sortedData[mobileYearIndex + 1];
 
     // Helper para añadir métrica
     const handleAddMetric = (key: string) => {
@@ -85,37 +105,88 @@ export function FinancialAnalysisTable({
     return (
         <div className="space-y-4 animate-in fade-in-50 duration-500">
             {/* Controles Superiores */}
-            <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground italic">
-                    * Desliza horizontalmente para ver más años
+            <div className="grid gap-2 sm:flex sm:items-center sm:justify-between">
+                <p className="hidden text-xs text-muted-foreground italic sm:block">
+                    La tabla compara las métricas de todos los años.
                 </p>
-
-                <Select value="" onValueChange={handleAddMetric} disabled={optionsToAdd.length === 0}>
-                    <SelectTrigger className="w-[240px] h-9 text-xs font-medium bg-primary/5 border-primary/20 hover:bg-primary/10 transition-colors focus:ring-primary/20">
+                <div className="grid gap-2 sm:flex sm:items-center">
+                    <div className="sm:hidden">
+                        <Select value={mobileYear} onValueChange={setSelectedMobileYear}>
+                            <SelectTrigger aria-label="Año financiero" className="h-11 w-full">
+                                <SelectValue placeholder="Elegí un año" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {years.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <Select value="" onValueChange={handleAddMetric} disabled={optionsToAdd.length === 0}>
+                        <SelectTrigger className="h-11 w-full text-xs font-medium bg-primary/5 border-primary/20 hover:bg-primary/10 transition-colors focus:ring-primary/20 sm:h-9 sm:w-[240px]">
                         <div className="flex items-center gap-2">
                             <Plus className="w-3.5 h-3.5" />
                             <SelectValue placeholder={optionsToAdd.length > 0 ? "Agregar dato a la tabla..." : "No hay más datos disponibles"} />
                         </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                        <ScrollArea className="h-[200px]">
-                            {optionsToAdd.length > 0 ? (
-                                optionsToAdd.map((metric) => (
-                                    <SelectItem key={metric.key} value={metric.key} className="text-xs cursor-pointer">
-                                        {metric.label}
-                                    </SelectItem>
-                                ))
-                            ) : (
-                                <div className="p-2 text-xs text-muted-foreground text-center">
-                                    No hay más métricas
-                                </div>
-                            )}
-                        </ScrollArea>
-                    </SelectContent>
-                </Select>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <ScrollArea className="h-[200px]">
+                                {optionsToAdd.length > 0 ? (
+                                    optionsToAdd.map((metric) => (
+                                        <SelectItem key={metric.key} value={metric.key} className="text-xs cursor-pointer">
+                                            {metric.label}
+                                        </SelectItem>
+                                    ))
+                                ) : (
+                                    <div className="p-2 text-xs text-muted-foreground text-center">
+                                        No hay más métricas
+                                    </div>
+                                )}
+                            </ScrollArea>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
-            <div className="rounded-xl border shadow-sm bg-card overflow-hidden">
+            <div className="space-y-2 sm:hidden">
+                {visibleMetrics.map(metricKey => {
+                    const config = availableMetrics.find(metric => metric.key === metricKey);
+                    if (!config) return null;
+                    const yoy = calculateYearOverYear(
+                        mobileYearData?.[metricKey],
+                        mobilePreviousYearData?.[metricKey],
+                    );
+                    return (
+                        <div key={metricKey} className="flex items-start justify-between gap-3 rounded-lg border bg-card p-3">
+                            <div className="min-w-0">
+                                <p className="break-words text-sm font-medium leading-snug">{config.label}</p>
+                                <p className="mt-1 text-xs text-muted-foreground">{mobileYear}</p>
+                                <p className="mt-1 break-words text-base font-bold">{formatMetricValue(mobileYearData?.[metricKey], config.format) || '—'}</p>
+                                {yoy !== null && Math.abs(yoy) > 0.5 && Math.abs(yoy) < 1000 && (
+                                    <div className={cn(
+                                        "mt-2 inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full border",
+                                        yoy > 0
+                                            ? "text-emerald-600 bg-emerald-50 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400"
+                                            : "text-rose-600 bg-rose-50 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50 dark:text-rose-400"
+                                    )}>
+                                        {yoy > 0 ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
+                                        <span>{Math.abs(yoy).toFixed(1)}% vs. año anterior</span>
+                                    </div>
+                                )}
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-10 w-10 shrink-0 text-muted-foreground hover:text-destructive"
+                                onClick={() => handleRemoveMetric(metricKey)}
+                                aria-label={`Quitar ${config.label}`}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="hidden rounded-xl border shadow-sm bg-card overflow-hidden sm:block">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
@@ -142,27 +213,10 @@ export function FinancialAnalysisTable({
 
                                         {sortedData.map((item, index) => {
                                             const value = item[metricKey];
-                                            // Calcular YoY (Year over Year)
-                                            // Buscamos el año siguiente en el array (que es el año anterior cronológicamente)
                                             const prevItem = sortedData[index + 1];
                                             const prevValue = prevItem ? prevItem[metricKey] : null;
-
-                                            let yoy = null;
-                                            if (typeof value === 'number' && typeof prevValue === 'number' && prevValue !== 0) {
-                                                yoy = ((value - prevValue) / Math.abs(prevValue)) * 100;
-                                            }
-
-                                            // Formateo del valor principal
-                                            let displayValue = '';
-                                            if (value !== undefined && value !== null) {
-                                                const numVal = Number(value);
-                                                if (!isNaN(numVal)) {
-                                                    if (config.format === 'compact') displayValue = formatLargeNumber(numVal);
-                                                    else if (config.format === 'currency') displayValue = formatPrice(numVal);
-                                                    else if (config.format === 'percent') displayValue = formatPercentage(numVal * 100);
-                                                    else displayValue = numVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                                }
-                                            }
+                                            const yoy = calculateYearOverYear(value, prevValue);
+                                            const displayValue = formatMetricValue(value, config.format);
 
                                             return (
                                                 <TableCell key={index} className="text-right align-top py-3">

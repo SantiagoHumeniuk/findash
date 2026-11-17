@@ -40,8 +40,9 @@ describe('PortfolioView', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('link', { name: 'Ver detalle de GOOGL' }))
-      .toHaveAttribute('href', '/asset/GOOGL');
+    const assetLinks = screen.getAllByRole('link', { name: 'Ver detalle de GOOGL' });
+    expect(assetLinks).toHaveLength(2);
+    assetLinks.forEach(link => expect(link).toHaveAttribute('href', '/asset/GOOGL'));
     expect(screen.getAllByRole('row')[1]).toHaveClass('hover:bg-primary/10');
   });
 });

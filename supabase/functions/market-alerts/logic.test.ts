@@ -35,13 +35,19 @@ Deno.test("price targets compare against the current price", () => {
   assert(!shouldTrigger(alert({ condition: "below", target: 99 }), quote(), TODAY));
 });
 
-Deno.test("move alerts use either direction, once a day, only for today's session", () => {
+Deno.test("move alerts use either direction and only for today's session", () => {
   const move = alert({ condition: "move", target: 3 });
   assert(shouldTrigger(move, quote({ changePercent: -3.5 }), TODAY));
   assert(!shouldTrigger(move, quote({ changePercent: 2 }), TODAY));
   assert(!shouldTrigger(move, quote({ changePercent: 5, tradeDate: "2026-10-30" }), TODAY));
   assert(!shouldTrigger({ ...move, last_triggered_at: `${TODAY}T14:00:00Z` }, quote({ changePercent: 5 }), TODAY));
-  assert(shouldTrigger({ ...move, last_triggered_at: "2026-10-30T14:00:00Z" }, quote({ changePercent: 5 }), TODAY));
+  assert(!shouldTrigger({ ...move, last_triggered_at: "2026-10-30T14:00:00Z" }, quote({ changePercent: 5 }), TODAY));
+});
+
+Deno.test("a previously triggered price alert never fires again", () => {
+  const previousTrigger = `${TODAY}T14:00:00Z`;
+  assert(!shouldTrigger(alert({ condition: "above", last_triggered_at: previousTrigger }), quote(), TODAY));
+  assert(!shouldTrigger(alert({ condition: "below", last_triggered_at: previousTrigger }), quote(), TODAY));
 });
 
 Deno.test("trigger messages name the symbol and the target", () => {

@@ -58,8 +58,6 @@ export default function ContactPage() {
       try {
         // Log del contacto
         await logger.info('CONTACT_FORM_SUBMITTED', 'Contact form submitted', {
-          name: formData.name,
-          email: formData.email,
           messageLength: formData.message.length,
         });
 

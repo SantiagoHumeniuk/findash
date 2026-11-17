@@ -1,6 +1,6 @@
 // src/features/dashboard/components/analysis/correlation-matrix.tsx
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { AssetData } from "../../../../types/dashboard";
 import { correlation } from "../../../../utils/math";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { indicatorConfig } from "../../../../utils/financial";
 import { useTheme } from "../../../../components/ui/theme-provider";
 import { usePlanFeature } from "../../../../hooks/use-plan-feature";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
 
 // --- Props del Componente ---
 interface CorrelationMatrixProps {
@@ -71,10 +72,9 @@ const getCellStyle = (value: number | null): React.CSSProperties => {
         };
     }
 
-    // Clampear el valor entre 0 y 1
-    const v = Math.min(1, Math.max(0, value));
+    const v = (Math.min(1, Math.max(-1, value)) + 1) / 2;
 
-    // Rojo (0, 100%, 50%) -> Amarillo (60, 100%, 50%) -> Verde (120, 100%, 40%)
+    // Rojo (-1) -> amarillo (0) -> verde (1).
     let hue: number;
     if (v <= 0.5) {
         // De rojo (0) a amarillo (60)
@@ -98,6 +98,7 @@ const getCellStyle = (value: number | null): React.CSSProperties => {
 export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets }: CorrelationMatrixProps) {
     const { theme } = useTheme();
     const { hasAccess: canExportPdf, upgradeMessage } = usePlanFeature('exportPdf');
+    const [mobileSymbol, setMobileSymbol] = useState(assets[0]?.profile.symbol ?? "");
 
     const correlationMatrix = useMemo(() => {
         const matrix: (number | null)[][] = [];
@@ -128,6 +129,8 @@ export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets 
         }
         return matrix;
     }, [assets]);
+    const selectedMobileIndex = Math.max(0, assets.findIndex(asset => asset.profile.symbol === mobileSymbol));
+    const selectedMobileAsset = assets[selectedMobileIndex];
 
     const handlePdfExport = () => {
         const title = "Matriz de Correlación";
@@ -216,7 +219,39 @@ export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets 
                 </div>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
-                <div className="overflow-x-auto border rounded-lg -mx-4 sm:mx-0">
+                <div className="space-y-3 sm:hidden">
+                    <Select value={selectedMobileAsset?.profile.symbol ?? ""} onValueChange={setMobileSymbol}>
+                        <SelectTrigger aria-label="Activo para consultar correlaciones" className="h-11 w-full">
+                            <SelectValue placeholder="Elegí un activo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {assets.map(asset => (
+                                <SelectItem key={asset.profile.symbol} value={asset.profile.symbol}>{asset.profile.symbol}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <div className="space-y-2">
+                        {assets.map((asset, index) => {
+                            if (index === selectedMobileIndex) return null;
+                            const value = correlationMatrix[selectedMobileIndex]?.[index] ?? null;
+                            return (
+                                <div
+                                    key={asset.profile.symbol}
+                                    className="flex min-h-14 items-center justify-between gap-3 rounded-lg border px-3 py-2"
+                                    style={getCellStyle(value)}
+                                >
+                                    <span className="min-w-0 break-words text-sm font-medium">
+                                        {selectedMobileAsset?.profile.symbol} vs {asset.profile.symbol}
+                                    </span>
+                                    <span className="shrink-0 text-sm font-bold">
+                                        {typeof value === 'number' ? value.toFixed(2) : 'Sin datos'}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+                <div className="hidden overflow-x-auto border rounded-lg -mx-4 sm:mx-0 sm:block">
                     <Table className="min-w-full">
                         <TableHeader className="bg-muted/50">
                             <TableRow>

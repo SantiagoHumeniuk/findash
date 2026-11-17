@@ -39,10 +39,10 @@ export type Digest = {
  * session traded today, so it does not report last Friday's move on Monday morning.
  */
 export function shouldTrigger(alert: PriceAlert, quote: MarketQuote, today: string): boolean {
+  if (alert.last_triggered_at) return false;
   if (alert.condition === "above") return quote.price >= alert.target;
   if (alert.condition === "below") return quote.price <= alert.target;
   if (quote.tradeDate !== today || quote.changePercent === null) return false;
-  if (alert.last_triggered_at?.slice(0, 10) === today) return false;
   return Math.abs(quote.changePercent) >= alert.target;
 }
 

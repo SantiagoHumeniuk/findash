@@ -15,6 +15,11 @@ export function normalizeSavedTickers(value: unknown): string[] {
   return [...new Set(symbols)];
 }
 
+/** An empty saved list is still a user choice and must not be repopulated automatically. */
+export function hasSavedTickerSelection(localTickers: string[] | null, accountTickers: unknown): boolean {
+  return localTickers !== null || Array.isArray(accountTickers);
+}
+
 /** Null means this device has nothing saved, so the account's list applies. */
 export function readLocalTickers(userId: string): string[] | null {
   try {

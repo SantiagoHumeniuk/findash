@@ -6,6 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { Button } from "../../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
 import { Checkbox } from "../../../../components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../../components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../../../components/ui/tooltip";
@@ -228,6 +229,7 @@ const formatValue = (config: Indicator, value: number | null, currency?: string)
 export const FundamentalsTable = React.memo(function FundamentalsTable({ assets }: FundamentalsTableProps) {
     const [hideNA, setHideNA] = useState(true);
     const [openSections, setOpenSections] = useState<string[]>(["valuation"]);
+    const [mobileSymbol, setMobileSymbol] = useState(assets[0]?.profile.symbol ?? "");
     const { theme } = useTheme();
     const { hasAccess: canExportPdf, upgradeMessage } = usePlanFeature('exportPdf');
     // Pre-calcular todos los valores para evitar trabajo en render
@@ -247,6 +249,7 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
             };
         });
     }, [assets]);
+    const mobileAsset = tableData.find(item => item.symbol === mobileSymbol) ?? tableData[0];
 
     // Filtrar filas/indicadores basados en hideNA y disponibilidad de datos
     const visibleKeysBySection = useMemo(() => {
@@ -258,6 +261,15 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
         });
         return visible;
     }, [tableData, hideNA]);
+    const mobileVisibleKeysBySection = useMemo(() => {
+        const visible: Record<string, string[]> = {};
+        indicatorSections.forEach(section => {
+            visible[section.id] = visibleKeysBySection[section.id].filter(
+                key => !hideNA || mobileAsset?.values[key] !== null
+            );
+        });
+        return visible;
+    }, [hideNA, mobileAsset, visibleKeysBySection]);
 
     const handlePdfExport = () => {
         const title = "Indicadores Fundamentales";
@@ -374,7 +386,40 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                                     {section.title}
                                 </AccordionTrigger>
                                 <AccordionContent>
-                                    <div className="overflow-x-auto border rounded-lg -mx-4 sm:mx-0">
+                                    <div className="space-y-3 sm:hidden">
+                                        <Select value={mobileAsset?.symbol ?? ""} onValueChange={setMobileSymbol}>
+                                            <SelectTrigger aria-label="Activo para consultar" className="h-11 w-full">
+                                                <SelectValue placeholder="Elegí un activo" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {tableData.map(item => (
+                                                    <SelectItem key={item.symbol} value={item.symbol}>{item.symbol}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <div className="divide-y rounded-lg border">
+                                            {mobileVisibleKeysBySection[section.id].length === 0 ? (
+                                                <p className="px-3 py-4 text-sm text-muted-foreground">
+                                                    No hay datos disponibles para {mobileAsset?.symbol} en esta sección.
+                                                </p>
+                                            ) : mobileVisibleKeysBySection[section.id].map(key => {
+                                                    const config = indicatorConfig[key];
+                                                    if (!config || !mobileAsset) return null;
+                                                    const value = mobileAsset.values[key];
+                                                    return (
+                                                        <div key={key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3">
+                                                            <span className="min-w-0 text-sm font-medium leading-snug" title={config.explanation}>
+                                                                {config.label}
+                                                            </span>
+                                                            <span className={`max-w-[48vw] break-words text-right text-sm font-semibold ${getIndicatorStatusClass(getIndicatorStatus(key, config, value, mobileAsset.asset))}`}>
+                                                                {formatValue(config, value, mobileAsset.currency) || "—"}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+                                    <div className="hidden overflow-x-auto border rounded-lg -mx-4 sm:mx-0 sm:block">
                                         <Table>
                                             <TableHeader className="bg-muted/50">
                                                 <TableRow>

@@ -34,6 +34,7 @@ export interface AlertPreferences {
 }
 
 const DEFAULT_PREFERENCES: AlertPreferences = { email_alerts: true, daily_digest: false };
+const PRICE_ALERT_POLL_MS = 30 * 1000;
 const NOTIFICATION_POLL_MS = 2 * 60 * 1000;
 
 export function usePriceAlerts() {
@@ -41,6 +42,8 @@ export function usePriceAlerts() {
   return useQuery({
     queryKey: ['price-alerts', user?.id],
     enabled: Boolean(user),
+    refetchInterval: PRICE_ALERT_POLL_MS,
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<PriceAlert[]> => {
       const { data, error } = await supabase
         .from('price_alerts')

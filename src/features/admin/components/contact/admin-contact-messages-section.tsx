@@ -38,6 +38,7 @@ export function AdminContactMessagesSection() {
   const [messages, setMessages] = useState<ContactMessageWithUser[]>([]);
   const [filteredMessages, setFilteredMessages] = useState<ContactMessageWithUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -62,10 +63,12 @@ export function AdminContactMessagesSection() {
   const loadMessages = async () => {
     try {
       setIsLoading(true);
+      setLoadError(false);
       const data = await contactService.getAllMessages();
       setMessages(data as ContactMessageWithUser[]);
     } catch (error) {
       console.error('Error loading contact messages:', error);
+      setLoadError(true);
       toast.error('Error al cargar los mensajes');
     } finally {
       setIsLoading(false);
@@ -121,12 +124,19 @@ export function AdminContactMessagesSection() {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('¿Estás seguro de eliminar este mensaje?')) return;
 
-    // Note: You'll need to add a delete method to contactService
-    console.log('Delete message:', id);
-    toast.info('Función de eliminación pendiente de implementar');
+    const success = await contactService.deleteMessage(id);
+    if (!success) {
+      toast.error('Error al eliminar el mensaje');
+      return;
+    }
+
+    toast.success('Mensaje eliminado');
+    setIsDetailsOpen(false);
+    setSelectedMessage(null);
+    await loadMessages();
   };
 
   const openDetails = (message: ContactMessageWithUser) => {
@@ -192,6 +202,19 @@ export function AdminContactMessagesSection() {
             <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary"></div>
             <span className="ml-2 sm:ml-3 text-sm sm:text-base text-muted-foreground">Cargando mensajes...</span>
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+          <p className="text-sm text-muted-foreground">No se pudieron cargar los mensajes.</p>
+          <Button variant="outline" onClick={() => void loadMessages()}>
+            Reintentar
+          </Button>
         </CardContent>
       </Card>
     );
@@ -486,6 +509,8 @@ export function AdminContactMessagesSection() {
                   variant="outline"
                   className="ml-auto text-destructive hover:text-destructive"
                   onClick={() => void handleDelete(selectedMessage.id)}
+                  aria-label="Eliminar mensaje"
+                  title="Eliminar mensaje"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>

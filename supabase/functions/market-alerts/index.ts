@@ -130,21 +130,27 @@ async function fetchEmails(userIds: string[]): Promise<Map<string, string>> {
 
 async function sendEmail(to: string, subject: string, html: string, unsubscribeUrl: string): Promise<boolean> {
   if (!resendKey || !fromEmail) return false;
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: fromEmail,
-      to,
-      subject,
-      html,
-      headers: { "List-Unsubscribe": `<${unsubscribeUrl}>` },
-    }),
-  });
-  await new Promise((resolve) => setTimeout(resolve, EMAIL_GAP_MS));
-  if (!response.ok) console.error(`Email to user failed: HTTP ${response.status} ${await response.text()}`);
-  else await response.body?.cancel();
-  return response.ok;
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: fromEmail,
+        to,
+        subject,
+        html,
+        headers: { "List-Unsubscribe": `<${unsubscribeUrl}>` },
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    await new Promise((resolve) => setTimeout(resolve, EMAIL_GAP_MS));
+    if (!response.ok) console.error(`Email to user failed: HTTP ${response.status} ${await response.text()}`);
+    else await response.body?.cancel();
+    return response.ok;
+  } catch (error) {
+    console.error("Email request failed:", error);
+    return false;
+  }
 }
 
 const unsubscribeUrl = (token: string) => `${appUrl}/baja?token=${token}`;
@@ -163,19 +169,24 @@ async function runAlerts(): Promise<Record<string, number>> {
   });
   if (triggered.length === 0) return { checked: alerts.length, triggered: 0, emailed: 0 };
 
-  // Marked before notifying: if a run fails halfway, a repeat notification is worse than a late one.
+  // Claim only still-active alerts so overlapping cron runs cannot notify twice.
   const now = new Date().toISOString();
-  // Every alert fires once; it then stays in the user's history.
-  await rest(`price_alerts?id=${inList(triggered.map(({ alert }) => alert.id))}`, {
+  const claimed = await rest<{ id: string }[]>(
+    `price_alerts?id=${inList(triggered.map(({ alert }) => alert.id))}&active=eq.true&select=id`,
+    {
     method: "PATCH",
-    headers: { Prefer: "return=minimal" },
+    headers: { Prefer: "return=representation" },
     body: JSON.stringify({ active: false, last_triggered_at: now }),
-  });
+    },
+  );
+  const claimedIds = new Set(claimed.map(({ id }) => id));
+  const claimedTriggers = triggered.filter(({ alert }) => claimedIds.has(alert.id));
+  if (claimedTriggers.length === 0) return { checked: alerts.length, triggered: 0, emailed: 0 };
 
   await rest("notifications", {
     method: "POST",
     headers: { Prefer: "return=minimal" },
-    body: JSON.stringify(triggered.map(({ alert, title, body }) => ({
+    body: JSON.stringify(claimedTriggers.map(({ alert, title, body }) => ({
       user_id: alert.user_id,
       kind: "alert",
       symbol: alert.symbol,
@@ -184,19 +195,36 @@ async function runAlerts(): Promise<Record<string, number>> {
     }))),
   });
 
-  const userIds = [...new Set(triggered.map(({ alert }) => alert.user_id))];
+  const userIds = [...new Set(claimedTriggers.map(({ alert }) => alert.user_id))];
   const [preferences, emails] = await Promise.all([ensurePreferences(userIds), fetchEmails(userIds)]);
+  const emailConfigured = Boolean(resendKey && fromEmail);
+  if (!emailConfigured) {
+    console.error("Alert emails are disabled: configure RESEND_API_KEY and ALERTS_FROM_EMAIL.");
+  }
   let emailed = 0;
+  let emailSkipped = 0;
+  let emailFailed = 0;
   for (const userId of userIds) {
     const preference = preferences.get(userId);
     const email = emails.get(userId);
-    if (!preference?.email_alerts || !email) continue;
-    const items = triggered.filter(({ alert }) => alert.user_id === userId);
+    if (!preference?.email_alerts || !email || !emailConfigured) {
+      emailSkipped += 1;
+      continue;
+    }
+    const items = claimedTriggers.filter(({ alert }) => alert.user_id === userId);
     const url = unsubscribeUrl(preference.unsubscribe_token);
     const subject = items.length === 1 ? items[0].title : `${items.length} alertas de FinDash`;
     if (await sendEmail(email, subject, alertsEmailHtml(items, appUrl, url), url)) emailed += 1;
+    else emailFailed += 1;
   }
-  return { checked: alerts.length, triggered: triggered.length, emailed };
+  return {
+    checked: alerts.length,
+    triggered: claimedTriggers.length,
+    emailed,
+    email_configured: emailConfigured ? 1 : 0,
+    email_skipped: emailSkipped,
+    email_failed: emailFailed,
+  };
 }
 
 type CachedAsset = {

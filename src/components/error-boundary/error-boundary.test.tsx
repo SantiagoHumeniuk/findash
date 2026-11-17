@@ -4,6 +4,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ErrorBoundary } from './error-boundary';
 
+vi.mock('../../lib/logger', () => ({ logger: { error: vi.fn() } }));
+
 // Component that throws an error
 const ThrowError = ({ shouldThrow = true }: { shouldThrow?: boolean }) => {
   if (shouldThrow) {

@@ -6,6 +6,7 @@ import { usePortfolio } from "../../../hooks/use-portfolio";
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from "../../../hooks/use-auth";
 import { useConfig } from "../../../hooks/use-config";
+import { usePlanLimits } from "../../../hooks/use-plan-limits";
 import { fetchTickerData } from "../../../services/api/asset-api";
 import { fetchYahooAsset } from "../../../services/api/yahoo-finance-api";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ import { toast } from "sonner";
 import { Card, CardHeader } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
 import { Briefcase, ChartCandlestick, RefreshCw, Layers, HelpCircle } from "lucide-react";
+import { Skeleton } from "../../../components/ui/skeleton";
 import { motion } from "framer-motion";
 import { PageHeader } from "../../../components/ui/page-header";
 import { TickerAddForm } from "../components/ticker-input/ticker-add-form";
@@ -40,17 +42,44 @@ const itemVariants = {
 };
 
 function DashboardPageContent() {
-    const { addTicker, removeTicker, dropFailedTicker, selectedTickers, tickersRestored } = useDashboard();
+    const { addTicker, removeTicker, dropFailedTicker, selectedTickers, tickersRestored, hasSavedSelection } = useDashboard();
     const { holdings, loading: portfolioLoading, currentPortfolio } = usePortfolio();
     const { user, profile } = useAuth();
     const config = useConfig();
     const queryClient = useQueryClient();
+    const { limit: comparisonLimit } = usePlanLimits('comparison', selectedTickers.length);
     
     // Estado para controlar la guía del dashboard
     const [showGuide, setShowGuide] = useState(false);
 
     // Referencia para trackear qué tickers han sido cargados automáticamente de este portfolio
     const loadedPortfolioIdRef = useRef<number | null>(null);
+
+    const handleLoadPortfolioTickers = useCallback(() => {
+        const existingSymbols = new Set(selectedTickers);
+        const candidates = [...new Set(holdings.map(holding => holding.symbol))]
+            .filter(symbol => !existingSymbols.has(symbol));
+        const role = profile?.role ?? 'basico';
+        const restrictedSymbols = role === 'basico'
+            ? candidates.filter(symbol => !config.plans.freeTierSymbols.includes(symbol))
+            : [];
+        const allowedCandidates = candidates.filter(symbol => !restrictedSymbols.includes(symbol));
+        const availableSlots = Math.max(0, comparisonLimit - selectedTickers.length);
+        const symbolsToAdd = allowedCandidates.slice(0, availableSlots);
+        symbolsToAdd.forEach(addTicker);
+        if (restrictedSymbols.length > 0) {
+            const displayedSymbols = restrictedSymbols.slice(0, 3).join(', ');
+            const remaining = restrictedSymbols.length - 3;
+            toast.error('Algunos activos no están disponibles en tu plan', {
+                description: `${displayedSymbols}${remaining > 0 ? ` y ${remaining} más` : ''}.`,
+            });
+        }
+        if (symbolsToAdd.length < allowedCandidates.length) {
+            toast.error('Se alcanzó el límite de comparación', {
+                description: `Se agregaron hasta ${comparisonLimit} activos según tu plan.`,
+            });
+        }
+    }, [addTicker, comparisonLimit, config.plans.freeTierSymbols, holdings, profile?.role, selectedTickers]);
 
     // Cargar tickers del portfolio actual
     useEffect(() => {
@@ -59,17 +88,13 @@ function DashboardPageContent() {
             if (loadedPortfolioIdRef.current !== currentPortfolio.id) {
                 const isFirstLoad = loadedPortfolioIdRef.current === null;
                 loadedPortfolioIdRef.current = currentPortfolio.id;
-                // La lista guardada del usuario tiene prioridad al entrar.
-                if (isFirstLoad && selectedTickers.length > 0) return;
-                const portfolioSymbols = holdings.map(h => h.symbol);
-                portfolioSymbols.forEach(symbol => {
-                    addTicker(symbol);
-                });
+                // Preserve an intentionally empty list as well as a non-empty saved selection.
+                if (isFirstLoad && (selectedTickers.length > 0 || hasSavedSelection)) return;
+                handleLoadPortfolioTickers();
             }
         }
-        // selectedTickers solo se consulta en la primera carga, no debe volver a disparar el efecto.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tickersRestored, portfolioLoading, holdings, currentPortfolio, addTicker]);
+        // The ref prevents duplicate imports as selection state changes.
+    }, [tickersRestored, portfolioLoading, holdings, currentPortfolio, selectedTickers, hasSavedSelection, handleLoadPortfolioTickers]);
 
     // [CORREGIDO]: Eliminado el useEffect que borraba localStorage en cada montaje.
     // Esto causaba pérdida de estado al navegar entre páginas.
@@ -148,7 +173,6 @@ function DashboardPageContent() {
             queryClient.invalidateQueries({ queryKey: ['cacheFreshness'] }),
         ]);
     }, [selectedTickers, queryClient]);
-
     return (
         <motion.div 
             className="container-wide stack-6"
@@ -193,28 +217,58 @@ function DashboardPageContent() {
                 </div>
             </motion.div>
 
-            {selectedTickers.length === 0 ? (
+            {!tickersRestored ? (
+                <Skeleton className="h-48 w-full rounded-2xl" />
+            ) : selectedTickers.length === 0 ? (
                 <motion.div
                     variants={itemVariants}
-                    className="relative flex flex-col items-center text-center py-16 sm:py-24 px-6 border border-white/[0.05] rounded-3xl bg-card/60 shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden group"
+                    className="relative overflow-hidden rounded-2xl border bg-card/60 px-4 py-6 shadow-sm sm:p-8"
                 >
-                    {/* Glowing background effect */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-cyan-400/5 opacity-50 group-hover:opacity-100 transition-opacity duration-700" />
-                    
-                    <div className="relative p-5 sm:p-6 bg-background/50 rounded-full border border-white/5 mb-6 shadow-inner">
-                        <Briefcase className="w-12 h-12 sm:w-16 sm:h-16 text-primary drop-shadow-[0_0_15px_rgba(56,189,248,0.5)] transition-transform duration-500 group-hover:scale-110" />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-cyan-400/5" />
+                    <div className="relative">
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-xl border bg-background p-2.5 text-primary">
+                                <Briefcase className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0">
+                                <h2 className="text-lg font-semibold tracking-tight sm:text-xl">Empezá con un activo</h2>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Buscá un símbolo arriba o cargá las posiciones de tu cartera cuando quieras.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                            <div className="rounded-lg border bg-background/60 p-3">
+                                <p className="text-sm font-medium">1. Elegí</p>
+                                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Agregá el activo que te interesa.</p>
+                            </div>
+                            <div className="rounded-lg border bg-background/60 p-3">
+                                <p className="text-sm font-medium">2. Entendé</p>
+                                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Empezá por el precio y su evolución.</p>
+                            </div>
+                            <div className="rounded-lg border bg-background/60 p-3">
+                                <p className="text-sm font-medium">3. Profundizá</p>
+                                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Abrí ratios o compará activos cuando lo necesites.</p>
+                            </div>
+                        </div>
+                        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-xs text-muted-foreground">
+                                Ejemplos: AAPL, YPF, SPY
+                            </p>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                                {holdings.length > 0 && (
+                                    <Button onClick={handleLoadPortfolioTickers} size="sm" className="w-full gap-2 sm:w-auto">
+                                        <Briefcase className="h-4 w-4" />
+                                        Cargar activos de cartera
+                                    </Button>
+                                )}
+                                <Button onClick={() => setShowGuide(true)} variant="outline" size="sm" className="w-full gap-2 sm:w-auto">
+                                    <HelpCircle className="h-4 w-4" />
+                                    Guía rápida
+                                </Button>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <h2 className="text-xl sm:text-2xl font-bold mb-3 tracking-tight text-foreground/90">
-                        Aún no tienes activos en seguimiento
-                    </h2>
-                    
-                    <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto mb-4 leading-relaxed font-medium">
-                        ¡Empezá a analizar tus activos favoritos!
-                    </p>
-                    <p className="text-xs sm:text-sm text-muted-foreground/70 max-w-sm mx-auto">
-                        Busca y añade tus primeros activos financieros en la barra superior para comenzar a monitorear su rendimiento en tiempo real.
-                    </p>
                 </motion.div>
             ) : (
                 <motion.div variants={itemVariants} className="stack-6">

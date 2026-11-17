@@ -13,6 +13,8 @@ import { AssetNewsTab } from './news/asset-news-tab';
 import { AssetFilingsCard } from './news/asset-filings-card';
 import { AssetOwnershipTab } from './insights/asset-ownership-tab';
 import { AssetFundamentalsTrends } from './fundamentals/asset-fundamentals-trends';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { useState } from 'react';
 
 /**
  * Props para el componente AssetDetailTabs.
@@ -34,6 +36,7 @@ interface AssetDetailTabsProps {
  * ```
  */
 export function AssetDetailTabs({ asset, onRefreshAssetData, isRefreshing }: AssetDetailTabsProps) {
+  const [activeTab, setActiveTab] = useState('profile');
   // ETFs and indexes have no company statements, so the tab is hidden for them.
   const hasFinancials = asset.ratios.length > 0 || asset.keyMetricsYearly.length > 0 ||
     asset.analystEstimates.length > 0 || (asset.yahooInsights?.annualStatements.length ?? 0) > 0;
@@ -41,8 +44,24 @@ export function AssetDetailTabs({ asset, onRefreshAssetData, isRefreshing }: Ass
   const tabCount = 5 + Number(hasFinancials) + Number(hasOwnership);
   const desktopColumns: Record<number, string> = { 5: 'lg:grid-cols-5', 6: 'lg:grid-cols-6', 7: 'lg:grid-cols-7' };
   return (
-    <Tabs defaultValue="profile" className="w-full">
-      <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-4 ${desktopColumns[tabCount]} h-auto`}>
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <div className="sm:hidden">
+        <Select value={activeTab} onValueChange={setActiveTab}>
+          <SelectTrigger className="h-11 w-full">
+            <SelectValue placeholder="Elegí una sección" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="profile">Perfil</SelectItem>
+            <SelectItem value="chart">Gráfico</SelectItem>
+            {hasFinancials && <SelectItem value="financials">Fundamentales</SelectItem>}
+            {hasOwnership && <SelectItem value="ownership">Accionistas</SelectItem>}
+            <SelectItem value="news">Noticias</SelectItem>
+            <SelectItem value="ratings">Analistas</SelectItem>
+            <SelectItem value="evolution">Evolución</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <TabsList className={`hidden sm:grid w-full grid-cols-2 sm:grid-cols-4 ${desktopColumns[tabCount]} h-auto`}>
         <TabsTrigger value="profile" className="flex min-h-11 min-w-0 items-center justify-center gap-1.5 whitespace-normal px-2 py-2 text-center text-[11px] leading-tight sm:gap-2 sm:px-3 sm:py-2.5 sm:text-sm">
           <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span>Perfil</span>

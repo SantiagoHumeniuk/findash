@@ -18,6 +18,7 @@ import {
     BrainCircuit
 } from "lucide-react";
 import { Skeleton } from "../../../../components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useState } from "react";
 
@@ -92,8 +93,20 @@ export function DashboardTabs({ assets, isLoading }: DashboardTabsProps) {
 
     return (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
-            <div className="overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 w-full">
-                <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 h-auto ">
+            <div className="sm:hidden">
+                <Select value={activeTab} onValueChange={setActiveTab}>
+                    <SelectTrigger className="h-11 w-full">
+                        <SelectValue placeholder="Elegí un análisis" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {tabs.map((tab) => (
+                            <SelectItem key={tab.value} value={tab.value}>{tab.label}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="hidden sm:block overflow-x-auto pb-1 w-full">
+                <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 h-auto">
                     {tabs.map((tab, index) => (
                         <motion.div
                             key={tab.value}

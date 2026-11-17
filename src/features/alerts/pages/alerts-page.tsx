@@ -143,7 +143,9 @@ export default function AlertsPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Avisos por email</CardTitle>
-              <CardDescription>También los vas a ver siempre dentro de FinDash.</CardDescription>
+              <CardDescription>
+                Las alertas quedan guardadas en FinDash; el envío por email requiere una configuración de correo verificada.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between gap-4">

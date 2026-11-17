@@ -10,6 +10,7 @@ import { logger } from "../lib/logger";
 import { usePlanLimits } from "../hooks/use-plan-limits";
 import { getSymbolRestrictionMessage } from "../utils/plan-validators";
 import {
+    hasSavedTickerSelection,
     normalizeSavedTickers,
     readLocalTickers,
     saveAccountTickers,
@@ -27,6 +28,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     
     const [selectedTickers, setSelectedTickers] = useState<string[]>([]);
     const [tickersRestored, setTickersRestored] = useState(false);
+    const [hasSavedSelection, setHasSavedSelection] = useState(false);
     // Saved tickers that failed this session stay saved: the failure may be temporary.
     const restoredTickersRef = useRef(new Set<string>());
     const failedTickersRef = useRef(new Set<string>());
@@ -40,11 +42,15 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         failedTickersRef.current = new Set();
         if (!profileId || !profile) {
             setSelectedTickers([]);
+            setHasSavedSelection(false);
             setTickersRestored(false);
             return;
         }
         // This device's list is the most recent; the account's list covers new devices.
-        const saved = readLocalTickers(profileId) ?? normalizeSavedTickers(profile.onboarding_profile?.dashboardTickers);
+        const localTickers = readLocalTickers(profileId);
+        const accountTickers = profile.onboarding_profile?.dashboardTickers;
+        const saved = localTickers ?? normalizeSavedTickers(accountTickers);
+        setHasSavedSelection(hasSavedTickerSelection(localTickers, accountTickers));
         // A downgraded plan may no longer allow everything that was saved.
         const allowed = (profile.role ?? 'basico') === 'basico'
             ? saved.filter((ticker) => config.plans.freeTierSymbols.includes(ticker))
@@ -58,12 +64,12 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     }, [profileId]);
 
     useEffect(() => {
-        if (!tickersRestored || !profileId) return;
+        if (!tickersRestored || !profileId || !hasSavedSelection) return;
         const tickers = [...selectedTickers, ...failedTickersRef.current];
         writeLocalTickers(profileId, tickers);
         const timer = window.setTimeout(() => void saveAccountTickers(profileId, tickers), ACCOUNT_SAVE_DELAY_MS);
         return () => window.clearTimeout(timer);
-    }, [selectedTickers, tickersRestored, profileId]);
+    }, [selectedTickers, tickersRestored, profileId, hasSavedSelection]);
 
     const addTicker = useCallback((tickerRaw: string) => {
         const ticker = tickerRaw.trim().toUpperCase();
@@ -130,6 +136,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
             totalTickers: selectedTickers.length + 1,
         });
         failedTickersRef.current.delete(ticker);
+        setHasSavedSelection(true);
         setSelectedTickers(prev => prev.includes(ticker) ? prev : [...prev, ticker]);
 
     }, [config, profile?.role, selectedTickers, isAtLimit, limit, limitMessage]);
@@ -140,6 +147,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         });
         failedTickersRef.current.delete(ticker);
         restoredTickersRef.current.delete(ticker);
+        setHasSavedSelection(true);
         setSelectedTickers(prev => prev.filter(t => t !== ticker));
     }, []);
 
@@ -151,11 +159,12 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     const value: DashboardContextType = useMemo(() => ({
         indicatorConfig,
         selectedTickers,
+        hasSavedSelection,
         addTicker,
         removeTicker,
         dropFailedTicker,
         tickersRestored,
-    }), [selectedTickers, addTicker, removeTicker, dropFailedTicker, tickersRestored]);
+    }), [selectedTickers, hasSavedSelection, addTicker, removeTicker, dropFailedTicker, tickersRestored]);
 
     return (
         <DashboardContext.Provider value={value}>

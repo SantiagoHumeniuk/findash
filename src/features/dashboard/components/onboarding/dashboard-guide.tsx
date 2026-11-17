@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, MousePointer2, TrendingUp, BarChart3, DollarSign, NewspaperIcon } from 'lucide-react';
+import { X, Search, TrendingUp, BarChart3 } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { Card, CardContent } from '../../../../components/ui/card';
 
@@ -21,46 +21,34 @@ export function DashboardGuide({ isVisible, onDismiss }: DashboardGuideProps) {
   const steps = [
     {
       icon: Search,
-      title: "1. Busca tu activo",
-      description: "Usa el buscador para encontrar cualquier empresa o activo financiero",
-      examples: ["YPF", "Apple", "Microsoft", "Bitcoin"],
-      visual: "dashboard-search",
-    },
-    {
-      icon: MousePointer2,
-      title: "2. Seleccioná del menú",
-      description: "Aparecerán sugerencias, hacé clic en el activo que te interesa",
-      examples: ["YPF S.A.", "Apple Inc.", "Microsoft Corp"],
-      visual: "search-results",
+      title: "1. Buscá un activo",
+      description: "Escribí un símbolo o nombre en el buscador y elegí el resultado correcto.",
+      examples: ["AAPL", "YPF", "SPY"],
     },
     {
       icon: TrendingUp,
-      title: "3. Explora los análisis",
-      description: "El activo se agregará y verás todos los datos y gráficos disponibles",
-      examples: ["Precios", "Fundamentales", "Comparación"],
-      visual: "dashboard-tabs",
+      title: "2. Entendé su evolución",
+      description: "Empezá por el precio y el gráfico histórico; agregá otros activos para compararlos.",
+      examples: ["Precio", "Rendimiento", "Historial"],
     },
     {
-      icon: MousePointer2,
-      title: "4. Navega entre pestañas",
-      description: "Cada pestaña tiene análisis diferentes del activo",
-      examples: ["Gráfico histórico", "Métricas financieras", "Correlaciones"],
-      visual: "tabs-navigation",
-    },
-    {
-      icon: NewspaperIcon,
-      title: "5. Ve detalles específicos",
-      description: "Hacé clic en cualquier activo para ver su página completa con noticias",
-      examples: ["Noticias", "Reportes", "Análisis detallado"],
-      visual: "asset-detail",
+      icon: BarChart3,
+      title: "3. Profundizá cuando quieras",
+      description: "Consultá ratios, correlaciones y noticias desde las secciones del análisis.",
+      examples: ["Ratios", "Correlación", "Noticias"],
     },
   ];
+
+  const dismiss = () => {
+    setCurrentStep(0);
+    onDismiss();
+  };
 
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      onDismiss();
+      dismiss();
     }
   };
 
@@ -78,59 +66,59 @@ export function DashboardGuide({ isVisible, onDismiss }: DashboardGuideProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-        onClick={onDismiss}
+        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 sm:items-center"
+        onClick={dismiss}
       >
         <motion.div
           initial={{ scale: 0.9, y: 20 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.9, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-lg"
+          className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto"
         >
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               {/* Header */}
-              <div className="flex items-center justify-between mb-6">
+              <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
                 <div>
-                  <h2 className="text-xl font-bold">Guía del Dashboard</h2>
+                  <h2 className="text-lg font-bold sm:text-xl">Guía rápida</h2>
                   <p className="text-sm text-muted-foreground">
-                    Aprende a usar el análisis de activos
+                    Empezá simple y explorá más cuando lo necesites.
                   </p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={onDismiss}>
-                  <X className="w-5 h-5" />
+                <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={dismiss} aria-label="Cerrar guía">
+                  <X className="h-5 w-5" />
                 </Button>
               </div>
 
               {/* Step Content */}
-              <div className="text-center space-y-6">
+              <div className="space-y-4 text-center sm:space-y-6">
                 {/* Icon */}
-                <div className="p-6 bg-primary/10 rounded-full w-20 h-20 flex items-center justify-center mx-auto">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 sm:h-20 sm:w-20">
                   {steps[currentStep] && (() => {
                     const IconComponent = steps[currentStep].icon;
-                    return <IconComponent className="w-10 h-10 text-primary" />;
+                    return <IconComponent className="h-7 w-7 text-primary sm:h-10 sm:w-10" />;
                   })()}
                 </div>
 
                 {/* Title and Description */}
-                <div className="space-y-3">
-                  <h3 className="text-xl font-bold text-foreground">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-foreground sm:text-xl">
                     {steps[currentStep]?.title}
                   </h3>
-                  <p className="text-muted-foreground leading-relaxed">
+                  <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
                     {steps[currentStep]?.description}
                   </p>
                 </div>
 
                 {/* Visual Examples */}
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-muted-foreground">Ejemplos:</p>
-                  <div className="flex flex-wrap gap-2 justify-center">
+                  <p className="text-xs font-medium text-muted-foreground sm:text-sm">Ejemplos</p>
+                  <div className="flex flex-wrap justify-center gap-2">
                     {steps[currentStep]?.examples.map((example, index) => (
                       <span
                         key={index}
-                        className="px-3 py-1.5 bg-muted text-muted-foreground text-sm rounded-full font-medium"
+                        className="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground sm:text-sm"
                       >
                         {example}
                       </span>
@@ -139,16 +127,16 @@ export function DashboardGuide({ isVisible, onDismiss }: DashboardGuideProps) {
                 </div>
 
                 {/* Visual Mockup */}
-                <div className="bg-muted/30 rounded-lg p-4 border-2 border-dashed">
+                <div className="rounded-lg border border-dashed bg-muted/30 p-3 sm:p-4">
                   <VisualMockup step={currentStep} />
                 </div>
 
                 {/* Progress */}
-                <div className="flex justify-center gap-2 pt-2">
+                <div className="flex justify-center gap-2 pt-1">
                   {steps.map((_, index) => (
                     <div
                       key={index}
-                      className={`w-3 h-3 rounded-full transition-colors ${
+                      className={`h-2.5 w-2.5 rounded-full transition-colors ${
                         index === currentStep 
                           ? 'bg-primary' 
                           : index < currentStep 
@@ -161,19 +149,20 @@ export function DashboardGuide({ isVisible, onDismiss }: DashboardGuideProps) {
               </div>
 
               {/* Controls */}
-              <div className="flex justify-between mt-8">
+              <div className="mt-5 flex items-center justify-between gap-2 sm:mt-8">
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={prevStep}
                   disabled={currentStep === 0}
-                  className="w-24"
+                  className="h-10"
                 >
                   Anterior
                 </Button>
-                <div className="text-sm text-muted-foreground flex items-center">
+                <div className="shrink-0 text-xs text-muted-foreground sm:text-sm">
                   {currentStep + 1} de {steps.length}
                 </div>
-                <Button onClick={nextStep} className="w-24">
+                <Button onClick={nextStep} size="sm" className="h-10">
                   {currentStep === steps.length - 1 ? 'Listo' : 'Siguiente'}
                 </Button>
               </div>
@@ -188,104 +177,42 @@ export function DashboardGuide({ isVisible, onDismiss }: DashboardGuideProps) {
 // Visual mockups for each step
 function VisualMockup({ step }: { step: number }) {
   switch (step) {
-    case 0: // Dashboard search - Replica del button real
+    case 0:
       return (
-        <div className="flex items-center space-x-4">
+        <div className="flex w-full items-center">
           <Button
             variant="outline"
-            className="w-[200px] justify-between text-muted-foreground border-2"
+            className="h-11 w-full justify-between text-muted-foreground"
             disabled
           >
-            <span className="truncate text-sm">Buscar activo (ej. AAPL)...</span>
+            <span className="truncate text-sm">Buscar símbolo o nombre</span>
             <Search className="h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </div>
       );
     
-    case 1: // Search results - Replica del Command Menu
+    case 1:
       return (
-        <div className="space-y-0 border rounded-md bg-background">
-          <div className="p-2 border-b bg-background">
-            <div className="text-xs text-muted-foreground px-2 py-1">Escribí ticker o nombre...</div>
+        <div className="space-y-2 rounded-lg border bg-background p-3 text-left">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-medium">Precio de ejemplo</span>
+            <span className="text-sm font-semibold">USD 182,40</span>
           </div>
-          <div className="max-h-24 overflow-hidden">
-            <div className="flex items-center gap-3 p-3 hover:bg-accent cursor-pointer border-l-2 border-l-primary bg-accent/50">
-              <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-xs text-white font-bold">Y</span>
-              </div>
-              <div className="flex-1">
-                <div className="font-medium text-sm">YPF S.A.</div>
-                <div className="text-xs text-muted-foreground">NYSE: YPF</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 hover:bg-accent cursor-pointer">
-              <div className="w-6 h-6 bg-gray-800 rounded-full flex items-center justify-center">
-                <span className="text-xs text-white font-bold">A</span>
-              </div>
-              <div className="flex-1">
-                <div className="font-medium text-sm">Apple Inc.</div>
-                <div className="text-xs text-muted-foreground">NASDAQ: AAPL</div>
-              </div>
-            </div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-full w-2/3 rounded-full bg-primary" />
           </div>
+          <p className="text-xs text-muted-foreground">Usá el gráfico para revisar su evolución.</p>
         </div>
       );
     
-    case 2: // Dashboard tabs - Replica de los selected tickers
+    case 2:
       return (
-        <div className="space-y-3">
-          <div className="text-xs text-muted-foreground font-medium">Activos agregados:</div>
-          <div className="flex flex-wrap gap-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full">
-              <span className="text-sm font-medium">YPF</span>
-              <X className="w-3 h-3 opacity-70" />
-            </div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full">
-              <span className="text-sm font-medium">AAPL</span>
-              <X className="w-3 h-3 opacity-70" />
-            </div>
+        <div className="space-y-2 rounded-lg border bg-background p-3 text-left">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            Análisis disponibles
           </div>
-        </div>
-      );
-    
-    case 3: // Tabs navigation - Replica de las pestañas reales
-      return (
-        <div className="bg-muted p-1 rounded-lg">
-          <div className="grid grid-cols-3 gap-1">
-            <div className="flex items-center justify-center gap-1 px-3 py-2 bg-background text-foreground rounded-md shadow-sm">
-              <BarChart3 className="w-4 h-4" />
-              <span className="text-xs font-medium">Precios</span>
-            </div>
-            <div className="flex items-center justify-center gap-1 px-3 py-2 text-muted-foreground hover:bg-background/50 rounded-md">
-              <DollarSign className="w-4 h-4" />
-              <span className="text-xs">Fund.</span>
-            </div>
-            <div className="flex items-center justify-center gap-1 px-3 py-2 text-muted-foreground hover:bg-background/50 rounded-md">
-              <TrendingUp className="w-4 h-4" />
-              <span className="text-xs">Gráf.</span>
-            </div>
-          </div>
-        </div>
-      );
-    
-    case 4: // Asset detail - Replica de como se vería un activo clickeable
-      return (
-        <div className="border rounded-lg p-3 hover:bg-accent/50 cursor-pointer">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-sm text-white font-bold">Y</span>
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">YPF</span>
-                <span className="text-xs bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400 px-1.5 py-0.5 rounded">+2.45%</span>
-              </div>
-              <div className="text-sm text-muted-foreground">YPF Sociedad Anónima</div>
-            </div>
-          </div>
-          <div className="mt-2 text-xs text-muted-foreground bg-blue-50 dark:bg-blue-500/10 p-2 rounded border-l-2 border-l-blue-500">
-            💡 Haz clic para ver noticias, análisis detallado y más
-          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">Fundamentales · Correlación · Noticias</p>
         </div>
       );
     
