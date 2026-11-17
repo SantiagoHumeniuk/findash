@@ -50,7 +50,7 @@ const SidebarHeaderContent = React.memo(({ config }: { config: Config }) => {
               </div>
               <div className={`grid flex-1 text-left body-sm leading-tight transition-all duration-200 ${isCollapsed ? 'opacity-0 w-0 hidden' : 'opacity-100'}`}>
                 <span className="truncate font-bold text-gradient-animated tracking-tight">{config.app.name}</span>
-                <span className="text-muted-foreground truncate caption font-medium">3.0</span>
+                <span className="text-muted-foreground truncate caption font-medium">{config.app.version}</span>
               </div>
             </NavLink>
           </SidebarMenuButton>
