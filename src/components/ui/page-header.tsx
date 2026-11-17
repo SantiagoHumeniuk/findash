@@ -29,15 +29,15 @@ export function PageHeader({ icon, title, description, className }: PageHeaderPr
       transition={{ duration: 0.3 }}
     >
       <div className={cn(
-        "flex items-center gap-3 sm:gap-4 pb-4 sm:pb-6 border-b",
+        "flex items-center gap-3 pb-4 sm:gap-4 sm:pb-6 border-b",
         className
       )}>
-        <div className="p-2 sm:p-3 bg-gradient-to-br from-primary/15 to-cyan-500/10 rounded-xl shadow-md border border-primary/10">
+        <div className="shrink-0 rounded-xl border border-primary/10 bg-gradient-to-br from-primary/15 to-cyan-500/10 p-2 shadow-md sm:p-3">
           {icon}
         </div>
-        <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-gradient-animated pb-1">{title}</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-0.5 sm:mt-1 font-medium">{description}</p>
+        <div className="min-w-0 flex-1">
+          <h1 className="break-words pb-1 text-2xl font-extrabold tracking-tight text-gradient-animated sm:text-3xl lg:text-4xl">{title}</h1>
+          <p className="mt-0.5 text-sm font-medium leading-relaxed text-muted-foreground sm:mt-1 sm:text-base">{description}</p>
         </div>
       </div>
     </motion.div>

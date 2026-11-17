@@ -2,33 +2,34 @@
 
 import { supabase } from '../../lib/supabase';
 import { logger } from '../../lib/logger';
+import bymaCedearRatios from '../../data/cedear-ratios.json';
+
+// Official BYMA ratio list published on 2026-11-12; the duplicated CIBR row is excluded.
 
 /**
- * Obtiene los ratios de conversión de CEDEARs desde la base de datos.
- * @returns {Promise<Record<string, number>>} - Un objeto (mapa) donde la clave es el símbolo del activo y el valor es su ratio de conversión.
+ * Combina los ratios oficiales de BYMA con los ajustes automáticos de mercado.
+ * @returns Mapa de ticker CEDEAR a CEDEARs por acción subyacente.
  */
 export const fetchCedearRatios = async (): Promise<Record<string, number>> => {
+  const ratiosMap: Record<string, number> = { ...bymaCedearRatios };
+
   try {
-    const { data, error } = await supabase.from('cedear_ratios').select('symbol,ratio');
+    const { data, error } = await supabase.from('cedear_ratios').select('symbol,ratio,source');
 
     if (error) {
       throw error;
     }
 
-    // Convertimos el array de objetos en un mapa para un acceso más eficiente (ej: ratios['AAPL'])
-    const ratiosMap = data.reduce((acc: Record<string, number>, item: { symbol: string; ratio: number }) => {
-      const symbol = item.symbol.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-      if (Number.isFinite(item.ratio) && item.ratio > 0) acc[symbol] = item.ratio;
-      return acc;
-    }, {});
-
-    return ratiosMap;
-
+    for (const item of data ?? []) {
+      const symbol = item.symbol.trim().toUpperCase();
+      if (!Number.isFinite(item.ratio) || item.ratio <= 0) continue;
+      if (item.source === 'mercado' || ratiosMap[symbol] === undefined) ratiosMap[symbol] = item.ratio;
+    }
   } catch (err) {
     await logger.error('CEDEAR_RATIOS_FETCH_FAILED', 'No se pudieron obtener los ratios de CEDEARs.', {
       errorMessage: (err as Error).message,
     });
-    // Devolvemos un objeto vacío en caso de error para no romper la aplicación.
-    return {};
   }
+
+  return ratiosMap;
 };

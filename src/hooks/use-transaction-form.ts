@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCedearRatios } from './use-cedear-ratios';
+import { findCedearRatio } from '../data/cedear-ratio-lookup';
+import { getArgentineAdrRatio } from '../data/argentine-adr-ratio-lookup';
 import { useCclRate } from './use-ccl-rate';
 import { usePortfolio } from './use-portfolio'; // Importamos usePortfolio
 
@@ -30,11 +32,10 @@ export const useTransactionForm = ({ isOpen, ticker, currentPrice }: UseTransact
   const { ratios: cedearRatios } = useCedearRatios();
   const { data: cclQuote, isLoading: loadingCcl } = useCclRate();
 
-  // Intentamos obtener el ratio usando el ticker tal cual (ej: 'MELI')
-  // Si no lo encontramos, intentamos normalizándolo (quitando caracteres no alfanuméricos, ej: 'BRK-B' -> 'BRKB')
-  const ratio = ticker
-    ? (cedearRatios[ticker] || cedearRatios[ticker.replace(/[^a-zA-Z]/g, '')])
-    : undefined;
+  const adr = ticker && !ticker.toUpperCase().endsWith('.BA')
+    ? getArgentineAdrRatio(ticker)
+    : null;
+  const ratio = ticker && !adr ? findCedearRatio(ticker, cedearRatios) ?? undefined : undefined;
 
   // Resetea y establece los valores iniciales del formulario cuando el modal se abre.
   useEffect(() => {
@@ -42,6 +43,9 @@ export const useTransactionForm = ({ isOpen, ticker, currentPrice }: UseTransact
       if (ratio && currentPrice) {
         setPrice('');
         setInputType('cedears');
+      } else if (adr && currentPrice) {
+        setPrice((currentPrice / adr.sharesPerAdr).toFixed(2));
+        setInputType('shares');
       } else if (currentPrice) {
         setPrice(currentPrice.toFixed(2));
         setInputType('shares');
@@ -56,7 +60,7 @@ export const useTransactionForm = ({ isOpen, ticker, currentPrice }: UseTransact
         setPortfolioId(currentPortfolio.id);
       }
     }
-  }, [isOpen, currentPrice, ratio, ticker, currentPortfolio]);
+  }, [isOpen, currentPrice, ratio, adr, ticker, currentPortfolio]);
 
   // The CCL rate may arrive after the modal opens, so the suggestion waits for it.
   useEffect(() => {
@@ -104,6 +108,9 @@ export const useTransactionForm = ({ isOpen, ticker, currentPrice }: UseTransact
     date, setDate,
     inputType, handleTypeChange,
     ratio, isCedears,
+    isAdr: adr !== null,
+    adrRatio: adr?.sharesPerAdr ?? null,
+    adrLocalSymbol: adr?.localSymbol ?? null,
     cclRate: cclQuote?.rate ?? null,
     loadingCcl,
     portfolioId, setPortfolioId, // Exponemos el estado del portfolio

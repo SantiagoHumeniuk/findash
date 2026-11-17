@@ -64,10 +64,10 @@ export function DashboardTabs({ assets, isLoading }: DashboardTabsProps) {
     // Definición de las pestañas para mantener el código limpio y mantenible
     const tabs = [
         { value: "prices", label: "Precios", icon: BarChart2, mobile: "Precios" },
-        { value: "fundamentals", label: "Fundamentales", icon: LayoutGrid, mobile: "Fund." },
-        { value: "correlation", label: "Correlación", icon: GitCompareArrows, mobile: "Corr." },
+        { value: "fundamentals", label: "Fundamentales", icon: LayoutGrid, mobile: "Fundamentales" },
+        { value: "correlation", label: "Correlación", icon: GitCompareArrows, mobile: "Correlación" },
         { value: "radar", label: "Radar", icon: Zap, mobile: "Radar" },
-        { value: "charts", label: "Gráficos", icon: AreaChart, mobile: "Gráf." },
+        { value: "charts", label: "Gráficos", icon: AreaChart, mobile: "Gráficos" },
         { value: "summary", label: "Resumen IA", icon: BrainCircuit, mobile: "IA" },
     ];
 
@@ -108,7 +108,7 @@ export function DashboardTabs({ assets, isLoading }: DashboardTabsProps) {
                         >
                             <TabsTrigger
                                 value={tab.value}
-                                className="w-full inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                                className="min-h-11 w-full inline-flex items-center justify-center whitespace-nowrap rounded-sm px-2 py-1.5 text-xs font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm sm:px-3 sm:text-sm"
                             >
                                 <tab.icon className="w-4 h-4 mr-2 hidden sm:block" />
                                 <span className="hidden sm:inline">{tab.label}</span>

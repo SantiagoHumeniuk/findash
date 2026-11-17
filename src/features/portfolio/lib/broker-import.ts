@@ -7,6 +7,12 @@
 // what FinDash understood before anything is saved.
 
 import type { Transaction } from '../../../types/portfolio';
+import {
+  findCedearRatio,
+  getCedearUnderlyingTicker,
+  getDollarCedearBaseTicker,
+} from '../../../data/cedear-ratio-lookup';
+import { getArgentineAdrRatio } from '../../../data/argentine-adr-ratio-lookup';
 import { isDollarQuotedLocal, isFixedIncome, type LocalQuote } from '../../../services/api/local-market-api';
 
 export type AssetKind = 'us-stock' | 'cedear' | 'ar-stock' | 'bond' | 'cash' | 'fund' | 'unknown';
@@ -42,6 +48,8 @@ export interface BrokerRow {
   lastPrice: number | null;
   /** Current value of the position, as written in the file. */
   fileValue: number | null;
+  /** True when the source ticker explicitly identified a local dollar-traded line, e.g. BMA.D. */
+  localDollarLine?: boolean;
   currency: Currency | null;
   date: string | null;
   type: 'buy' | 'sell';
@@ -64,6 +72,12 @@ export interface ClassifyContext {
 }
 
 export interface ClassifiedRow extends BrokerRow {
+  /** Underlying ticker used to persist CEDEAR transactions. */
+  underlyingSymbol: string;
+  /** Canonical BYMA ticker used to persist Argentine-share transactions. */
+  localStockSymbol: string;
+  /** True when the imported position is an ADR rather than the local dollar-traded line. */
+  isAdr: boolean;
   kind: AssetKind;
   /** Why the kind was chosen, shown in the review. */
   reason: string;
@@ -284,7 +298,9 @@ export function parseBrokerSheets(sheets: { name: string; rows: unknown[][] }[],
       const symbolText = text('symbol');
       if (/^total|^subtotal/i.test(symbolText) || /^total|^subtotal/i.test(cellText(filled[0]))) continue;
 
-      const symbol = cleanSymbol(symbolText);
+      const sourceSymbol = cleanSymbol(symbolText);
+      const dollarQuotedLine = sourceSymbol.endsWith('.D');
+      const symbol = dollarQuotedLine ? sourceSymbol.slice(0, -2) : sourceSymbol;
       if (!symbol || quantity === null || quantity === 0) {
         skippedLines += 1;
         continue;
@@ -308,6 +324,7 @@ export function parseBrokerSheets(sheets: { name: string; rows: unknown[][] }[],
       const sectionText = (sectionIsOperation ? '' : sectionCell) || section;
       const operation = normalizeText(text('type') || (sectionIsOperation ? sectionCell : ''));
       const currency = parseCurrency(text('currency'))
+        ?? (dollarQuotedLine ? 'USD' : null)
         ?? parseCurrency(cellText(cell('lastPrice')))
         ?? parseCurrency(cellText(cell('costPrice')))
         ?? parseCurrency(cellText(cell('value')))
@@ -323,6 +340,7 @@ export function parseBrokerSheets(sheets: { name: string; rows: unknown[][] }[],
         costPrice,
         lastPrice: lastPrice && lastPrice > 0 ? lastPrice : null,
         fileValue: fileValue && fileValue !== 0 ? Math.abs(fileValue) : null,
+        localDollarLine: dollarQuotedLine,
         currency,
         date: parseDate(cell('date')),
         type: /venta|sell|^v$|^s$/.test(operation) || quantity < 0 ? 'sell' : 'buy',
@@ -365,17 +383,28 @@ const distance = (a: number | null | undefined, b: number | null | undefined): n
 
 /** Each candidate's expected price in the row's currency, to compare with the file. */
 function candidatePrices(row: BrokerRow, context: ClassifyContext): Partial<Record<AssetKind, number>> {
-  const local = context.local.get(row.symbol);
+  const adr = getArgentineAdrRatio(row.symbol);
+  const localSymbol = adr && !row.localDollarLine ? adr.localSymbol : row.symbol;
+  const local = context.local.get(localSymbol);
   const prices: Partial<Record<AssetKind, number>> = {};
   const inUsd = row.currency === 'USD';
   const us = context.usPrices.get(row.symbol);
+  const ratio = findCedearRatio(row.symbol, context.cedearRatios);
+  const dollarCedear = getDollarCedearBaseTicker(row.symbol, context.cedearRatios) !== null;
   if (us) prices['us-stock'] = inUsd ? us : us * context.ccl;
-  if (local?.kind === 'cedear') prices.cedear = inUsd ? local.price / context.ccl : local.price;
-  else if (context.cedearRatios[row.symbol] && us) {
-    const perCedear = (us * context.ccl) / context.cedearRatios[row.symbol];
+  if (local?.kind === 'cedear') {
+    prices.cedear = inUsd === dollarCedear
+      ? local.price
+      : inUsd ? local.price / context.ccl : local.price * context.ccl;
+  }
+  else if (ratio && us) {
+    const perCedear = (us * context.ccl) / ratio;
     prices.cedear = inUsd ? perCedear / context.ccl : perCedear;
   }
-  if (local?.kind === 'stock') prices['ar-stock'] = inUsd ? local.price / context.ccl : local.price;
+  if (local?.kind === 'stock') {
+    const sharesPerAdr = adr && !row.localDollarLine && inUsd ? adr.sharesPerAdr : 1;
+    prices['ar-stock'] = (inUsd ? local.price / context.ccl : local.price) * sharesPerAdr;
+  }
   if (local && isFixedIncome(local.kind)) {
     const dollarLine = isDollarQuotedLocal(row.symbol, context.local);
     prices.bond = dollarLine === inUsd ? local.price : inUsd ? local.price / context.ccl : local.price * context.ccl;
@@ -390,6 +419,10 @@ function candidatePrices(row: BrokerRow, context: ClassifyContext): Partial<Reco
  */
 export function classifyRow(row: BrokerRow, context: ClassifyContext): ClassifiedRow {
   const sectionHint = sectionKind(row.section);
+  const hasCedearRatio = findCedearRatio(row.symbol, context.cedearRatios) !== null;
+  const dollarCedearBaseTicker = getDollarCedearBaseTicker(row.symbol, context.cedearRatios);
+  const adr = getArgentineAdrRatio(row.symbol);
+  const isAdr = adr !== null && !row.localDollarLine && row.currency === 'USD';
   const filePrice = row.lastPrice ?? (row.fileValue ? row.fileValue / row.quantity : null) ?? row.costPrice;
   const prices = candidatePrices(row, context);
   let kind: AssetKind = 'unknown';
@@ -401,6 +434,12 @@ export function classifyRow(row: BrokerRow, context: ClassifyContext): Classifie
   } else if (sectionHint === 'fund') {
     kind = 'fund';
     reason = 'Fondo común de inversión';
+  } else if (isAdr && adr) {
+    kind = 'ar-stock';
+    reason = `ADR ${row.symbol}: ${adr.sharesPerAdr} acciones locales por ADR`;
+  } else if (dollarCedearBaseTicker) {
+    kind = 'cedear';
+    reason = `CEDEAR en dólares; ratio de ${dollarCedearBaseTicker}`;
   } else {
     const candidates = (Object.entries(prices) as [AssetKind, number][])
       // Bonds are often written per 1 nominal instead of per 100.
@@ -419,6 +458,14 @@ export function classifyRow(row: BrokerRow, context: ClassifyContext): Classifie
       // clearly says otherwise (dollars, or a fixed income section).
       kind = 'cedear';
       reason = 'Cotiza como CEDEAR en pesos';
+    } else if (
+      hasCedearRatio &&
+      row.currency !== 'USD' &&
+      sectionHint !== 'bond' &&
+      sectionHint !== 'us-stock'
+    ) {
+      kind = 'cedear';
+      reason = 'Ticker incluido en el catálogo de ratios de CEDEARs';
     } else if (sectionHint) {
       kind = sectionHint;
       reason = `Sección "${row.section}" del archivo`;
@@ -452,15 +499,28 @@ export function finalizeRow(
 ): ClassifiedRow {
   const warnings: string[] = [];
   const filePrice = row.lastPrice ?? (row.fileValue ? row.fileValue / row.quantity : null) ?? row.costPrice;
+  const dollarCedearBaseTicker = getDollarCedearBaseTicker(row.symbol, context.cedearRatios);
+  const adr = getArgentineAdrRatio(row.symbol);
+  const isAdr = adr !== null && !row.localDollarLine && row.currency === 'USD';
   const currency: Currency = row.currency
-    ?? (kind === 'us-stock' ? 'USD' : kind === 'bond' && isDollarQuotedLocal(row.symbol, context.local) ? 'USD' : 'ARS');
+    ?? (kind === 'us-stock' ||
+      (kind === 'cedear' && dollarCedearBaseTicker !== null) ||
+      (kind === 'bond' && isDollarQuotedLocal(row.symbol, context.local))
+      ? 'USD'
+      : 'ARS');
   let ratio: number | null = null;
   if (kind === 'cedear') {
-    const stored = context.cedearRatios[row.symbol] ?? null;
+    const stored = findCedearRatio(row.symbol, context.cedearRatios);
     const market = stored === null ? marketRatio(row.symbol, context) : null;
     ratio = override.ratio !== undefined ? override.ratio : stored ?? market;
     if (!ratio) warnings.push('Falta el ratio del CEDEAR: cargalo para convertirlo bien.');
     else if (override.ratio === undefined && stored === null) warnings.push(`Ratio ${ratio}:1 deducido de los precios de hoy; confirmalo si tenés el dato del broker.`);
+  }
+  if (kind === 'ar-stock') {
+    ratio = override.ratio !== undefined
+      ? override.ratio
+      : isAdr && adr ? adr.sharesPerAdr : 1;
+    if (isAdr && !ratio) warnings.push('Falta el ratio del ADR: completalo para convertirlo a acciones locales.');
   }
   if (kind === 'bond') warnings.push('La renta fija todavía no se carga en el portafolio: la vamos a sumar más adelante.');
   if (kind === 'bond') {
@@ -475,7 +535,8 @@ export function finalizeRow(
   }
   if (kind === 'unknown') warnings.push('Elegí qué tipo de activo es para importarlo.');
 
-  const findashValueArs = valueInArs({ ...row, kind, currency, ratio }, context);
+  const localStockSymbol = kind === 'ar-stock' && isAdr && adr ? adr.localSymbol : row.symbol;
+  const findashValueArs = valueInArs({ ...row, symbol: localStockSymbol, kind, currency, ratio }, context);
   if (IMPORTABLE_KINDS.includes(kind) && findashValueArs === null) {
     warnings.push('FinDash no encontró su cotización hoy: se va a mostrar a precio de compra.');
   }
@@ -486,7 +547,19 @@ export function finalizeRow(
     warnings.push('El valor que calcula FinDash difiere más de 10% del archivo: revisá el tipo y la cantidad.');
   }
 
-  return { ...row, kind, reason, currency, ratio, findashValueArs, fileValueArs, warnings };
+  return {
+    ...row,
+    underlyingSymbol: kind === 'cedear' ? getCedearUnderlyingTicker(row.symbol, context.cedearRatios) : row.symbol,
+    localStockSymbol,
+    isAdr,
+    kind,
+    reason,
+    currency,
+    ratio,
+    findashValueArs,
+    fileValueArs,
+    warnings,
+  };
 }
 
 const toArs = (amount: number, currency: Currency, ccl: number) => (currency === 'USD' ? amount * ccl : amount);
@@ -516,12 +589,15 @@ function valueInArs(row: Pick<ClassifiedRow, 'symbol' | 'quantity' | 'kind' | 'c
       return us ? row.quantity * us * context.ccl : null;
     }
     case 'cedear': {
-      if (local?.kind === 'cedear') return row.quantity * local.price;
+      if (local?.kind === 'cedear') {
+        const ccl = getDollarCedearBaseTicker(row.symbol, context.cedearRatios) ? context.ccl : 1;
+        return row.quantity * local.price * ccl;
+      }
       const us = context.usPrices.get(row.symbol);
       return us && row.ratio ? (row.quantity / row.ratio) * us * context.ccl : null;
     }
     case 'ar-stock':
-      return local ? row.quantity * local.price : null;
+      return local ? row.quantity * (row.ratio ?? 1) * local.price : null;
     case 'bond': {
       if (!local) return null;
       const perNominal = local.price / 100;
@@ -561,13 +637,18 @@ export function toTransactions(
       case 'cedear': {
         if (!row.ratio) return [];
         // Stored as underlying shares: N CEDEARs at a ratio of R are N/R shares.
-        return [{ ...base, symbol: row.symbol, quantity: row.quantity / row.ratio, purchase_price: usd * row.ratio }];
+        return [{ ...base, symbol: row.underlyingSymbol, quantity: row.quantity / row.ratio, purchase_price: usd * row.ratio }];
       }
       case 'bond':
         // Quantity in nominal units; price per nominal unit.
         return [{ ...base, symbol: localSymbol(row.symbol), quantity: row.quantity, purchase_price: usd / (row.ratio ?? 100) }];
       case 'ar-stock':
-        return [{ ...base, symbol: localSymbol(row.symbol), quantity: row.quantity, purchase_price: usd }];
+        return [{
+          ...base,
+          symbol: localSymbol(row.localStockSymbol),
+          quantity: row.quantity * (row.ratio ?? 1),
+          purchase_price: usd / (row.ratio ?? 1),
+        }];
       default:
         return [{ ...base, symbol: row.symbol, quantity: row.quantity, purchase_price: usd }];
     }

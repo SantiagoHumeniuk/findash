@@ -10,6 +10,11 @@ export interface LocalQuote {
   price: number;
   changePercent: number | null;
   kind: LocalInstrumentKind;
+  source?: 'DATA912' | 'IOL';
+  lastUpdated?: string;
+  bid?: number | null;
+  ask?: number | null;
+  bookUpdatedAt?: string;
 }
 
 export interface LocalMarket {

@@ -33,6 +33,7 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
     date, setDate,
     handleTypeChange,
     ratio, isCedears,
+    isAdr, adrRatio, adrLocalSymbol,
     cclRate, loadingCcl,
     portfolioId, setPortfolioId
   } = useTransactionForm({ isOpen, ticker, currentPrice });
@@ -65,7 +66,8 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
     }
 
     // ✅ Validación: Verificar límite de activos si es un activo nuevo EN ESE PORTFOLIO
-    const symbolExistsInPortfolio = transactions.some(t => t.portfolio_id === portfolioId && t.symbol === ticker);
+    const transactionSymbol = isAdr && adrLocalSymbol ? `${adrLocalSymbol}.BA` : ticker;
+    const symbolExistsInPortfolio = transactions.some(t => t.portfolio_id === portfolioId && t.symbol === transactionSymbol);
 
     if (!symbolExistsInPortfolio && isAtLimit) {
       toast.error("Límite de activos alcanzado en este portafolio", {
@@ -123,11 +125,15 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
         return;
       }
 
-      const finalQuantityInShares = calculateFinalQuantity(enteredQuantity, isCedears, ratio);
-      const finalPricePerShare = calculateFinalPrice(enteredPrice, isCedears, ratio) / (isCedears ? cclRate! : 1);
+      const finalQuantityInShares = isAdr
+        ? enteredQuantity
+        : calculateFinalQuantity(enteredQuantity, isCedears, ratio);
+      const finalPricePerShare = isAdr && adrRatio
+        ? enteredPrice
+        : calculateFinalPrice(enteredPrice, isCedears, ratio) / (isCedears ? cclRate! : 1);
 
       await addTransaction({
-        symbol: ticker,
+        symbol: transactionSymbol,
         quantity: finalQuantityInShares,
         purchase_price: finalPricePerShare,
         purchase_date: dateString,
@@ -176,14 +182,23 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
             </Select>
           </div>
 
-          {ratio && (
+          {(ratio !== undefined || isAdr) && (
             <div>
-              <Label className="mb-2 block text-xs sm:text-sm">Tipo de Activo</Label>
-              <div className="flex gap-2">
-                <Button type="button" size="sm" onClick={() => handleTypeChange('cedears')} variant={isCedears ? 'default' : 'outline'} className="flex-1 text-xs sm:text-sm">CEDEARs</Button>
-                <Button type="button" size="sm" onClick={() => handleTypeChange('shares')} variant={!isCedears ? 'default' : 'outline'} className="flex-1 text-xs sm:text-sm">Acciones</Button>
-              </div>
-              {isCedears && (
+              {ratio && (
+                <>
+                  <Label className="mb-2 block text-xs sm:text-sm">Tipo de Activo</Label>
+                  <div className="flex gap-2">
+                    <Button type="button" size="sm" onClick={() => handleTypeChange('cedears')} variant={isCedears ? 'default' : 'outline'} className="flex-1 text-xs sm:text-sm">CEDEARs</Button>
+                    <Button type="button" size="sm" onClick={() => handleTypeChange('shares')} variant={!isCedears ? 'default' : 'outline'} className="flex-1 text-xs sm:text-sm">Acciones</Button>
+                  </div>
+                </>
+              )}
+              {isAdr && adrRatio && adrLocalSymbol && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Ratio ADR: 1 {ticker} = {adrRatio} acciones {adrLocalSymbol}. Ingresá la cantidad de acciones locales que compraste.
+                </p>
+              )}
+              {isCedears && ratio !== undefined && (
                 <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                   <p>Ratio: {ratio} CEDEARs = 1 Acción.</p>
                   {loadingCcl ? (
@@ -202,7 +217,7 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="quantity" className="text-xs sm:text-sm">Cantidad</Label>
+              <Label htmlFor="quantity" className="text-xs sm:text-sm">{isAdr ? 'Cantidad de acciones locales' : 'Cantidad'}</Label>
               <Input
                 id="quantity"
                 type="number"
@@ -211,7 +226,7 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
                 max="1000000"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                placeholder={isCedears ? 'Ej: 15' : 'Ej: 1.5'}
+                placeholder={isCedears ? 'Ej: 15' : isAdr ? 'Ej: 10' : 'Ej: 1.5'}
                 required
                 autoFocus
                 className="text-sm"
@@ -219,7 +234,7 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
             </div>
             <div className="space-y-1.5 sm:space-y-2">
               <Label htmlFor="price" className="text-xs sm:text-sm">
-                {isCedears ? 'Precio por CEDEAR (ARS)' : 'Precio por Acción (USD)'}
+                {isCedears ? 'Precio por CEDEAR (ARS)' : isAdr ? 'PPC por acción local (USD)' : 'Precio por Acción (USD)'}
               </Label>
               <Input
                 id="price"
@@ -229,7 +244,7 @@ export function AddTransactionModal({ isOpen, onClose, ticker, currentPrice }: A
                 max="1000000"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                placeholder={isCedears ? 'Ej: 18.500' : 'Ej: 175.00'}
+                placeholder={isCedears ? 'Ej: 18.500' : isAdr ? 'Ej: 8.72' : 'Ej: 175.00'}
                 required
                 className="text-sm"
               />

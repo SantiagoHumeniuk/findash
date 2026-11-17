@@ -30,10 +30,16 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
   
   const isUndervalued = spread !== null && spread >= 0;
   const verdictStyle = {
-    infravalorada: { label: 'Infravalorada', badge: 'bg-green-600 hover:bg-green-700', text: 'text-green-600', bar: 'bg-green-500 left-0', Icon: TrendingUp },
-    'en-precio': { label: 'En precio', badge: 'bg-slate-600 hover:bg-slate-700', text: 'text-muted-foreground', bar: `bg-slate-400 ${isUndervalued ? 'left-0' : 'right-0'}`, Icon: Equal },
-    sobrevalorada: { label: 'Sobrevalorada', badge: 'bg-red-600 hover:bg-red-700', text: 'text-red-600', bar: 'bg-red-500 right-0', Icon: TrendingDown },
+    infravalorada: { label: 'Infravalorada', badge: 'bg-green-600 hover:bg-green-700', text: 'text-green-600', Icon: TrendingUp },
+    'en-precio': { label: 'En precio', badge: 'bg-slate-600 hover:bg-slate-700', text: 'text-muted-foreground', Icon: Equal },
+    sobrevalorada: { label: 'Sobrevalorada', badge: 'bg-red-600 hover:bg-red-700', text: 'text-red-600', Icon: TrendingDown },
   }[verdict ?? 'en-precio'];
+  const spreadBarColor = verdict === 'infravalorada'
+    ? 'bg-green-500'
+    : verdict === 'sobrevalorada'
+      ? 'bg-red-500'
+      : 'bg-slate-400';
+  const spreadBarWidth = spread === null ? 0 : Math.min(Math.abs(spread), 100) / 2;
   const confidenceLabel = { alta: 'Confianza alta', media: 'Confianza media', baja: 'Confianza baja' }[confidence ?? 'baja'];
   const confidenceHint = {
     alta: 'Los modelos coinciden entre sí.',
@@ -154,10 +160,10 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
 
       <CardContent className="space-y-6 h-full flex flex-col justify-center">
         {/* Bloque Principal de Precios */}
-        <div className="flex items-end justify-between">
-          <div>
+        <div className="grid grid-cols-2 items-end gap-3 sm:flex sm:justify-between">
+          <div className="min-w-0">
             <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wider">Precio Mercado</p>
-            <p className="text-3xl font-bold tracking-tighter">
+            <p className="text-2xl font-bold tracking-tight tabular-nums sm:text-3xl">
               {formatPrice(currentPrice)}
             </p>
           </div>
@@ -169,12 +175,12 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
             </div>
           </div>}
 
-          {showDetails && <div className="text-right">
+          {showDetails && <div className="min-w-0 text-right">
             <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wider flex items-center justify-end gap-1">
               Valor Teórico
               {isAnomaly && <AlertTriangle className="w-3 h-3 text-yellow-500" />}
             </p>
-            <p className={`text-3xl font-bold tracking-tighter ${isAnomaly ? 'text-yellow-600 decoration-yellow-600/30 line-through decoration-2' : 'text-primary'}`}>
+            <p className={`text-2xl font-bold tracking-tight tabular-nums sm:text-3xl ${isAnomaly ? 'text-yellow-600 decoration-yellow-600/30 line-through decoration-2' : 'text-primary'}`}>
               {formatPrice(fairValue)}
             </p>
             {fairValueRange && (
@@ -232,12 +238,30 @@ export function DCFValuationCard({ asset }: DCFValuationCardProps) {
               </span>}
             </div>
 
-            {showDetails && <div className="relative h-2 w-full bg-secondary rounded-full overflow-hidden">
-              <div
-                className={`absolute top-0 bottom-0 transition-all duration-1000 ease-out rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] ${verdictStyle.bar}`}
-                style={{ width: `${Math.min(Math.abs(spread), 100)}%` }}
-              />
-            </div>}
+            {showDetails && (
+              <div className="space-y-1">
+                <div
+                  role="img"
+                  aria-label={`Desvío del precio respecto al valor justo: ${spread > 0 ? '+' : ''}${spread.toFixed(2)}%.`}
+                  className="relative h-3 w-full overflow-hidden rounded-full bg-secondary/80"
+                >
+                  <div
+                    data-testid="fair-value-spread-fill"
+                    className={`absolute inset-y-0 rounded-full transition-all duration-700 ease-out ${spreadBarColor}`}
+                    style={{
+                      width: `${spreadBarWidth}%`,
+                      ...(spread >= 0 ? { left: '50%' } : { right: '50%' }),
+                    }}
+                  />
+                  <div className="absolute inset-y-0 left-1/2 z-10 w-px bg-foreground/50" />
+                </div>
+                <div className="grid grid-cols-3 text-[10px] text-muted-foreground">
+                  <span className="text-left">Sobrevalorada</span>
+                  <span className="text-center">En precio</span>
+                  <span className="text-right">Infravalorada</span>
+                </div>
+              </div>
+            )}
 
             <p className="text-xs text-muted-foreground text-center pt-1 font-medium">
               {verdict === 'en-precio'

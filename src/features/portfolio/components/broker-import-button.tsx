@@ -11,8 +11,10 @@ import { usePortfolio } from '../../../hooks/use-portfolio';
 import { usePortfolioLimits } from '../../../hooks/use-portfolio-limits';
 import { useCedearRatios } from '../../../hooks/use-cedear-ratios';
 import { fetchCclRate } from '../../../hooks/use-ccl-rate';
+import { getDollarCedearBaseTicker } from '../../../data/cedear-ratio-lookup';
 import { fetchLocalMarket } from '../../../services/api/local-market-api';
 import { fetchYahooMarketQuotes } from '../../../services/api/yahoo-finance-api';
+import { CEDEAR_UNDERLYING_TICKERS } from '../../../data/cedear-underlying-tickers';
 import { cn } from '../../../lib/utils';
 import {
   ASSET_KIND_LABELS,
@@ -44,14 +46,23 @@ const ars = (value: number | null) => value === null
 const number = (value: number) => value.toLocaleString('es-AR', { maximumFractionDigits: 4 });
 
 /** US prices for the tickers that could be US shares or CEDEARs (local bonds and stocks are skipped). */
-async function fetchUsPrices(symbols: string[]): Promise<Map<string, number>> {
+async function fetchUsPrices(symbols: string[], cedearRatios: Record<string, number>): Promise<Map<string, number>> {
   const prices = new Map<string, number>();
   const candidates = [...new Set(symbols.filter((symbol) => /^[A-Z][A-Z0-9.-]{0,9}$/.test(symbol)))];
-  for (let index = 0; index < candidates.length; index += 20) {
+  const symbolsByUnderlying = new Map<string, string[]>();
+  for (const symbol of candidates) {
+    const underlying = CEDEAR_UNDERLYING_TICKERS[symbol] ?? getDollarCedearBaseTicker(symbol, cedearRatios) ?? symbol;
+    symbolsByUnderlying.set(underlying, [...(symbolsByUnderlying.get(underlying) ?? []), symbol]);
+  }
+  const underlyingSymbols = [...symbolsByUnderlying.keys()];
+  for (let index = 0; index < underlyingSymbols.length; index += 20) {
     try {
-      const { quotes } = await fetchYahooMarketQuotes(candidates.slice(index, index + 20));
+      const { quotes } = await fetchYahooMarketQuotes(underlyingSymbols.slice(index, index + 20));
       for (const quote of quotes) {
-        if (quote.price.value && quote.price.value > 0 && (quote.currency ?? 'USD') === 'USD') prices.set(quote.symbol, quote.price.value);
+        const cedearSymbols = symbolsByUnderlying.get(quote.symbol.trim().toUpperCase()) ?? [];
+        if (quote.price.value && quote.price.value > 0 && (quote.currency ?? 'USD') === 'USD') {
+          for (const symbol of cedearSymbols) prices.set(symbol, quote.price.value);
+        }
       }
     } catch {
       // Without US prices the file's own sections and the local market still classify most rows.
@@ -67,7 +78,7 @@ async function fetchUsPrices(symbols: string[]): Promise<Map<string, number>> {
  */
 export function BrokerImportButton() {
   const { importTransactions, currentPortfolio, transactions } = usePortfolio();
-  const { ratios: cedearRatios } = useCedearRatios();
+  const { ratios: cedearRatios, loading: cedearRatiosLoading } = useCedearRatios();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [reading, setReading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -80,8 +91,14 @@ export function BrokerImportButton() {
     : 0;
 
   const importable = useMemo(() => draft?.rows.filter((row) => IMPORTABLE_KINDS.includes(row.kind)) ?? [], [draft]);
-  const blocked = importable.filter((row) => row.kind === 'cedear' && !row.ratio);
-  const distinctSymbols = new Set(importable.map((row) => (row.kind === 'ar-stock' || row.kind === 'bond' ? localSymbol(row.symbol) : row.symbol))).size;
+  const blocked = importable.filter((row) =>
+    (row.kind === 'cedear' || (row.kind === 'ar-stock' && row.isAdr)) && !row.ratio
+  );
+  const distinctSymbols = new Set(importable.map((row) => {
+    if (row.kind === 'ar-stock') return localSymbol(row.localStockSymbol);
+    if (row.kind === 'bond') return localSymbol(row.symbol);
+    return row.kind === 'cedear' ? row.underlyingSymbol : row.symbol;
+  })).size;
   const { maxAssets } = usePortfolioLimits(0);
   const overLimit = distinctSymbols > maxAssets;
   const totals = useMemo(() => {
@@ -119,7 +136,7 @@ export function BrokerImportButton() {
       const [local, ccl, usPrices] = await Promise.all([
         fetchLocalMarket(),
         fetchCclRate(),
-        fetchUsPrices(parsed.rows.map((row) => row.symbol)),
+        fetchUsPrices(parsed.rows.map((row) => row.symbol), cedearRatios),
       ]);
       const context: ClassifyContext = { cedearRatios, local: local.quotes, usPrices, ccl: ccl.rate };
       setDraft({
@@ -188,10 +205,10 @@ export function BrokerImportButton() {
         variant="outline"
         className="gap-2 shadow-premium hover:shadow-none transition-all"
         onClick={() => fileInputRef.current?.click()}
-        disabled={reading || saving}
+        disabled={reading || saving || cedearRatiosLoading}
       >
         {reading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-        {reading ? 'Leyendo archivo…' : 'Importar cartera'}
+        {reading ? 'Leyendo archivo…' : cedearRatiosLoading ? 'Cargando ratios…' : 'Importar cartera'}
       </Button>
       <Button type="button" variant="ghost" size="sm" className="gap-2" onClick={() => setShowGuide(true)}>
         <BookOpen className="h-4 w-4" />
@@ -273,7 +290,7 @@ export function BrokerImportButton() {
                             </Select>
                             {row.kind === 'cedear' && (
                               <label className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                                Ratio
+                                Ratio CEDEAR
                                 <Input
                                   type="number"
                                   min={0}
@@ -284,6 +301,20 @@ export function BrokerImportButton() {
                                   aria-label={`Ratio del CEDEAR ${row.symbol}`}
                                 />
                                 : 1
+                              </label>
+                            )}
+                            {row.kind === 'ar-stock' && row.isAdr && (
+                              <label className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                                Acciones por ADR
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step="any"
+                                  className="h-7 w-20"
+                                  value={row.ratio ?? ''}
+                                  onChange={(event) => updateRow(index, { ratio: Number(event.target.value) > 0 ? Number(event.target.value) : null })}
+                                  aria-label={`Acciones locales por ADR ${row.symbol}`}
+                                />
                               </label>
                             )}
                             {row.kind === 'bond' && (
@@ -333,7 +364,7 @@ export function BrokerImportButton() {
                   type="button"
                   onClick={() => void handleConfirm()}
                   disabled={saving || importable.length === 0 || blocked.length > 0 || overLimit}
-                  title={blocked.length > 0 ? 'Completá el ratio de los CEDEARs marcados' : undefined}
+                  title={blocked.length > 0 ? 'Completá el ratio de los CEDEARs o ADRs marcados' : undefined}
                 >
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
                   {saving ? 'Guardando…' : `${replace && existingInPortfolio > 0 ? 'Reemplazar e importar' : 'Importar'} ${importable.length} activos`}
@@ -361,7 +392,8 @@ export function BrokerImportButton() {
               Reconocemos el ticker, la cantidad, el precio de compra (PPC o precio promedio) y el precio o valor actual, aunque las columnas
               tengan otros nombres o el archivo traiga títulos y secciones. Cada fila se identifica sola: CEDEARs (con su ratio, que se
               actualiza todos los días), acciones argentinas y acciones de EE. UU. Por ahora el portafolio es solo de renta variable: los
-              bonos, ONs y letras se reconocen pero no se importan, igual que el efectivo, las cauciones y los fondos.
+              bonos, ONs y letras se reconocen pero no se importan, igual que el efectivo, las cauciones y los fondos. Los ADRs argentinos se convierten
+              a acciones locales con su ratio de conversión precargado.
             </p>
             <p className="text-muted-foreground">
               Los montos en pesos se pasan a dólares con el CCL de hoy, el mismo que se usa para valuar, así que la ganancia o pérdida en

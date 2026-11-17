@@ -1,0 +1,15 @@
+{
+  "BBAR": { "localSymbol": "BBAR", "sharesPerAdr": 3 },
+  "BMA": { "localSymbol": "BMA", "sharesPerAdr": 10 },
+  "CEPU": { "localSymbol": "CEPU", "sharesPerAdr": 10 },
+  "CRESY": { "localSymbol": "CRES", "sharesPerAdr": 10 },
+  "EDN": { "localSymbol": "EDN", "sharesPerAdr": 20 },
+  "GGAL": { "localSymbol": "GGAL", "sharesPerAdr": 10 },
+  "IRS": { "localSymbol": "IRSA", "sharesPerAdr": 10 },
+  "LOMA": { "localSymbol": "LOMA", "sharesPerAdr": 5 },
+  "PAM": { "localSymbol": "PAMP", "sharesPerAdr": 25 },
+  "SUPV": { "localSymbol": "SUPV", "sharesPerAdr": 5 },
+  "TEO": { "localSymbol": "TECO2", "sharesPerAdr": 5 },
+  "TGS": { "localSymbol": "TGSU2", "sharesPerAdr": 5 },
+  "YPF": { "localSymbol": "YPFD", "sharesPerAdr": 1 }
+}

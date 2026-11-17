@@ -1,6 +1,7 @@
 // src/features/portfolio/components/table/portfolio-view.tsx
 
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Button } from '../../../../components/ui/button';
@@ -18,6 +19,7 @@ import { PortfolioViewProps } from '../../types/portfolio.types';
 import { HoldingWithMetrics } from '../../../../types/portfolio';
 import { formatCurrency, formatPercent } from '../../../../lib/utils';
 import { formatQuantity } from '../../lib/portfolio.utils';
+import { AssetLogo } from '../../../../components/ui/asset-logo';
 
 import { generateAdvisory } from '../../lib/advisory-engine';
 import { RecommendationModal } from '../modals/recommendation-modal';
@@ -32,20 +34,30 @@ export const PortfolioView = React.memo(function PortfolioView({ holdings, portf
       cell: ({ row }) => {
         const asset = row.original.assetData;
         const symbol = row.original.symbol;
+        const assetSymbol = symbol.replace(/\.BA$/, '');
+        const name = asset.profile?.companyName ?? symbol;
         return (
-          <span className="block">
-            <span className="font-semibold">{symbol.replace(/.BA$/, '')}</span>
-            {asset.localMarket && (
-              <span className="block text-[11px] text-muted-foreground">
-                {asset.profile.industry} · $ {asset.localMarket.arsPrice.toLocaleString('es-AR', { maximumFractionDigits: 2 })}
-              </span>
-            )}
-            {asset.priceUnavailable && (
-              <span className="block text-[11px] text-amber-600 dark:text-amber-400" title="Sin cotización hoy: se muestra a precio de compra">
-                Sin cotización hoy
-              </span>
-            )}
-          </span>
+          <Link
+            to={`/asset/${assetSymbol}`}
+            aria-label={`Ver detalle de ${assetSymbol}`}
+            className="flex items-center gap-2 hover:opacity-80"
+          >
+            <AssetLogo symbol={assetSymbol} name={name} src={asset.profile?.image} className="size-8" />
+            <span className="block">
+              <span className="font-semibold">{assetSymbol}</span>
+              {asset.localMarket && (
+                <span className="block text-[11px] text-muted-foreground">
+                  {asset.localMarket.kind === 'cedear' ? 'CEDEAR' : asset.profile.industry} · $ {asset.localMarket.arsPrice.toLocaleString('es-AR', { maximumFractionDigits: 2 })}
+                  {asset.localMarket.impliedCcl && ` · CCL implícito $${asset.localMarket.impliedCcl.toLocaleString('es-AR', { maximumFractionDigits: 2 })}`}
+                </span>
+              )}
+              {asset.priceUnavailable && (
+                <span className="block text-[11px] text-amber-600 dark:text-amber-400" title="Sin cotización hoy: se muestra a precio de compra">
+                  Sin cotización hoy
+                </span>
+              )}
+            </span>
+          </Link>
         );
       },
     },
@@ -205,7 +217,7 @@ export const PortfolioView = React.memo(function PortfolioView({ holdings, portf
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} className="hover:bg-primary/10">
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}

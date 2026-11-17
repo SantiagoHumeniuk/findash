@@ -13,9 +13,27 @@ import { toast } from 'sonner';
 import { logger } from '../lib/logger';
 import { errorToString } from '../utils/type-guards';
 import { fetchTickerData } from '../services/api/asset-api';
-import { fetchLocalMarket } from '../services/api/local-market-api';
+import { fetchLocalMarket, type LocalMarket } from '../services/api/local-market-api';
+import {
+    fetchIolMarketData,
+    getIolMarketDataRequestKey,
+    type IolMarketDataRequest,
+} from '../services/api/iol-market-data-api';
 import { fetchCclRate } from '../hooks/use-ccl-rate';
-import { buildLocalAsset, isLocalPortfolioSymbol } from '../features/portfolio/lib/local-assets';
+import {
+    buildCedearUnderlyingAsset,
+    buildLocalAsset,
+    getIolMarketForExchange,
+    getReliableIolPrice,
+    isLocalPortfolioSymbol,
+    mergeCedearQuote,
+    normalizeLegacyPortfolioSymbol,
+} from '../features/portfolio/lib/local-assets';
+import {
+    getCedearTickersForUnderlying,
+    getCedearUnderlyingTicker,
+} from '../data/cedear-ratio-lookup';
+import { useCedearRatios } from '../hooks/use-cedear-ratios';
 import type { Config } from '../types/config';
 import type { Profile } from '../types/auth';
 import type { User } from '@supabase/supabase-js';
@@ -37,6 +55,7 @@ const fetchPortfolioData = async (
     user: User | null,
     profile: Profile | null,
     config: Config,
+    cedearRatios: Record<string, number>,
 ): Promise<FetchPortfolioResult> => {
     if (!user || !profile) {
         return { transactions: [], portfolioData: {}, portfolios: [] };
@@ -66,24 +85,104 @@ const fetchPortfolioData = async (
         throw new Error('No se pudo obtener tus transacciones.');
     }
 
-    const transactions = (transResult.data || []) as Transaction[];
+    const transactions = ((transResult.data || []) as Transaction[]).map((transaction) => {
+        const symbol = normalizeLegacyPortfolioSymbol(transaction.symbol);
+        return symbol === transaction.symbol ? transaction : { ...transaction, symbol };
+    });
     const symbols = [...new Set(transactions.map((t: Transaction) => t.symbol))];
     const portfolioData: Record<string, AssetData> = {};
     const unavailableSymbols: string[] = [];
 
     // Use shared cache first; only cache misses use a plan-metered asset lookup.
     // A few at a time: concurrent enough to be fast, gentle enough on the Edge Function.
-    // Local stocks and bonds are priced with Buenos Aires quotes (one request for all of them).
+    // Local stocks, bonds and CEDEARs use Buenos Aires quotes (one request for all of them).
     const localSymbols = symbols.filter(isLocalPortfolioSymbol);
-    if (localSymbols.length > 0) {
-        try {
-            const [market, ccl] = await Promise.all([fetchLocalMarket(), fetchCclRate()]);
+    const cedearSymbols = symbols.filter((symbol) =>
+        !isLocalPortfolioSymbol(symbol) && getCedearTickersForUnderlying(symbol, cedearRatios).length > 0
+    );
+    const localCedearAssets: Record<string, AssetData> = {};
+    let market: LocalMarket = { fetchedAt: new Date().toISOString(), quotes: new Map() };
+    let cclRate = 0;
+    if (localSymbols.length > 0 || cedearSymbols.length > 0) {
+        const [localMarketResult, cclResult] = await Promise.allSettled([
+            fetchLocalMarket(),
+            fetchCclRate(),
+        ]);
+        if (localMarketResult.status === 'fulfilled') {
+            market = localMarketResult.value;
+        } else {
+            void logger.warn('PORTFOLIO_DATA912_PRICES_FAILED', errorToString(localMarketResult.reason));
+        }
+        if (cclResult.status === 'fulfilled') {
+            cclRate = cclResult.value.rate;
+        } else {
+            void logger.warn('PORTFOLIO_CCL_RATE_FAILED', errorToString(cclResult.reason));
+        }
+
+        const localQuoteKinds = new Map<string, 'stock' | 'cedear'>();
+        for (const symbol of localSymbols) {
+            const ticker = symbol.toUpperCase().replace(/\.BA$/, '');
+            if (market.quotes.get(ticker)?.kind === 'stock') localQuoteKinds.set(ticker, 'stock');
+        }
+
+        for (const symbol of cedearSymbols) {
+            const candidates = getCedearTickersForUnderlying(symbol, cedearRatios);
+            const alreadyListed = candidates.filter((ticker) => market.quotes.get(ticker)?.kind === 'cedear');
+            const orderedCandidates = [
+                ...alreadyListed,
+                ...candidates.filter((ticker) => !alreadyListed.includes(ticker)),
+            ];
+            for (const ticker of orderedCandidates) {
+                if (!localQuoteKinds.has(ticker)) localQuoteKinds.set(ticker, 'cedear');
+            }
+        }
+
+        const localIolRequests: IolMarketDataRequest[] = [...localQuoteKinds.keys()].map((symbol) => ({
+            symbol,
+            market: 'BCBA',
+            term: 'T0',
+        }));
+        if (localIolRequests.length > 0) {
+            try {
+                const results = await fetchIolMarketData(localIolRequests);
+                for (const result of results) {
+                    if ('error' in result) {
+                        void logger.warn('IOL_LOCAL_QUOTE_FAILED', `IOL no devolvió ${result.request.symbol}`, {
+                            symbol: result.request.symbol,
+                            errorMessage: result.error,
+                        });
+                        continue;
+                    }
+                    const reliablePrice = getReliableIolPrice(result);
+                    if (!reliablePrice) continue;
+                    const symbol = result.request.symbol;
+                    const quote = {
+                        symbol,
+                        price: reliablePrice.price,
+                        changePercent: result.quote.changePercent,
+                        kind: localQuoteKinds.get(symbol) ?? 'cedear',
+                        source: 'IOL' as const,
+                        lastUpdated: new Date(reliablePrice.timestamp).toISOString(),
+                        bid: result.topOfBook.bid?.price ?? null,
+                        ask: result.topOfBook.ask?.price ?? null,
+                        bookUpdatedAt: result.topOfBook.lastUpdated,
+                    };
+                    market.quotes.set(symbol, quote);
+                }
+            } catch (error) {
+                void logger.error('PORTFOLIO_IOL_LOCAL_PRICES_FAILED', errorToString(error));
+            }
+        }
+
+        if (cclRate > 0) {
             for (const symbol of localSymbols) {
-                const asset = buildLocalAsset(symbol, market, ccl.rate);
+                const asset = buildLocalAsset(symbol, market, cclRate);
                 if (asset) portfolioData[symbol] = asset;
             }
-        } catch (error) {
-            void logger.error('PORTFOLIO_LOCAL_PRICES_FAILED', errorToString(error));
+            for (const symbol of cedearSymbols) {
+                const asset = buildCedearUnderlyingAsset(symbol, market, cclRate, cedearRatios);
+                if (asset) localCedearAssets[symbol] = asset;
+            }
         }
     }
 
@@ -94,12 +193,18 @@ const fetchPortfolioData = async (
             unavailableSymbols.push(symbol);
             return;
         }
+        const localCedearAsset = localCedearAssets[symbol];
         try {
-            portfolioData[symbol] = await fetchTickerData({
+            const asset = await fetchTickerData({
                 queryKey: ['assetData', symbol, config, user, profile],
                 fromPortfolio: true,
             });
+            portfolioData[symbol] = localCedearAsset ? mergeCedearQuote(asset, localCedearAsset) : asset;
         } catch (error) {
+            if (localCedearAsset) {
+                portfolioData[symbol] = localCedearAsset;
+                return;
+            }
             unavailableSymbols.push(symbol);
             void logger.error('PORTFOLIO_ASSET_FETCH_FAILED', `Could not load portfolio asset ${symbol}`, {
                 symbol,
@@ -109,6 +214,49 @@ const fetchPortfolioData = async (
     };
     for (let index = 0; index < symbols.length; index += PORTFOLIO_LOAD_CONCURRENCY) {
         await Promise.all(symbols.slice(index, index + PORTFOLIO_LOAD_CONCURRENCY).map(loadSymbol));
+    }
+
+    const underlyingRequestsBySymbol = new Map<string, IolMarketDataRequest>();
+    for (const symbol of cedearSymbols) {
+        const asset = portfolioData[symbol];
+        const marketName = asset ? getIolMarketForExchange(asset.profile.exchange) : null;
+        if (!marketName) continue;
+        const request: IolMarketDataRequest = {
+            symbol: getCedearUnderlyingTicker(symbol, cedearRatios),
+            market: marketName,
+            term: 'T1',
+        };
+        underlyingRequestsBySymbol.set(symbol, request);
+    }
+
+    if (underlyingRequestsBySymbol.size > 0) {
+        try {
+            const results = await fetchIolMarketData([...underlyingRequestsBySymbol.values()]);
+            const resultsByKey = new Map(
+                results.map((result) => [getIolMarketDataRequestKey(result.request), result]),
+            );
+            for (const [symbol, request] of underlyingRequestsBySymbol) {
+                const result = resultsByKey.get(getIolMarketDataRequestKey(request));
+                if (!result || 'error' in result) {
+                    if (result && 'error' in result) {
+                        void logger.warn('IOL_UNDERLYING_QUOTE_FAILED', `IOL no devolvió ${request.symbol}`, {
+                            symbol: request.symbol,
+                            errorMessage: result.error,
+                        });
+                    }
+                    continue;
+                }
+                const asset = portfolioData[symbol];
+                if (!asset) continue;
+                portfolioData[symbol] = mergeCedearQuote(
+                    asset,
+                    localCedearAssets[symbol] ?? asset,
+                    result,
+                );
+            }
+        } catch (error) {
+            void logger.error('PORTFOLIO_IOL_UNDERLYING_PRICES_FAILED', errorToString(error));
+        }
     }
 
     if (unavailableSymbols.length > 0) {
@@ -124,14 +272,15 @@ const fetchPortfolioData = async (
 export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     const { user, profile } = useAuth();
     const config = useConfig();
+    const { ratios: cedearRatios } = useCedearRatios();
     const queryClient = useQueryClient();
 
     // Local state for selected portfolio ID
     const [currentPortfolioId, setCurrentPortfolioId] = useState<number | null>(null);
 
     const { data, isLoading, isError, error, refetch } = useQuery({
-        queryKey: ['portfolio', user?.id],
-        queryFn: () => fetchPortfolioData(user, profile, config),
+        queryKey: ['portfolio', user?.id, cedearRatios],
+        queryFn: () => fetchPortfolioData(user, profile, config, cedearRatios),
         enabled: !!user && !!profile,
         staleTime: 2 * 60 * 60 * 1000,
         gcTime: 2 * 60 * 60 * 1000,

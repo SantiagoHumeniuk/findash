@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as XLSX from 'xlsx';
+import bymaCedearRatios from '../../../data/cedear-ratios.json';
+import { findCedearRatio } from '../../../data/cedear-ratio-lookup';
+import { getArgentineAdrRatio } from '../../../data/argentine-adr-ratio-lookup';
 import type { LocalQuote } from '../../../services/api/local-market-api';
 import { classifyRow, parseBrokerSheets, parseNumber, toTransactions, type ClassifyContext } from './broker-import';
 import { parseDelimitedText } from './read-spreadsheet';
@@ -35,6 +38,14 @@ describe('parseNumber', () => {
     expect(parseNumber('12,5%')).toBe(12.5);
     expect(parseNumber('-')).toBeNull();
     expect(parseNumber(42)).toBe(42);
+  });
+});
+
+describe('Argentine ADR ratios', () => {
+  it('preloads the local-share ticker and shares represented by each ADR', () => {
+    expect(getArgentineAdrRatio('BMA')).toEqual({ localSymbol: 'BMA', sharesPerAdr: 10 });
+    expect(getArgentineAdrRatio('TGS')).toEqual({ localSymbol: 'TGSU2', sharesPerAdr: 5 });
+    expect(getArgentineAdrRatio('unknown')).toBeNull();
   });
 });
 
@@ -83,6 +94,75 @@ describe('IOL holdings export', () => {
     expect(ggal.quantity).toBe(100);
     expect(ggal.purchase_price).toBeCloseTo(5_000 / CCL);
     expect(transactions.some((tx) => tx.symbol === 'AL30.BA')).toBe(false);
+  });
+
+  it('normalizes a USD-traded Argentine share line and keeps its PPC in dollars', () => {
+    const parsed = parseCsv([
+      'Ticker;Cantidad;Último precio;PPC',
+      'BMA.D;10;$ 9,00;$ 8,72',
+    ].join('\n'));
+    const bmaContext: ClassifyContext = {
+      ...context,
+      local: new Map([...local, ['BMA', { symbol: 'BMA', price: 13_080, changePercent: 0, kind: 'stock' }]]),
+    };
+    const row = classifyRow(parsed.rows[0], bmaContext);
+
+    expect(row.symbol).toBe('BMA');
+    expect(row.currency).toBe('USD');
+    expect(row.kind).toBe('ar-stock');
+    expect(row.ratio).toBe(1);
+    expect(row.costPrice).toBe(8.72);
+    expect(toTransactions([row], 7, CCL)[0]).toMatchObject({
+      symbol: 'BMA.BA',
+      quantity: 10,
+      purchase_price: 8.72,
+    });
+  });
+
+  it('converts an Argentine ADR into local shares with the preloaded ratio', () => {
+    const parsed = parseCsv([
+      'Ticker;Cantidad;Último precio;PPC;Moneda',
+      'BMA;1;87,20;80,00;USD',
+    ].join('\n'));
+    const bmaContext: ClassifyContext = {
+      ...context,
+      local: new Map([...local, ['BMA', { symbol: 'BMA', price: 13_080, changePercent: 0, kind: 'stock' }]]),
+      usPrices: new Map([...context.usPrices, ['BMA', 87.2]]),
+    };
+    const row = classifyRow(parsed.rows[0], bmaContext);
+
+    expect(row).toMatchObject({
+      kind: 'ar-stock',
+      isAdr: true,
+      localStockSymbol: 'BMA',
+      ratio: 10,
+      findashValueArs: 130_800,
+    });
+    expect(row.reason).toContain('10 acciones locales por ADR');
+    expect(toTransactions([row], 7, CCL)[0]).toMatchObject({
+      symbol: 'BMA.BA',
+      quantity: 10,
+      purchase_price: 8,
+    });
+  });
+
+  it('converts ADRs whose US and BYMA tickers differ to the local stock ticker', () => {
+    const parsed = parseCsv([
+      'Ticker;Cantidad;Último precio;PPC;Moneda',
+      'TGS;2;50;45;USD',
+    ].join('\n'));
+    const tgsContext: ClassifyContext = {
+      ...context,
+      local: new Map([...local, ['TGSU2', { symbol: 'TGSU2', price: 15_000, changePercent: 0, kind: 'stock' }]]),
+    };
+    const row = classifyRow(parsed.rows[0], tgsContext);
+    const [transaction] = toTransactions([row], 7, CCL);
+
+    expect(transaction).toMatchObject({
+      symbol: 'TGSU2.BA',
+      quantity: 10,
+      purchase_price: 9,
+    });
   });
 });
 
@@ -170,6 +250,53 @@ describe('Excel files', () => {
 });
 
 describe('CEDEARs by default', () => {
+  it('does not confuse an underlying US ticker with a differently punctuated CEDEAR', () => {
+    expect(findCedearRatio('BAC', { 'BA.C': 4 })).toBeNull();
+  });
+
+  it('uses the base company ratio for USD-denominated CEDEAR tickers', () => {
+    expect(findCedearRatio('NVDAD', bymaCedearRatios)).toBe(bymaCedearRatios.NVDA);
+    expect(findCedearRatio('AAPLD', bymaCedearRatios)).toBe(bymaCedearRatios.AAPL);
+    expect(findCedearRatio('GOGLD', bymaCedearRatios)).toBe(bymaCedearRatios.GOOGL);
+    expect(findCedearRatio('NUD', bymaCedearRatios)).toBe(bymaCedearRatios.NU);
+  });
+
+  it('imports a USD CEDEAR using the base ticker ratio and USD purchase cost', () => {
+    const usdCedear = classifyRow(
+      parseCsv(['Ticker;Cantidad;Último precio;PPC;Moneda', 'NVDAD;5;6,67;6,5;USD'].join('\n')).rows[0],
+      { ...context, cedearRatios: bymaCedearRatios, local: new Map(), usPrices: new Map() },
+    );
+
+    expect(usdCedear.kind).toBe('cedear');
+    expect(usdCedear.ratio).toBe(bymaCedearRatios.NVDA);
+    expect(usdCedear.currency).toBe('USD');
+    expect(usdCedear.underlyingSymbol).toBe('NVDA');
+    expect(toTransactions([usdCedear], 1, CCL)[0]).toMatchObject({
+      symbol: 'NVDA',
+      quantity: 5 / bymaCedearRatios.NVDA,
+      purchase_price: 6.5 * bymaCedearRatios.NVDA,
+    });
+  });
+
+  it('loads the catalog ratio when the broker ticker uses different punctuation and quotes are unavailable', () => {
+    const noMarketData: ClassifyContext = {
+      ...context,
+      cedearRatios: bymaCedearRatios,
+      local: new Map(),
+      usPrices: new Map(),
+    };
+    const parsed = parseCsv(['Ticker;Cantidad;Último precio;PPC', 'BRK.B;10;100;90'].join('\n'));
+    const row = classifyRow(parsed.rows[0], noMarketData);
+
+    expect(row.kind).toBe('cedear');
+    expect(row.ratio).toBe(bymaCedearRatios.BRKB);
+    expect(row.warnings).not.toContain('Falta el ratio del CEDEAR: cargalo para convertirlo bien.');
+    expect(toTransactions([row], 1, CCL)[0]).toMatchObject({
+      symbol: 'BRK-B',
+      quantity: 10 / bymaCedearRatios.BRKB,
+    });
+  });
+
   it('treats a CEDEAR filed under "Acciones" as a CEDEAR', () => {
     const rows = classifyAll(['Acciones', 'Ticker;Cantidad;PPC', 'MELI;10;18.000'].join('\n'));
     expect(rows[0].kind).toBe('cedear');
