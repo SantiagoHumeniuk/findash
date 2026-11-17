@@ -2,7 +2,7 @@
   "useMockData": false,
   "app": {
     "name": "FinDash",
-    "version": "3.0",
+    "version": "4.0",
     "contactEmail": "findash.data@gmail.com",
     "socialMedia": {
       "twitter": "https://twitter.com/findash",
