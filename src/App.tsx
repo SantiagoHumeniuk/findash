@@ -1,7 +1,7 @@
 // src/App.tsx
 
 import React from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { ThemeProvider } from "./components/ui/theme-provider";
 import {
   SidebarProvider,
@@ -28,11 +28,21 @@ export default function App() {
           <Toaster position="top-right" richColors />
           <AppSidebar />
           
-          <SidebarInset className="flex-1 overflow-y-auto relative bg-transparent">
-            <AnimatedBackground variant="hero" className="absolute inset-0 min-h-full flex flex-col w-full">
+          <SidebarInset className="relative flex h-svh min-h-svh flex-1 overflow-y-auto bg-transparent">
+            <AnimatedBackground variant="hero" className="flex min-h-full w-full flex-col">
               <ActivesBar />
+              <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-border/70 bg-background/85 px-4 py-2 backdrop-blur-xl md:hidden">
+                <SidebarTrigger
+                  aria-label="Abrir navegación"
+                  className="size-11 rounded-xl border border-border/70 bg-background/70 text-foreground shadow-sm"
+                />
+                <Link to="/" className="flex min-w-0 items-center gap-2 rounded-md font-semibold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <img src="/logo-128.png" alt="" width="28" height="28" className="size-7 shrink-0 object-contain" />
+                  <span className="truncate">FinDash</span>
+                </Link>
+              </div>
 
-              <main className="page-transition flex-1 flex flex-col relative z-10 overflow-x-hidden">
+              <main className="page-transition relative z-10 flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
                 <div key={location.pathname} className="page-enter h-full">
                     <React.Suspense fallback={<SuspenseFallback type="page" message="Cargando página..." />}>
                       <Outlet />
@@ -43,11 +53,6 @@ export default function App() {
 
             {/* Modal de estado de suscripción y pago */}
             <SubscriptionStatusModal />
-
-            {/* Trigger flotante solo para móvil */}
-            <div className="fixed bottom-6 left-6 z-50 md:hidden">
-              <SidebarTrigger className="size-12 rounded-full bg-primary/20 backdrop-blur-md border border-primary/30 text-primary shadow-xl" />
-            </div>
           </SidebarInset>
         </SidebarProvider>
       </ThemeProvider>

@@ -1,7 +1,6 @@
 // src/features/portfolio/pages/portfolio-page.tsx
 
 import { BuyAssetDialog } from '../components/modals/buy-asset-dialog';
-import { RealReturnsCard } from '../components/analysis/real-returns-card';
 import { useState, useMemo, useCallback } from 'react';
 import { usePortfolio } from '../../../hooks/use-portfolio';
 import { usePortfolioHistory } from '../hooks/use-portfolio-history';
@@ -277,8 +276,6 @@ function PortfolioPageContent() {
           avgHoldingDays={avgHoldingDays}
           historicalMetrics={historicalMetrics}
         />
-
-        <RealReturnsCard transactions={transactions} holdings={holdings} portfolioData={portfolioData} />
 
         <div className="grid grid-cols-1 gap-6">
             <PortfolioCharts 

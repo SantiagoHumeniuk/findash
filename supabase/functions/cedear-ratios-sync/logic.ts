@@ -1,5 +1,7 @@
 // Pure rules of the CEDEAR ratio sync, tested with `deno test`.
 
+import { CEDEAR_UNDERLYING_TICKERS } from "../../../src/data/cedear-underlying-tickers.ts";
+
 export type StoredRatio = {
   symbol: string;
   ratio: number;
@@ -76,7 +78,4 @@ export function applyObservation(stored: StoredRatio | undefined, symbol: string
 }
 
 /** BYMA tickers whose US listing uses a different symbol. */
-export const US_TICKER: Record<string, string> = {
-  BRKB: "BRK-B",
-  DISN: "DIS",
-};
+export const US_TICKER = CEDEAR_UNDERLYING_TICKERS;

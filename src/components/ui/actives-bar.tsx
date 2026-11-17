@@ -29,8 +29,8 @@ const TickerItem = memo(({ asset, logo }: { asset: MarketMover; logo: string | n
     const Icon = isPositive ? ArrowUp : ArrowDown;
 
     return (
-        <div className="flex items-center flex-shrink-0 px-6 body-sm whitespace-nowrap">
-            <AssetLogo symbol={asset.symbol} src={logo} lookup={false} className="mr-2 size-5 text-[0.5rem]" />
+        <div className="flex flex-shrink-0 items-center px-3 text-xs whitespace-nowrap sm:px-6 sm:text-sm">
+            <AssetLogo symbol={asset.symbol} src={logo} lookup={false} className="mr-2 size-4 text-[0.5rem] sm:size-5" />
             <span className="font-bold text-foreground">{asset.symbol}</span>
             <div className={`flex items-center ml-2 font-medium ${colorClass}`}>
                 <Icon className="w-4 h-4 mr-1" />
@@ -83,8 +83,8 @@ export default function ActivesBar() {
 
     const isHomePage = location.pathname === '/' || location.pathname === '/inicio';
     const containerClass = isHomePage 
-       ? "relative w-full h-10 overflow-hidden border-b bg-transparent border-white/[0.02]"
-       : "relative w-full h-10 overflow-hidden border-b bg-background/90 border-border/40";
+       ? "relative h-9 w-full overflow-hidden border-b border-white/[0.02] bg-transparent sm:h-10"
+       : "relative h-9 w-full overflow-hidden border-b border-border/40 bg-background/90 sm:h-10";
 
     // Renderiza un placeholder si está cargando
     if (loading) {

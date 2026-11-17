@@ -43,8 +43,20 @@ export interface AssetData {
     yahooAttemptedAt?: string;
     yahooQuoteAttemptedAt?: string;
     yahooError?: string | null;
-    /** Set for local stocks and bonds valued with Buenos Aires prices. */
-    localMarket?: { kind: string; arsPrice: number; ccl: number; fetchedAt: string };
+    /** Set for local stocks, CEDEARs and bonds valued with Buenos Aires prices. */
+    localMarket?: {
+        kind: string;
+        arsPrice: number;
+        ccl: number;
+        fetchedAt: string;
+        source?: 'DATA912' | 'IOL';
+        lastUpdated?: string;
+        bid?: number | null;
+        ask?: number | null;
+        bookUpdatedAt?: string;
+        cedearRatio?: number;
+        impliedCcl?: number;
+    };
     /** No price today: the portfolio shows the position at cost. */
     priceUnavailable?: boolean;
 }

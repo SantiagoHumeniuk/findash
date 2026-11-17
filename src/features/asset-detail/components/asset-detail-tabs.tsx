@@ -43,44 +43,37 @@ export function AssetDetailTabs({ asset, onRefreshAssetData, isRefreshing }: Ass
   return (
     <Tabs defaultValue="profile" className="w-full">
       <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-4 ${desktopColumns[tabCount]} h-auto`}>
-        <TabsTrigger value="profile" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
+        <TabsTrigger value="profile" className="flex min-h-11 min-w-0 items-center justify-center gap-1.5 whitespace-normal px-2 py-2 text-center text-[11px] leading-tight sm:gap-2 sm:px-3 sm:py-2.5 sm:text-sm">
           <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          <span className="hidden sm:inline">Perfil</span>
-          <span className="sm:hidden">Info</span>
+          <span>Perfil</span>
         </TabsTrigger>
-        <TabsTrigger value="chart" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
+        <TabsTrigger value="chart" className="flex min-h-11 min-w-0 items-center justify-center gap-1.5 whitespace-normal px-2 py-2 text-center text-[11px] leading-tight sm:gap-2 sm:px-3 sm:py-2.5 sm:text-sm">
           <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          <span className="hidden sm:inline">Gráfico</span>
-          <span className="sm:hidden">📊</span>
+          <span>Gráfico</span>
         </TabsTrigger>
         {hasFinancials && (
-          <TabsTrigger value="financials" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
+          <TabsTrigger value="financials" className="flex min-h-11 min-w-0 items-center justify-center gap-1.5 whitespace-normal px-2 py-2 text-center text-[11px] leading-tight sm:gap-2 sm:px-3 sm:py-2.5 sm:text-sm">
             <DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Fundamentales</span>
-            <span className="sm:hidden">Fund.</span>
+            <span>Fundamentales</span>
           </TabsTrigger>
         )}
         {hasOwnership && (
-          <TabsTrigger value="ownership" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
+          <TabsTrigger value="ownership" className="flex min-h-11 min-w-0 items-center justify-center gap-1.5 whitespace-normal px-2 py-2 text-center text-[11px] leading-tight sm:gap-2 sm:px-3 sm:py-2.5 sm:text-sm">
             <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Accionistas</span>
-            <span className="sm:hidden">Acc.</span>
+            <span>Accionistas</span>
           </TabsTrigger>
         )}
-        <TabsTrigger value="news" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
+        <TabsTrigger value="news" className="flex min-h-11 min-w-0 items-center justify-center gap-1.5 whitespace-normal px-2 py-2 text-center text-[11px] leading-tight sm:gap-2 sm:px-3 sm:py-2.5 sm:text-sm">
           <Newspaper className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          <span className="hidden sm:inline">Noticias</span>
-          <span className="sm:hidden">📰</span>
+          <span>Noticias</span>
         </TabsTrigger>
-        <TabsTrigger value="ratings" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
+        <TabsTrigger value="ratings" className="flex min-h-11 min-w-0 items-center justify-center gap-1.5 whitespace-normal px-2 py-2 text-center text-[11px] leading-tight sm:gap-2 sm:px-3 sm:py-2.5 sm:text-sm">
           <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          <span className="hidden sm:inline">Analistas</span>
-          <span className="sm:hidden">Ratings</span>
+          <span>Analistas</span>
         </TabsTrigger>
-        <TabsTrigger value="evolution" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2.5">
+        <TabsTrigger value="evolution" className="flex min-h-11 min-w-0 items-center justify-center gap-1.5 whitespace-normal px-2 py-2 text-center text-[11px] leading-tight sm:gap-2 sm:px-3 sm:py-2.5 sm:text-sm">
           <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          <span className="hidden sm:inline">Evolución</span>
-          <span className="sm:hidden">Evol</span>
+          <span>Evolución</span>
         </TabsTrigger>
       </TabsList>
 
