@@ -66,13 +66,14 @@ export default function PlansPage() {
       role: 'plus',
       icon: Crown,
       description: 'Para inversores serios que necesitan más análisis',
-      price: `$${(config.payment?.pricing?.plus ?? 15000).toLocaleString('es-AR')}`,
+      price: `$${(config.payment?.pricing?.plus ?? 5000).toLocaleString('es-AR')}`,
       priceDetail: 'por mes',
       features: [
         `Acceso a todos los símbolos (+8,000)`,
         `${config.plans.roleLimits.plus} llamadas API diarias`,
         `Dashboard comparativo (hasta ${config.dashboard.maxTickersToCompare.plus} activos)`,
         `${config.plans.portfolioLimits.plus} portfolios de inversión`,
+        `Hasta 10 activos simultáneos por portafolio`,
         'Todas las funciones del plan Básico',
         'Valor justo completo: precio teórico, modelos y DCF',
         'Screener completo con filtros guardados',
@@ -91,13 +92,14 @@ export default function PlansPage() {
       role: 'premium',
       icon: Rocket,
       description: 'Para profesionales que demandan lo mejor',
-      price: `$${(config.payment?.pricing?.premium ?? 25000).toLocaleString('es-AR')}`,
+      price: `$${(config.payment?.pricing?.premium ?? 10000).toLocaleString('es-AR')}`,
       priceDetail: 'por mes',
       features: [
         `Acceso a todos los símbolos (+8,000)`,
         `${config.plans.roleLimits.premium} llamadas API diarias`,
         `Dashboard comparativo (hasta ${config.dashboard.maxTickersToCompare.premium} activos)`,
         `${config.plans.portfolioLimits.premium} portfolios de inversión`,
+        `Hasta 25 activos simultáneos por portafolio`,
         'Todas las funciones del plan Plus',
         'Publicar artículos en el blog',
         'Participación activa en la comunidad',
@@ -338,6 +340,12 @@ export default function PlansPage() {
                       <td className="text-center p-2 sm:p-4">
                         <Check className="h-4 w-4 sm:h-5 sm:w-5 text-primary mx-auto" />
                       </td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="p-2 sm:p-4">Activos por portafolio</td>
+                      <td className="text-center p-2 sm:p-4 whitespace-nowrap">3 activos</td>
+                      <td className="text-center p-2 sm:p-4 bg-primary/5 whitespace-nowrap">10 activos</td>
+                      <td className="text-center p-2 sm:p-4 whitespace-nowrap">25 activos</td>
                     </tr>
                     <tr className="border-b">
                       <td className="p-2 sm:p-4">Análisis fundamental</td>

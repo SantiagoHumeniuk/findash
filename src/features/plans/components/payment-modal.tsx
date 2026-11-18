@@ -54,8 +54,8 @@ export function PaymentModal({ isOpen, onClose, plan, onSuccess }: PaymentModalP
 
   const planName = plan === 'plus' ? 'Plus' : 'Premium';
   const planPrice = plan === 'plus'
-    ? (config.payment?.pricing?.plus ?? 15000)
-    : (config.payment?.pricing?.premium ?? 25000);
+    ? (config.payment?.pricing?.plus ?? 5000)
+    : (config.payment?.pricing?.premium ?? 10000);
   const paymentLink = plan === 'plus'
     ? (config.payment?.links?.plus ?? 'https://mpago.la/2wrJ9MD')
     : (config.payment?.links?.premium ?? 'https://mpago.la/2U7wTKi');

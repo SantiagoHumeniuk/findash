@@ -9,9 +9,9 @@ import { useConfig } from './use-config';
  * 
  * Límites por plan:
  * - Básico: 3 activos
- * - Plus: 5 activos
- * - Premium: 10 activos
- * - Admin: 20 activos
+ * - Plus: 10 activos
+ * - Premium: 25 activos
+ * - Admin: 50 activos
  */
 export function usePortfolioLimits(currentAssetCount: number) {
   const { profile } = useAuth();

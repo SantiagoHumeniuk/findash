@@ -17,20 +17,20 @@
   "plans": {
     "roleLimits": {
       "basico": 5,
-      "plus": 25,
-      "premium": 50,
+      "plus": 150,
+      "premium": 500,
       "administrador": 100000
     },
     "portfolioLimits": {
       "basico": 1,
-      "plus": 5,
-      "premium": 10,
+      "plus": 10,
+      "premium": 30,
       "administrador": 10000
     },
     "alertLimits": {
       "basico": 3,
-      "plus": 20,
-      "premium": 100,
+      "plus": 50,
+      "premium": 250,
       "administrador": 10000
     },
     "freeTierSymbols": [
@@ -135,8 +135,8 @@
       "premium": "https://mpago.la/2U7wTKi"
     },
     "pricing": {
-      "plus": 15000,
-      "premium": 25000
+      "plus": 5000,
+      "premium": 10000
     }
   },
   "notifications": [
@@ -154,16 +154,16 @@
   "dashboard": {
     "maxTickersToCompare": {
       "basico": 3,
-      "plus": 5,
-      "premium": 10,
-      "administrador": 20
+      "plus": 10,
+      "premium": 25,
+      "administrador": 50
     }
   },
   "insights": {
     "maxItems": {
       "basico": 5,
-      "plus": 20,
-      "premium": 100,
+      "plus": 100,
+      "premium": 500,
       "administrador": 1000
     },
     "updatedWithinHours": 168

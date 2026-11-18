@@ -85,11 +85,25 @@ export function usePlanLimits(
   const nextPlanLimits: Record<string, { plan: string; limit: number }> = {
     basico: {
       plan: 'Plus',
-      limit: limitType === 'watchlist' ? 25 : limitType === 'alerts' ? 20 : 5,
+      limit:
+        limitType === 'watchlist'
+          ? (config.plans?.roleLimits?.plus ?? 150)
+          : limitType === 'alerts'
+            ? (config.plans?.alertLimits?.plus ?? 50)
+            : limitType === 'portfolios'
+              ? (config.plans?.portfolioLimits?.plus ?? 10)
+              : (config.dashboard?.maxTickersToCompare?.plus ?? 10),
     },
     plus: {
       plan: 'Premium',
-      limit: limitType === 'watchlist' ? 50 : limitType === 'alerts' ? 100 : 10,
+      limit:
+        limitType === 'watchlist'
+          ? (config.plans?.roleLimits?.premium ?? 500)
+          : limitType === 'alerts'
+            ? (config.plans?.alertLimits?.premium ?? 250)
+            : limitType === 'portfolios'
+              ? (config.plans?.portfolioLimits?.premium ?? 30)
+              : (config.dashboard?.maxTickersToCompare?.premium ?? 25),
     },
   };
 

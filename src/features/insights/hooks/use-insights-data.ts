@@ -21,7 +21,7 @@ export function useInsightsData() {
   const { profile } = useAuth();
   const role = profile?.role ?? 'basico';
   const insightsCfg = config.insights ?? {
-    maxItems: { basico: 5, plus: 20, premium: 100, administrador: 1000 },
+    maxItems: { basico: 5, plus: 100, premium: 500, administrador: 1000 },
     updatedWithinHours: 168,
   };
   const maxItems: number = insightsCfg.maxItems[role] ?? 5;

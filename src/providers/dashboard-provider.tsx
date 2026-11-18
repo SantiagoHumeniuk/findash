@@ -87,8 +87,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
          * 
          * Valores por plan (config.dashboard.maxTickersToCompare):
          * - basico: 3 activos
-         * - plus: 5 activos
-         * - premium: 10 activos
+         * - plus: 10 activos
+         * - premium: 25 activos
          * - administrador: 20 activos
          * 
          * Dónde se aplica: DashboardProvider.addTicker()
