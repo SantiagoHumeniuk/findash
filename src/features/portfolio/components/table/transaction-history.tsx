@@ -8,7 +8,12 @@ import { useReactTable, getCoreRowModel, getPaginationRowModel, ColumnDef } from
 import { formatCurrency } from '../../../../lib/utils';
 import { formatDate, formatQuantity } from '../../lib/portfolio.utils';
 
-export function TransactionHistory({ transactions }: { transactions: Transaction[] }) {
+interface TransactionHistoryProps {
+    transactions: Transaction[];
+    embedded?: boolean;
+}
+
+export function TransactionHistory({ transactions, embedded = false }: TransactionHistoryProps) {
     const columns = useMemo<ColumnDef<Transaction>[]>(() => [
         { accessorKey: "purchase_date", header: "Fecha", cell: ({ getValue }) => formatDate(getValue() as string) },
         { accessorKey: "symbol", header: "Activo" },
@@ -25,7 +30,26 @@ export function TransactionHistory({ transactions }: { transactions: Transaction
         getPaginationRowModel: getPaginationRowModel(),
     });
 
-    if (transactions.length === 0) return null;
+    if (transactions.length === 0) {
+        return (
+            <p className="p-6 text-center text-sm text-muted-foreground">
+                Todavía no hay transacciones en este portafolio.
+            </p>
+        );
+    }
+
+    const tableContent = (
+        <DataTable
+            table={table}
+            totalPages={table.getPageCount()}
+            currentPage={table.getState().pagination.pageIndex + 1}
+            onPageChange={(page) => table.setPageIndex(page - 1)}
+        />
+    );
+
+    if (embedded) {
+        return <div className="p-4 sm:p-6">{tableContent}</div>;
+    }
 
     return (
         <Card>
@@ -33,12 +57,7 @@ export function TransactionHistory({ transactions }: { transactions: Transaction
                 <CardTitle className="text-lg sm:text-xl">Historial de Transacciones</CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
-                <DataTable
-                    table={table}
-                    totalPages={table.getPageCount()}
-                    currentPage={table.getState().pagination.pageIndex + 1}
-                    onPageChange={(page) => table.setPageIndex(page - 1)}
-                />
+                {tableContent}
             </CardContent>
         </Card>
     );

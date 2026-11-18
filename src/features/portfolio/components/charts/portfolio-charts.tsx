@@ -2,23 +2,7 @@
 
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
-import {
-  Pie,
-  PieChart,
-  Cell,
-  ResponsiveContainer,
-  Bar,
-  BarChart,
-  YAxis,
-  CartesianGrid,
-  LabelList,
-  XAxis,
-} from "../../../../components/charts/lazy-recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../../components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-} from "../../../../components/ui/chart";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
 import { Holding } from "../../../../types/portfolio";
 import { BarChart3, PieChart as PieChartIcon } from "lucide-react";
 import { formatCurrency, formatPercent } from "../../../../lib/utils";
@@ -31,7 +15,6 @@ import { AssetHistorical, AssetData } from "../../../../types/dashboard";
 import { HistoricalPerformanceChart } from "../../../dashboard/components/charts/historical-performance-chart";
 import { AllocationChart } from "./allocation-chart";
 import { usePortfolioAnalytics } from "../../hooks/use-portfolio-analytics";
-import type { Payload } from 'recharts/types/component/DefaultTooltipContent';
 
 /**
  * Hook personalizado para procesar datos de gráficos del portfolio.
@@ -42,30 +25,13 @@ import type { Payload } from 'recharts/types/component/DefaultTooltipContent';
  */
 const useChartData = (holdings: Holding[]) => {
   return useMemo(() => {
-    const { allocationData, totalValue } = calculateAllocationData(holdings);
+    const { allocationData } = calculateAllocationData(holdings);
     const plData = calculatePlData(holdings);
     const chartConfig = generateChartConfig(allocationData);
 
-    return { allocationData, plData, chartConfig, totalValue };
+    return { allocationData, plData, chartConfig };
   }, [holdings]);
 };
-
-/**
- * Componente de leyenda para gráficos.
- * Memoizado para evitar renders innecesarios.
- * 
- * @param color - Color del indicador
- * @param label - Etiqueta descriptiva
- */
-const LegendItem = React.memo(({ color, label }: { color: string; label: string }) => (
-  <div className="flex items-center gap-1.5 sm:gap-2">
-    <div
-      className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full"
-      style={{ backgroundColor: color }}
-    />
-    <span className="text-xs sm:text-sm font-medium text-foreground">{label}</span>
-  </div>
-));
 
 /**
  * Props para el componente PortfolioCharts
@@ -91,6 +57,16 @@ interface PortfolioChartsProps {
 export const PortfolioCharts = React.memo(function PortfolioCharts({ holdings, portfolioHistory, portfolioData }: PortfolioChartsProps) {
   const { allocationData, plData, chartConfig } = useChartData(holdings);
   const { data: analyticsData, isLoading: isAnalyticsLoading } = usePortfolioAnalytics();
+  const sortedAllocation = useMemo(
+    () => [...allocationData].sort((a, b) => b.value - a.value),
+    [allocationData],
+  );
+  const sortedReturns = useMemo(
+    () => [...plData].sort((a, b) => b.pl - a.pl),
+    [plData],
+  );
+  const maxAllocation = Math.max(1, ...sortedAllocation.map((item) => item.percentage));
+  const maxReturn = Math.max(1, ...sortedReturns.map((item) => Math.abs(item.pl)));
 
   // Mock AssetData para el gráfico histórico
   // Memoized para evitar recrear el objeto en cada render si la historia no cambia
@@ -298,205 +274,134 @@ export const PortfolioCharts = React.memo(function PortfolioCharts({ holdings, p
   if (holdings.length === 0) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+    <div className="space-y-4">
+      {portfolioAsset && <HistoricalPerformanceChart assets={historicalAssets} />}
 
-        {/* Gráfico Histórico */}
-        {portfolioAsset && (
-          <div className="col-span-1 lg:col-span-2">
-            <HistoricalPerformanceChart assets={historicalAssets} />
-          </div>
-        )}
-
-        {/* Distribución por Activos */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="flex"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+          className="flex"
         >
-          <Card className="flex flex-col w-full bg-card/50 backdrop-blur-sm border-primary/10 shadow-premium">
-            <CardHeader className="items-center pb-0 p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg heading-premium">
-                <PieChartIcon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /> Distribución por Activos
+          <Card className="flex w-full flex-col">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <PieChartIcon className="size-4 text-primary sm:size-5" /> Distribución por activos
               </CardTitle>
+              <CardDescription>Qué parte de tu portafolio representa cada posición.</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 pb-0 p-4 sm:p-6">
-              <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[280px] sm:max-h-[320px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <ChartTooltip
-                      content={({ active, payload }: { active?: boolean; payload?: Payload<number, string>[] }) => {
-                        if (!active || !payload || payload.length === 0) return null;
-                        const data = payload[0];
-                        const name = data?.name ?? '';
-                        const entry = allocationData.find((d) => d.name === name);
-                        if (!entry) return null;
-
-                        return (
-                          <div className="rounded-xl border-none bg-card p-3 shadow-premium">
-                            <div className="grid gap-1">
-                              <div className="flex flex-col">
-                                <span className="text-[0.70rem] font-bold uppercase text-muted-foreground">{entry.name}</span>
-                                <span className="text-sm font-extrabold text-foreground">{formatCurrency(entry.value)}</span>
-                                <span className="text-[0.70rem] font-semibold text-primary">{entry.percentage.toFixed(1)}% del total</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }}
-                    />
-                    <Pie 
-                        data={allocationData} 
-                        dataKey="value" 
-                        nameKey="name"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={3}
-                        stroke="none"
-                        className="drop-shadow-xl"
-                        cornerRadius={4}
-                    >
-                      <defs>
-                        {allocationData.map((entry) => {
-                          const baseColor = chartConfig[entry.name]?.color ?? `var(--chart-${(allocationData.indexOf(entry) % 6) + 1})`;
-                          return (
-                            <linearGradient key={`grad-${entry.name}`} id={`grad-${entry.name}`} x1="0" y1="0" x2="1" y2="1">
-                              <stop offset="5%" stopColor={baseColor} stopOpacity={0.9} />
-                              <stop offset="95%" stopColor={baseColor} stopOpacity={0.4} />
-                            </linearGradient>
-                          );
-                        })}
-                      </defs>
-                      {allocationData.map((entry) => (
-                        <Cell 
-                            key={`cell-${entry.name}`} 
-                            fill={`url(#grad-${entry.name})`} 
-                            className="hover:opacity-80 transition-opacity cursor-pointer outline-none"
-                            stroke="currentColor" 
-                            strokeWidth={1} 
-                            strokeOpacity={0.2}
-                        />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-            <CardContent className="pt-0 p-3 sm:p-6">
-              <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-2">
-                {allocationData.map((entry) => (
-                  <LegendItem
+            <CardContent className="space-y-4">
+              <div
+                className="flex h-3 overflow-hidden rounded-full bg-muted"
+                role="img"
+                aria-label={sortedAllocation.map((entry) => `${entry.name}: ${entry.percentage.toFixed(1)}%`).join(', ')}
+              >
+                {sortedAllocation.map((entry, index) => (
+                  <span
                     key={entry.name}
-                    color={chartConfig[entry.name]?.color ?? `var(--chart-${(allocationData.indexOf(entry) % 6) + 1})`}
-                    label={`${entry.name} (${entry.percentage.toFixed(1)}%)`}
+                    className="h-full min-w-0.5"
+                    style={{
+                      width: `${entry.percentage}%`,
+                      backgroundColor: chartConfig[entry.name]?.color ?? `var(--chart-${(index % 6) + 1})`,
+                    }}
                   />
                 ))}
               </div>
+              <div className="space-y-2.5">
+                {sortedAllocation.map((entry, index) => {
+                  const color = chartConfig[entry.name]?.color ?? `var(--chart-${(index % 6) + 1})`;
+                  return (
+                    <div key={entry.name} className="grid grid-cols-[minmax(3.5rem,4rem)_minmax(2rem,1fr)_3.25rem_5.5rem] items-center gap-2 text-sm sm:grid-cols-[4.5rem_minmax(2rem,1fr)_3.5rem_6rem]">
+                      <span className="truncate font-medium" title={entry.name}>{entry.name}</span>
+                      <span className="h-1.5 overflow-hidden rounded-full bg-muted">
+                        <span className="block h-full rounded-full" style={{ width: `${(entry.percentage / maxAllocation) * 100}%`, backgroundColor: color }} />
+                      </span>
+                      <span className="text-right tabular-nums text-muted-foreground">{entry.percentage.toFixed(1)}%</span>
+                      <span className="text-right tabular-nums">{formatCurrency(entry.value)}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Retorno por Activo */}
         <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.05 }}
+          className="flex"
         >
-          <Card className="w-full bg-card/50 backdrop-blur-sm border-primary/10 shadow-premium">
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg heading-premium">
-                <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /> Retorno por Activo (%)
+          <Card className="w-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <BarChart3 className="size-4 text-primary sm:size-5" /> Retorno por activo
               </CardTitle>
+              <CardDescription>Ordenado de mejor a peor desde tu precio promedio.</CardDescription>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              <ChartContainer config={{ pl: { label: "G/P (%)" } }} className="h-[250px] sm:h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={plData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
-                    <XAxis dataKey="symbol" hide />
-                    <YAxis
-                      tickFormatter={(value) => `${value}%`}
-                      tickLine={false}
-                      axisLine={false}
-                      domain={['auto', 'auto']}
-                      tick={{ fill: "var(--foreground)", fontSize: 12, fontWeight: 500 }}
-                    />
-                    <ChartTooltip
-                      content={({ active, payload }: { active?: boolean; payload?: Payload<number, string>[] }) => {
-                        if (!active || !payload || payload.length === 0) return null;
-                        const data = payload[0];
-                        const payloadData = data?.payload as { symbol?: string } | undefined;
-                        const symbol = payloadData?.symbol ?? '';
-                        const entry = plData.find((d) => d.symbol === symbol);
-                        if (!entry) return null;
-
-                        const plValue = entry.plValue;
-                        const isPositive = plValue >= 0;
-
-                        return (
-                          <div className="rounded-xl border-none bg-card p-3 shadow-premium">
-                            <div className="grid gap-1">
-                              <div className="flex flex-col">
-                                <span className="text-[0.70rem] font-bold uppercase text-muted-foreground">{entry.symbol}</span>
-                                <span className={`text-sm font-extrabold ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-                                  {isPositive ? '+' : ''}{formatCurrency(Math.abs(plValue))}
-                                </span>
-                                <span className="text-[0.70rem] font-semibold text-primary">{formatPercent(entry.pl)} de retorno</span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }}
-                    />
-                    <defs>
-                      <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.9}/>
-                        <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0.4}/>
-                      </linearGradient>
-                      <linearGradient id="colorNegative" x1="0" y1="1" x2="0" y2="0">
-                        <stop offset="5%" stopColor="var(--chart-4)" stopOpacity={0.9}/>
-                        <stop offset="95%" stopColor="var(--chart-4)" stopOpacity={0.4}/>
-                      </linearGradient>
-                    </defs>
-                    <Bar dataKey="pl" radius={[6, 6, 0, 0]}>
-                      <LabelList dataKey="symbol" position="top" offset={8} className="fill-foreground font-bold text-[10px]" />
-                      {plData.map((entry) => (
-                        <Cell key={`cell-${entry.symbol}`} fill={entry.pl >= 0 ? "url(#colorPositive)" : "url(#colorNegative)"} className="hover:opacity-80 transition-opacity" stroke="currentColor" strokeWidth={1} strokeOpacity={0.2} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-            <CardContent className="pt-0 p-3 sm:p-6">
-              <div className="flex flex-wrap justify-center gap-4 sm:gap-6 mt-2">
-                <LegendItem color="var(--chart-2)" label="Positivo" />
-                <LegendItem color="var(--chart-4)" label="Negativo" />
+            <CardContent className="space-y-3">
+              {sortedReturns.map((entry) => {
+                const isPositive = entry.pl >= 0;
+                const width = `${Math.max((Math.abs(entry.pl) / maxReturn) * 50, 1)}%`;
+                return (
+                  <div key={entry.symbol} className="grid grid-cols-[3.5rem_minmax(0,1fr)_5.5rem] items-center gap-2 text-sm sm:grid-cols-[4.5rem_minmax(0,1fr)_6rem]">
+                    <span className="truncate font-medium" title={entry.symbol}>{entry.symbol}</span>
+                    <span
+                      className="relative h-5"
+                      role="img"
+                      aria-label={`${entry.symbol}: ${formatPercent(entry.pl)}`}
+                    >
+                      <span className="absolute inset-y-0 left-1/2 w-px bg-border" />
+                      <span
+                        className={`absolute top-1/2 h-2.5 -translate-y-1/2 rounded-full ${isPositive ? 'bg-green-500' : 'bg-red-500'}`}
+                        style={isPositive
+                          ? { left: '50%', width }
+                          : { right: '50%', width }}
+                      />
+                    </span>
+                    <span className={`text-right text-xs font-semibold tabular-nums sm:text-sm ${isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {isPositive ? '▲' : '▼'} {formatPercent(entry.pl)}
+                    </span>
+                  </div>
+                );
+              })}
+              <div className="flex items-center gap-4 border-t pt-3 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-green-500" /> Ganancia</span>
+                <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-red-500" /> Pérdida</span>
               </div>
             </CardContent>
           </Card>
         </motion.div>
       </div>
 
-      {/* Analytics Charts (Sector & Country) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <AllocationChart
-          data={analyticsData?.sectorAllocation ?? []}
-          type="sector"
-          title="Diversificación por Sector"
-          description="Exposición de tu portafolio a diferentes industrias."
-          isLoading={isAnalyticsLoading}
-        />
-        <AllocationChart
-          data={analyticsData?.countryAllocation ?? []}
-          type="country"
-          title="Exposición Geográfica"
-          description="Distribución de tus activos por país de origen."
-          isLoading={isAnalyticsLoading}
-        />
-      </div>
+      {Boolean(analyticsData ?? isAnalyticsLoading) && (
+        <details className="group rounded-xl border bg-card">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+            Análisis avanzado
+            <span className="text-xs text-muted-foreground group-open:hidden">Ver exposición por sector y país</span>
+            <span className="hidden text-xs text-muted-foreground group-open:inline">Ocultar análisis</span>
+          </summary>
+          <div className="space-y-4 border-t p-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <AllocationChart
+                data={analyticsData?.sectorAllocation ?? []}
+                type="sector"
+                title="Diversificación por sector"
+                description="Exposición de tu portafolio a diferentes industrias."
+                isLoading={isAnalyticsLoading}
+              />
+              <AllocationChart
+                data={analyticsData?.countryAllocation ?? []}
+                type="country"
+                title="Exposición geográfica"
+                description="Distribución de tus activos por país de origen."
+                isLoading={isAnalyticsLoading}
+              />
+            </div>
+          </div>
+        </details>
+      )}
     </div>
   );
 });

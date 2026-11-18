@@ -2,10 +2,11 @@
 
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '../../../../components/ui/table';
+import { Card, CardContent, CardHeader } from '../../../../components/ui/card';
 import { Button } from '../../../../components/ui/button';
 import { PlusCircle, MinusCircle, Trash2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../components/ui/tabs';
 import {
   useReactTable,
   getCoreRowModel,
@@ -23,9 +24,24 @@ import { AssetLogo } from '../../../../components/ui/asset-logo';
 
 import { generateAdvisory } from '../../lib/advisory-engine';
 import { RecommendationModal } from '../modals/recommendation-modal';
+import { TransactionHistory } from './transaction-history';
 
-export const PortfolioView = React.memo(function PortfolioView({ holdings, portfolioData, onDeleteAsset, onAddMore, onSell }: PortfolioViewProps) {
-  const [sorting, setSorting] = useState<SortingState>([]);
+export const PortfolioView = React.memo(function PortfolioView({ holdings, transactions, portfolioData, onDeleteAsset, onAddMore, onSell }: PortfolioViewProps) {
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'marketValue', desc: true }]);
+  const totalMarketValue = useMemo(
+    () => holdings.reduce((sum, holding) => sum + holding.marketValue, 0),
+    [holdings],
+  );
+  const totalInvested = useMemo(
+    () => holdings.reduce((sum, holding) => sum + holding.totalCost, 0),
+    [holdings],
+  );
+  const totalPl = totalMarketValue - totalInvested;
+  const totalPlPercent = totalInvested > 0 ? (totalPl / totalInvested) * 100 : 0;
+  const maxAllocation = useMemo(
+    () => Math.max(0, ...holdings.map((holding) => totalMarketValue > 0 ? (holding.marketValue / totalMarketValue) * 100 : 0)),
+    [holdings, totalMarketValue],
+  );
 
   const columns = useMemo<ColumnDef<HoldingWithMetrics>[]>(() => [
     {
@@ -67,19 +83,37 @@ export const PortfolioView = React.memo(function PortfolioView({ holdings, portf
       cell: ({ getValue }) => formatQuantity(getValue() as number),
     },
     {
-      accessorKey: 'avgPurchasePrice',
-      header: 'Precio Prom.',
-      cell: ({ getValue }) => formatCurrency(getValue() as number),
-    },
-    {
-      accessorKey: 'currentPrice',
-      header: 'Precio Actual',
-      cell: ({ getValue }) => formatCurrency(getValue() as number),
+      id: 'priceComparison',
+      accessorFn: (row) => row.currentPrice,
+      header: 'Precio prom. → actual',
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap text-xs tabular-nums sm:text-sm">
+          <span className="text-muted-foreground">{formatCurrency(row.original.avgPurchasePrice)}</span>
+          <span className="px-1 text-muted-foreground" aria-hidden="true">→</span>
+          <span className="font-semibold">{formatCurrency(row.original.currentPrice)}</span>
+        </span>
+      ),
     },
     {
       accessorKey: 'marketValue',
       header: 'Valor Mercado',
       cell: ({ getValue }) => formatCurrency(getValue() as number),
+    },
+    {
+      id: 'allocation',
+      accessorFn: (row) => totalMarketValue > 0 ? (row.marketValue / totalMarketValue) * 100 : 0,
+      header: 'Peso',
+      cell: ({ getValue }) => {
+        const allocation = Number(getValue());
+        return (
+          <div className="flex min-w-20 items-center gap-2">
+            <span className="h-1.5 w-10 overflow-hidden rounded-full bg-muted">
+              <span className="block h-full rounded-full bg-cyan-500" style={{ width: `${maxAllocation > 0 ? (allocation / maxAllocation) * 100 : 0}%` }} />
+            </span>
+            <span className="text-xs tabular-nums">{allocation.toFixed(1)}%</span>
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'pl',
@@ -160,7 +194,7 @@ export const PortfolioView = React.memo(function PortfolioView({ holdings, portf
         );
       },
     },
-  ], [onAddMore, onSell, onDeleteAsset, portfolioData, holdings]);
+  ], [onAddMore, onSell, onDeleteAsset, portfolioData, holdings, totalMarketValue, maxAllocation]);
 
   const table = useReactTable({
     data: holdings,
@@ -171,22 +205,31 @@ export const PortfolioView = React.memo(function PortfolioView({ holdings, portf
     getSortedRowModel: getSortedRowModel(),
   });
 
-  if (holdings.length === 0) {
-    return (
-      <Card className="text-center py-8 sm:py-10 px-4">
-        <p className="text-sm sm:text-base text-muted-foreground">Todavía no tenés posiciones abiertas.</p>
-        <p className="text-xs sm:text-sm text-muted-foreground mt-2">Agregá tu primera transacción desde el Dashboard.</p>
-      </Card>
-    );
-  }
-
   return (
-    <Card>
-      <CardHeader className="p-4 sm:p-6">
-        <CardTitle className="text-lg sm:text-xl">Posiciones Abiertas</CardTitle>
-      </CardHeader>
-      <CardContent className="p-4 sm:p-6">
-        <div className="space-y-3 sm:hidden">
+    <Tabs defaultValue="positions">
+      <Card className="overflow-hidden">
+        <CardHeader className="p-0">
+          <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b bg-transparent p-2 sm:p-3">
+            <TabsTrigger value="positions" className="gap-2 rounded-md px-3 py-2 text-xs sm:text-sm">
+              Posiciones abiertas
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums sm:text-xs">{holdings.length}</span>
+            </TabsTrigger>
+            <TabsTrigger value="transactions" className="gap-2 rounded-md px-3 py-2 text-xs sm:text-sm">
+              Historial de transacciones
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums sm:text-xs">{transactions.length}</span>
+            </TabsTrigger>
+          </TabsList>
+        </CardHeader>
+        <CardContent className="p-0">
+          <TabsContent value="positions" className="mt-0">
+            {holdings.length === 0 ? (
+              <div className="px-4 py-10 text-center">
+                <p className="text-sm text-muted-foreground">Todavía no tenés posiciones abiertas.</p>
+                <p className="mt-2 text-xs text-muted-foreground">Agregá una operación o importá tu cartera para comenzar.</p>
+              </div>
+            ) : (
+              <div className="p-4 sm:p-6">
+                <div className="space-y-3 sm:hidden">
           {table.getRowModel().rows.map(({ original: holding }) => {
             const asset = holding.assetData;
             const assetSymbol = holding.symbol.replace(/\.BA$/, '');
@@ -297,8 +340,8 @@ export const PortfolioView = React.memo(function PortfolioView({ holdings, portf
               </article>
             );
           })}
-        </div>
-        <div className="hidden rounded-md border overflow-x-auto sm:block">
+                </div>
+                <div className="hidden overflow-x-auto rounded-md border sm:block">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -341,9 +384,30 @@ export const PortfolioView = React.memo(function PortfolioView({ holdings, portf
                 </TableRow>
               ))}
             </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell colSpan={3} className="font-semibold">
+                  Total · {holdings.length} {holdings.length === 1 ? 'posición' : 'posiciones'}
+                </TableCell>
+                <TableCell className="font-semibold tabular-nums">{formatCurrency(totalMarketValue)}</TableCell>
+                <TableCell className="font-semibold tabular-nums">100%</TableCell>
+                <TableCell colSpan={2} className={`font-semibold tabular-nums ${totalPl >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <span className="block">{formatCurrency(totalPl)}</span>
+                  <span className="text-xs">{formatPercent(totalPlPercent)}</span>
+                </TableCell>
+                <TableCell colSpan={3} />
+              </TableRow>
+            </TableFooter>
           </Table>
         </div>
-      </CardContent>
-    </Card>
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="transactions" className="mt-0">
+            <TransactionHistory transactions={transactions} embedded />
+          </TabsContent>
+        </CardContent>
+      </Card>
+    </Tabs>
   );
 });

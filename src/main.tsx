@@ -38,6 +38,7 @@ const ResetPasswordPage = React.lazy(() => import('./features/auth/pages/reset-p
 const InfoPage = React.lazy(() => import('./features/info/pages/info-page.tsx'));
 const NotFoundPage = React.lazy(() => import('./features/not-found/pages/not-found-page.tsx'));
 const ScreenerPage = React.lazy(() => import('./features/screener/pages/screener-page.tsx'));
+const MarketMapPage = React.lazy(() => import('./features/screener/pages/market-map-page.tsx'));
 const CedearsPage = React.lazy(() => import('./features/screener/pages/cedears-page.tsx'));
 const AlertsPage = React.lazy(() => import('./features/alerts/pages/alerts-page.tsx'));
 const UnsubscribePage = React.lazy(() => import('./features/alerts/pages/unsubscribe-page.tsx'));
@@ -94,6 +95,16 @@ const router = createBrowserRouter([
                 )
             },
             {
+                path: "market-map",
+                element: (
+                    <ErrorBoundary level="feature" featureName="Market Map">
+                        <Suspense fallback={<SuspenseFallback type="page" message="Cargando mapa del mercado..." />}>
+                            <MarketMapPage />
+                        </Suspense>
+                    </ErrorBoundary>
+                )
+            },
+            {
                 path: "cedears",
                 element: (
                     <ErrorBoundary level="feature" featureName="CEDEARs">
@@ -133,7 +144,7 @@ const router = createBrowserRouter([
                     </ErrorBoundary>
                 )
             },
-            { path: "market-movers", element: <Navigate to="/screener?tab=map" replace /> },
+            { path: "market-movers", element: <Navigate to="/market-map" replace /> },
             { path: "baja", element: <Suspense fallback={<PageSkeleton />}><UnsubscribePage /></Suspense> },
             { path: "contact", element: <Suspense fallback={<PageSkeleton />}><ContactPage /></Suspense> },
             { path: "plans", element: <Suspense fallback={<PageSkeleton />}><PlansPage /></Suspense> },

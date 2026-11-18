@@ -25,7 +25,6 @@ import {
   PortfolioStats,
   PortfolioCharts,
   PortfolioView,
-  TransactionHistory,
   AddTransactionModal,
   SellTransactionModal,
   PortfolioSkeleton,
@@ -40,7 +39,13 @@ import { ErrorScreen } from '../../../components/ui/error-screen';
 
 function PortfolioPageContent() {
   const { holdings, transactions, totalPerformance, loading, error, refreshPortfolio, deleteAsset, portfolioData } = usePortfolio();
-  const { metrics: historicalMetrics, portfolioHistory } = usePortfolioHistory(holdings);
+  const {
+    metrics: historicalMetrics,
+    portfolioHistory,
+    historyCoveragePercent,
+    historyUnavailableSymbols,
+    isLoading: isPortfolioHistoryLoading,
+  } = usePortfolioHistory(holdings);
   const { data: portfolioAnalytics } = usePortfolioAnalytics();
 
   const { theme } = useTheme();
@@ -115,6 +120,7 @@ function PortfolioPageContent() {
         { label: 'Rendimiento histórico total', value: formatPercent(totalPerformance.percent) },
         { label: 'Costo total invertido', value: formatCurrency(portfolioMetrics.totalInvested) },
         { label: 'Permanencia promedio', value: `${Math.round(avgHoldingDays)} días` },
+        { label: 'Cobertura histórica del portafolio', value: formatPercent(historyCoveragePercent) },
         {
           label: 'Beta ponderado',
           value: typeof portfolioMetrics.portfolioBeta === 'number'
@@ -159,7 +165,7 @@ function PortfolioPageContent() {
       const pdfCharts = [
         ...(portfolioHistory.length > 1 ? [{
           title: 'Evolución histórica simulada del portafolio',
-          description: 'Tenencias actuales a precios históricos; no incorpora transacciones ni conversión cambiaria.',
+          description: `Tenencias actuales; cobertura histórica del ${formatPercent(historyCoveragePercent)} del valor actual. No incorpora transacciones ni la variación histórica del CCL.`,
           kind: 'line' as const,
           data: portfolioHistory.map((point) => ({
             label: new Date(point.date).toLocaleDateString('es-AR'),
@@ -238,12 +244,12 @@ function PortfolioPageContent() {
     <>
       <motion.div
         id="portfolio-export-area"
-        className="container-wide stack-8 relative bg-background" // Added bg-background just in case html2canvas needs a solid base
+        className="container-wide relative space-y-5 bg-background sm:space-y-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 24, mass: 0.8 }}
       >
-        <div className="flex items-center justify-between gap-4 pb-6 border-b flex-wrap">
+        <div className="space-y-4 border-b pb-5">
           <div className="flex items-center gap-4">
             <div className="p-2 sm:p-3 bg-gradient-to-br from-primary/15 to-cyan-500/10 rounded-xl shadow-md border border-primary/10">
               <LayoutDashboard className="w-8 h-8 text-primary" />
@@ -253,9 +259,9 @@ function PortfolioPageContent() {
               <p className="text-muted-foreground text-sm font-medium mt-1">Análisis avanzado de inversiones y gestión de activos.</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <BuyAssetDialog onChoose={(ticker, price) => setAddModalInfo({ isOpen: true, ticker, price })} />
-            <PortfolioSelector />
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <span className="text-sm text-muted-foreground">Ver</span>
+            <PortfolioSelector showCreateButton />
             <BrokerImportButton />
             <Button 
                 onClick={() => void handleExportPdf()} 
@@ -266,6 +272,7 @@ function PortfolioPageContent() {
               <FileDown className="h-4 w-4" />
               {exportingPdf ? 'Exportando...' : 'Exportar Informe'}
             </Button>
+            <BuyAssetDialog onChoose={(ticker, price) => setAddModalInfo({ isOpen: true, ticker, price })} />
           </div>
         </div>
 
@@ -275,6 +282,9 @@ function PortfolioPageContent() {
           portfolioData={portfolioData}
           avgHoldingDays={avgHoldingDays}
           historicalMetrics={historicalMetrics}
+          historyCoveragePercent={historyCoveragePercent}
+          historyUnavailableSymbols={historyUnavailableSymbols}
+          historyIsLoading={isPortfolioHistoryLoading}
         />
 
         <div className="grid grid-cols-1 gap-6">
@@ -287,13 +297,12 @@ function PortfolioPageContent() {
 
         <PortfolioView
           holdings={holdingsWithMetrics}
+          transactions={transactions}
           portfolioData={portfolioData}
           onDeleteAsset={(symbol: string) => void handleDeleteAsset(symbol)}
           onAddMore={handleOpenAddModal}
           onSell={handleOpenSellModal}
         />
-        
-        <TransactionHistory transactions={transactions} />
       </motion.div>
 
       <AddTransactionModal

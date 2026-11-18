@@ -307,13 +307,18 @@
   "sidebar": {
     "groups": [
       {
-        "label": "Herramientas",
+        "label": "",
         "items": [
           {
             "to": "/",
             "label": "Inicio",
             "icon": "Home"
-          },
+          }
+        ]
+      },
+      {
+        "label": "MI DINERO",
+        "items": [
           {
             "to": "/hoy",
             "label": "Tu día",
@@ -333,16 +338,6 @@
             "requiresAuth": true
           },
           {
-            "to": "/screener",
-            "label": "Screener",
-            "icon": "Filter"
-          },
-          {
-            "to": "/cedears",
-            "label": "CEDEARs",
-            "icon": "ArrowLeftRight"
-          },
-          {
             "to": "/watchlist",
             "label": "Watchlist",
             "icon": "Star",
@@ -354,6 +349,58 @@
             "icon": "Bell",
             "requiresAuth": true
           },
+          {
+            "to": "/dividends",
+            "label": "Dividendos",
+            "icon": "Divide",
+            "requiresAuth": true
+          }
+        ]
+      },
+      {
+        "label": "MERCADO",
+        "items": [
+          {
+            "to": "/market-map",
+            "label": "Mapa del mercado",
+            "icon": "Map"
+          },
+          {
+            "to": "/screener",
+            "label": "Screener",
+            "icon": "Filter"
+          },
+          {
+            "to": "/cedears",
+            "label": "CEDEARs",
+            "icon": "ArrowLeftRight"
+          },
+          {
+            "to": "/sectors-industries",
+            "label": "Sectores e Industrias",
+            "icon": "FactoryIcon"
+          },
+          {
+            "to": "/economic-calendar",
+            "label": "Calendario Económico",
+            "icon": "Calendar"
+          },
+          {
+            "to": "/risk-premium",
+            "label": "Riesgo País",
+            "icon": "Globe"
+          },
+          {
+            "to": "/bonos",
+            "label": "Renta Fija & Macro",
+            "icon": "Landmark",
+            "requiresAuth": true
+          }
+        ]
+      },
+      {
+        "label": "APRENDER Y PLANIFICAR",
+        "items": [
           {
             "to": "/insights",
             "label": "Insights",
@@ -367,42 +414,15 @@
             "requiresAuth": true
           },
           {
-            "to": "/sectors-industries",
-            "label": "Sectores e Industrias",
-            "icon": "FactoryIcon"
-          },
-          {
-            "to": "/economic-calendar",
-            "label": "Calendario Económico",
-            "icon": "Calendar"
-          },
-          {
-            "to": "/dividends",
-            "label": "Dividendos",
-            "icon": "Divide",
-            "requiresAuth": true
-          },
-          {
-            "to": "/risk-premium",
-            "label": "Riesgo País",
-            "icon": "Globe"
-          },
-          {
             "to": "/retirement-calculator",
             "label": "Calculadora de Retiro",
             "icon": "PiggyBank",
-            "requiresAuth": true
-          },
-          {
-            "to": "/bonos",
-            "label": "Renta Fija & Macro",
-            "icon": "Landmark",
             "requiresAuth": true
           }
         ]
       },
       {
-        "label": "General",
+        "label": "GENERAL",
         "items": [
           {
             "to": "/profile",

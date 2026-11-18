@@ -24,6 +24,7 @@ import {
 import { useAuth } from '../../hooks/use-auth';
 import { paymentService, type SubscriptionRequest } from '../../services/payment-service';
 import { useNavigate } from 'react-router-dom';
+import { claimNoticeDisplay } from './subscription-notice-limit';
 
 export function SubscriptionStatusModal() {
   const { user, profile, refreshProfile } = useAuth();
@@ -34,6 +35,8 @@ export function SubscriptionStatusModal() {
   const [expiryNotice, setExpiryNotice] = useState<'expiring' | 'expired' | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const expiryCheckRequestRef = useRef<string | null>(null);
+  const handledExpiryNoticesRef = useRef(new Set<string>());
+  const fallbackNoticeCountsRef = useRef(new Map<string, number>());
 
   const currentRole = profile?.role;
   const isPaidPlan = currentRole === 'plus' || currentRole === 'premium';
@@ -142,18 +145,37 @@ export function SubscriptionStatusModal() {
   const remainingMs = expiration ? expiration.getTime() - now : null;
 
   useEffect(() => {
-    if (!user || !expiryRequest || remainingMs === null || !Number.isFinite(remainingMs)) return;
+    if (!user) {
+      handledExpiryNoticesRef.current.clear();
+      setExpiryNotice(null);
+      return;
+    }
+    if (!expiryRequest || remainingMs === null || !Number.isFinite(remainingMs)) return;
 
     const type = remainingMs <= 0 ? 'expired' : remainingMs <= 24 * 60 * 60 * 1000 ? 'expiring' : null;
     if (!type) return;
 
     const noticeKey = `subscription_notice_${user.id}_${expiryRequest.id}_${type}`;
+    if (handledExpiryNoticesRef.current.has(noticeKey)) return;
+    handledExpiryNoticesRef.current.add(noticeKey);
+
+    let noticeStorage: Pick<Storage, 'getItem' | 'setItem'> | null = null;
     try {
-      if (localStorage.getItem(noticeKey)) return;
-      localStorage.setItem(noticeKey, 'shown');
-    } catch {
-      // The notice can still be shown when local storage is unavailable.
+      if (typeof window !== 'undefined') noticeStorage = window.localStorage;
+    } catch (error) {
+      console.error('Unable to access subscription notice storage:', error);
     }
+
+    const maxDisplays = type === 'expired' ? 2 : 1;
+    const canShowNotice = claimNoticeDisplay(
+      noticeKey,
+      maxDisplays,
+      noticeStorage,
+      fallbackNoticeCountsRef.current,
+      (error) => console.error('Unable to persist subscription notice count:', error),
+    );
+    if (!canShowNotice) return;
+
     setExpiryNotice(type);
 
     if (type === 'expired' && expiryCheckRequestRef.current !== expiryRequest.id) {

@@ -47,14 +47,28 @@ export function PortfolioSkeleton() {
         <Skeleton className="hidden sm:block h-10 w-32 rounded-xl" />
       </motion.div>
 
-      {/* Stats Cards (4) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+      {/* Portfolio summary */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
+        <motion.div variants={staggerItem} className="lg:col-span-2">
+          <div className="bg-card/40 backdrop-blur-md border border-primary/5 shadow-premium rounded-2xl p-4 sm:p-5 h-36 flex flex-col justify-between">
+            <Skeleton className="h-4 w-1/3 rounded-md" />
+            <Skeleton className="h-10 w-2/3 rounded-md" />
+          </div>
+        </motion.div>
+        <motion.div variants={staggerItem}>
+          <div className="bg-card/40 backdrop-blur-md border border-primary/5 shadow-premium rounded-2xl p-4 sm:p-5 h-36 flex flex-col justify-between">
+            <Skeleton className="h-4 w-1/2 rounded-md" />
+            <Skeleton className="h-8 w-3/4 rounded-md" />
+          </div>
+        </motion.div>
+      </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 sm:gap-4">
+        {Array.from({ length: 3 }).map((_, i) => (
           <motion.div
             key={i}
             variants={staggerItem}
           >
-            <div className="bg-card/40 backdrop-blur-md border border-primary/5 shadow-premium rounded-2xl p-4 sm:p-5 h-24 sm:h-28 flex flex-col justify-between">
+            <div className="bg-card/40 backdrop-blur-md border border-primary/5 shadow-premium rounded-2xl p-4 sm:p-5 h-32 flex flex-col justify-between">
                 <Skeleton className="h-4 w-1/2 rounded-md" />
                 <Skeleton className="h-8 w-3/4 rounded-md" />
             </div>
@@ -78,10 +92,10 @@ export function PortfolioSkeleton() {
         </motion.div>
       </div>
 
-      {/* Table */}
+      {/* Positions and transactions */}
       <motion.div variants={staggerItem}>
         <div className="bg-card/40 backdrop-blur-md border border-primary/5 shadow-premium rounded-3xl p-5 sm:p-6 h-80 sm:h-96 flex flex-col gap-4">
-           <Skeleton className="h-6 w-48 rounded-md mb-2" />
+           <Skeleton className="h-9 w-72 rounded-md mb-2" />
            <Skeleton className="h-10 w-full rounded-xl" />
            <Skeleton className="h-10 w-full rounded-xl" />
            <Skeleton className="h-10 w-full rounded-xl" />

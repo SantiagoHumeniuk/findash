@@ -1,13 +1,15 @@
 // src/features/portfolio/types/portfolio.types.ts
 
-import { HoldingWithMetrics } from '../../../types/portfolio';
+import { HoldingWithMetrics, Transaction } from '../../../types/portfolio';
+import { AssetData } from '../../../types/dashboard';
 
 /**
  * Props para el componente PortfolioView
  */
 export interface PortfolioViewProps {
   holdings: HoldingWithMetrics[];
-  portfolioData: Record<string, any>;
+  transactions: Transaction[];
+  portfolioData: Record<string, AssetData>;
   onDeleteAsset: (symbol: string) => void;
   onAddMore: (ticker: string, price: number) => void;
   onSell: (holding: HoldingWithMetrics) => void;

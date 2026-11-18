@@ -42,7 +42,13 @@ import {
 } from "../../../components/ui/alert-dialog";
 import { UpgradeModal } from '../../../components/shared/upgrade-modal';
 
-export const PortfolioSelector = React.memo(function PortfolioSelector() {
+interface PortfolioSelectorProps {
+    showCreateButton?: boolean;
+}
+
+export const PortfolioSelector = React.memo(function PortfolioSelector({
+    showCreateButton = false,
+}: PortfolioSelectorProps) {
     const { portfolios, currentPortfolio, selectPortfolio, createPortfolio, deletePortfolio } = usePortfolio();
     const [open, setOpen] = useState(false);
     const [showNewPortfolioDialog, setShowNewPortfolioDialog] = useState(false);
@@ -99,7 +105,7 @@ export const PortfolioSelector = React.memo(function PortfolioSelector() {
     };
 
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                     <Button
@@ -191,6 +197,12 @@ export const PortfolioSelector = React.memo(function PortfolioSelector() {
                     </Command>
                 </PopoverContent>
             </Popover>
+            {showCreateButton && (
+                <Button onClick={handleOpenCreate} className="gap-2 whitespace-nowrap">
+                    <Plus aria-hidden="true" className="h-4 w-4" />
+                    Crear portafolio
+                </Button>
+            )}
 
             <Dialog open={showNewPortfolioDialog} onOpenChange={setShowNewPortfolioDialog}>
                 <DialogContent>

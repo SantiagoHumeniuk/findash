@@ -33,9 +33,11 @@ export function NavMain({ items, label }: NavMainProps) {
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-1.5">
-        <SidebarGroupLabel className="text-muted-foreground font-semibold uppercase tracking-wider text-[10px] ml-2 mb-1 transition-opacity duration-300">
-          {label ?? "General"}
-        </SidebarGroupLabel>
+        {label?.trim() && (
+          <SidebarGroupLabel className="text-muted-foreground font-semibold uppercase tracking-wider text-[10px] ml-2 mb-1 transition-opacity duration-300">
+            {label}
+          </SidebarGroupLabel>
+        )}
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.url}>
