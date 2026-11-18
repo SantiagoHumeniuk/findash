@@ -6,7 +6,7 @@ import { AssetLogo } from "../../../../../components/ui/asset-logo";
 
 interface RankingListProps {
     // El objeto 'asset' dentro del array es de tipo AssetData completo
-    rankedAssets: { asset: AssetData; score: number }[];
+    rankedAssets: { asset: AssetData; score: number; coverage: number }[];
 }
 
 export default function RankingList({ rankedAssets }: RankingListProps) {
@@ -18,7 +18,7 @@ export default function RankingList({ rankedAssets }: RankingListProps) {
                     Ranking General
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
-                    Clasificación ponderada (Valor + Calidad + Salud + Potencial)
+                    Puntaje orientativo sobre 100. Revisá la cobertura de datos antes de comparar.
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0">
@@ -74,7 +74,7 @@ export default function RankingList({ rankedAssets }: RankingListProps) {
                                         {item.score}
                                     </motion.div>
                                     <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                                        Puntos
+                                        Puntos · {item.coverage}% datos
                                     </div>
                                 </div>
                             </motion.div>

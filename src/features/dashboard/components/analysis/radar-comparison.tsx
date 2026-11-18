@@ -7,6 +7,7 @@ import { indicatorConfig } from "../../../../utils/financial"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card"
 import { ChartContainer, ChartTooltip } from "../../../../components/ui/chart"
 import { Checkbox } from "../../../../components/ui/checkbox"
+import { Button } from "../../../../components/ui/button"
 import { Zap } from "lucide-react"
 
 // --- Props del Componente ---
@@ -17,6 +18,14 @@ interface RadarComparisonProps {
 // --- CONFIGURACIÓN PARA EL GRÁFICO RADAR ---
 // Las claves deben coincidir con las definidas en indicatorConfig
 const radarKeys = ['netDebtToEBITDA', 'roic', 'evToEbitda', 'beta', 'PER', 'fcfYield'];
+const radarMetricLabels: Record<string, string> = {
+    netDebtToEBITDA: 'Deuda neta/EBITDA',
+    roic: 'ROIC',
+    evToEbitda: 'EV/EBITDA',
+    beta: 'Beta',
+    PER: 'PER',
+    fcfYield: 'FCF Yield',
+};
 
 const RADAR_METRIC_RANGES: Record<string, { min: number; max: number; lowerIsBetter: boolean }> = {
     netDebtToEBITDA: { min: 0, max: 5, lowerIsBetter: true }, // 0 excelente, >5 pobre
@@ -42,7 +51,11 @@ const resolveValue = (asset: AssetData, key: string): number | null => {
             if (source && typeof source === 'object' && field in source) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const val = (source as any)[field];
-                if (typeof val === 'number' && Number.isFinite(val)) {
+                if (
+                    typeof val === 'number' &&
+                    Number.isFinite(val) &&
+                    ((key !== 'PER' && key !== 'evToEbitda') || val > 0)
+                ) {
                     value = val;
                     break;
                 }
@@ -66,11 +79,13 @@ const resolveValue = (asset: AssetData, key: string): number | null => {
     return value;
 };
 
+const countAvailableMetrics = (asset: AssetData) =>
+    radarKeys.filter(key => resolveValue(asset, key) !== null).length;
+
 // --- Funciones de Normalización ---
-const normalizeForRadar = (value: number | null, key: string): number => {
+const normalizeForRadar = (value: number | null, key: string): number | null => {
     const config = RADAR_METRIC_RANGES[key];
-    // Si no hay configuración o valor, retornamos 0 (centro del radar)
-    if (!config || value === null || !Number.isFinite(value)) return 0;
+    if (!config || value === null || !Number.isFinite(value)) return null;
 
     const { min, max, lowerIsBetter } = config;
     const clamped = Math.max(Math.min(value, max), min);
@@ -86,7 +101,7 @@ const normalizeForRadar = (value: number | null, key: string): number => {
 export const RadarComparison = React.memo(function RadarComparison({ assets }: RadarComparisonProps) {
     // An asset needs at least three resolvable axes to draw a meaningful shape.
     const hasRadarCoverage = (asset: AssetData) =>
-        radarKeys.filter((key) => resolveValue(asset, key) !== null).length >= 3;
+        countAvailableMetrics(asset) >= 3;
     const fallbackAssets = React.useMemo(
         () => assets.filter(asset => !hasRadarCoverage(asset)),
         [assets]
@@ -121,8 +136,8 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
 
     const chartData = React.useMemo(() => {
         return radarKeys.map(key => {
-            const label = indicatorConfig[key]?.label || key;
-            const metricData: { metric: string, [ticker: string]: number | string } = {
+            const label = radarMetricLabels[key] || indicatorConfig[key]?.label || key;
+            const metricData: { metric: string, [ticker: string]: number | string | null } = {
                 metric: label,
             };
 
@@ -148,7 +163,7 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
                         originalFormatted = rawValue.toFixed(2);
                     }
                 }
-                metricData[`${symbol}_original`] = originalFormatted;
+                metricData[`${symbol}_original`] = rawValue === null ? 'Sin dato' : originalFormatted;
             });
 
             return metricData;
@@ -163,6 +178,7 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
         });
         return config;
     }, [chartAssets]);
+    const hasVisibleAssets = chartAssets.some(asset => visibleAssets[asset.profile.symbol] ?? true);
 
     if (chartAssets.length === 0) {
         return (
@@ -173,7 +189,7 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
                     </p>
                     <p className="text-xs sm:text-sm">
                         {fallbackAssets.length > 0
-                            ? 'Agregá activos con métricas comparables para ver el gráfico.'
+                            ? `Se requieren al menos 3 de las 6 métricas del radar. Sin cobertura suficiente: ${fallbackAssets.map(asset => asset.profile.symbol).join(', ')}.`
                             : 'Agregá al menos un activo para ver el gráfico radar.'}
                     </p>
                 </div>
@@ -187,9 +203,9 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
                 <div className="flex items-center gap-2 sm:gap-3">
                     <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                     <div>
-                        <CardTitle className="text-lg sm:text-xl">Radar Comparativo</CardTitle>
+                        <CardTitle className="text-lg sm:text-xl">Perfiles por activo</CardTitle>
                         <CardDescription className="text-xs sm:text-sm">
-                            Perfil visual del activo. Un punto más alejado del centro es mejor.
+                            Un gráfico separado por activo, con la misma escala para compararlos sin superponer sus formas. Los múltiplos PER y EV/EBITDA no positivos se omiten porque no son comparables con esta escala.
                         </CardDescription>
                     </div>
                 </div>
@@ -208,75 +224,107 @@ export const RadarComparison = React.memo(function RadarComparison({ assets }: R
                                 />
                                 <span className="flex items-center gap-1.5 sm:gap-2">
                                     <span style={{ width: 8, height: 8, background: color, display: 'inline-block', borderRadius: 2 }} className="sm:w-[10px] sm:h-[10px]" />
-                                    <span className="text-xs sm:text-sm font-medium">{symbol}</span>
+                                    <span className="text-xs sm:text-sm font-medium">
+                                        {symbol} <span className="text-muted-foreground">({countAvailableMetrics(asset)}/6)</span>
+                                    </span>
                                 </span>
                             </label>
                         );
                     })}
                 </div>
-                <ChartContainer config={chartConfig} className="mx-auto w-full h-[350px] sm:h-[450px] lg:h-[500px]">
-                    <RadarChart data={chartData} outerRadius="65%">
-                        <PolarGrid />
-                        <PolarAngleAxis dataKey="metric" tick={{ fontSize: 10 }} />
-                        <PolarRadiusAxis angle={30} domain={[0, 1]} tick={false} axisLine={false} />
-                        <ChartTooltip
-                            cursor={{ strokeDasharray: '3 3' }}
-                            content={({ payload, label }: { payload?: unknown[]; label?: React.ReactNode }) => {
-                                interface RadarTooltipItem {
-                                    name?: string;
-                                    color?: string;
-                                    payload?: Record<string, unknown>;
-                                }
-                                if (!payload || payload.length === 0) return null;
+                {!hasVisibleAssets ? (
+                    <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-4 text-center">
+                        <p className="text-sm text-muted-foreground">Ocultaste todos los activos del radar.</p>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setVisibleAssets(Object.fromEntries(chartAssets.map(asset => [asset.profile.symbol, true])))}
+                        >
+                            Mostrar todos los activos
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                        {chartAssets.map((asset, index) => {
+                            const symbol = asset.profile.symbol;
+                            if (visibleAssets[symbol] === false) return null;
+                            const color = `var(--chart-${(index % 12) + 1})`;
 
-                                return (
-                                    <Card className="p-2 shadow-lg border-none bg-background/95 backdrop-blur-sm">
-                                        <CardHeader className="p-1 pb-2 border-b mb-1">
-                                            <span className="font-bold text-sm">{label}</span>
-                                        </CardHeader>
-                                        <CardContent className="p-1 space-y-1.5">
-                                            {payload.map((itemRaw, index) => {
-                                                const item = itemRaw as RadarTooltipItem;
-                                                const name = typeof item.name === 'string' ? item.name : '';
-                                                // Si el activo está oculto, no lo mostramos en tooltip (opcional, chart lo suele manejar)
-                                                if (!visibleAssets[name]) return null;
+                            return (
+                                <Card key={symbol} className="min-w-0 overflow-hidden">
+                                    <CardHeader className="p-4 pb-0">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <CardTitle className="text-base">{symbol}</CardTitle>
+                                                <CardDescription className="mt-1 truncate text-xs">
+                                                    {asset.profile.companyName || 'Nombre de empresa no disponible'}
+                                                </CardDescription>
+                                            </div>
+                                            <span className="shrink-0 rounded-full border bg-muted/40 px-2 py-1 text-[10px] font-medium text-muted-foreground">
+                                                {countAvailableMetrics(asset)}/6 métricas
+                                            </span>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-2 sm:p-3">
+                                        <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                                            <RadarChart data={chartData} outerRadius="62%">
+                                                <PolarGrid />
+                                                <PolarAngleAxis dataKey="metric" tick={{ fontSize: 9 }} />
+                                                <PolarRadiusAxis domain={[0, 1]} tick={false} axisLine={false} />
+                                                <ChartTooltip
+                                                    content={({ payload, label }: { payload?: unknown[]; label?: React.ReactNode }) => {
+                                                        interface RadarTooltipItem {
+                                                            payload?: Record<string, unknown>;
+                                                        }
+                                                        const item = payload?.[0] as RadarTooltipItem | undefined;
+                                                        if (!item) return null;
+                                                        const original = item.payload?.[`${symbol}_original`];
 
-                                                const color = typeof item.color === 'string' ? item.color : undefined;
-                                                const original = item.payload?.[`${name}_original`] as string;
-
+                                                        return (
+                                                            <Card className="border-none bg-background/95 p-2 shadow-lg backdrop-blur-sm">
+                                                                <CardHeader className="p-1 pb-2">
+                                                                    <span className="text-xs text-muted-foreground">{symbol}</span>
+                                                                    <span className="font-semibold">{label}</span>
+                                                                </CardHeader>
+                                                                <CardContent className="p-1 text-sm font-bold">
+                                                                    {typeof original === 'string' ? original : 'Sin dato'}
+                                                                </CardContent>
+                                                            </Card>
+                                                        );
+                                                    }}
+                                                />
+                                                <Radar
+                                                    name={symbol}
+                                                    dataKey={symbol}
+                                                    stroke={color}
+                                                    fill={color}
+                                                    fillOpacity={0.18}
+                                                />
+                                            </RadarChart>
+                                        </ChartContainer>
+                                        <div className="grid grid-cols-2 gap-2 px-2 pb-2">
+                                            {chartData.map(metric => {
+                                                const rawValue = metric[`${symbol}_original`];
                                                 return (
-                                                    <div key={index} className="flex items-center justify-between gap-4 min-w-[120px]">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                                                            <span className="text-xs font-medium text-muted-foreground">{name}:</span>
-                                                        </div>
-                                                        <span className="font-bold text-xs">{original}</span>
+                                                    <div key={metric.metric} className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-muted/40 px-2 py-1.5">
+                                                        <span className="truncate text-[10px] text-muted-foreground">{metric.metric}</span>
+                                                        <span className="shrink-0 text-[10px] font-semibold tabular-nums">
+                                                            {typeof rawValue === 'string' ? rawValue : 'Sin dato'}
+                                                        </span>
                                                     </div>
                                                 );
                                             })}
-                                        </CardContent>
-                                    </Card>
-                                );
-                            }}
-                        />
-                        {/* Legend opcional, ya tenemos los checkboxes arriba */}
-                        {chartAssets.map((asset, index) => {
-                            const symbol = asset.profile.symbol;
-                            if (!visibleAssets[symbol]) return null;
-                            const colorVar = `var(--chart-${(index % 12) + 1})`;
-                            return (
-                                <Radar
-                                    key={symbol}
-                                    name={symbol}
-                                    dataKey={symbol}
-                                    stroke={colorVar}
-                                    fill={colorVar}
-                                    fillOpacity={0.2}
-                                />
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             );
                         })}
-                    </RadarChart>
-                </ChartContainer>
+                    </div>
+                )}
+                <p className="mt-3 text-xs text-muted-foreground">
+                    Cada eje se normaliza con un rango fijo y se limita a ese rango. Los valores originales aparecen debajo del gráfico; los ejes faltantes se excluyen y no se convierten en cero.
+                    {fallbackAssets.length > 0 && ` Omitidos por cobertura insuficiente: ${fallbackAssets.map(asset => asset.profile.symbol).join(', ')}.`}
+                </p>
             </CardContent>
         </Card>
     );

@@ -42,7 +42,7 @@ const itemVariants = {
 };
 
 function DashboardPageContent() {
-    const { addTicker, removeTicker, dropFailedTicker, selectedTickers, tickersRestored, hasSavedSelection } = useDashboard();
+    const { addTicker, removeTicker, selectedTickers, tickersRestored, hasSavedSelection } = useDashboard();
     const { holdings, loading: portfolioLoading, currentPortfolio } = usePortfolio();
     const { user, profile } = useAuth();
     const config = useConfig();
@@ -143,19 +143,12 @@ function DashboardPageContent() {
         [assetQueries, selectedTickers]
     );
 
-    useEffect(() => {
-        if (failedTickers.length > 0) {
-            failedTickers.forEach(ticker => {
-                dropFailedTicker(ticker);
-                toast.error(`No se pudo cargar "${ticker}"`, {
-                    description: "Verificá el símbolo o intentá más tarde.",
-                    duration: 5000,
-                });
-            });
-        }
-    }, [failedTickers, dropFailedTicker]);
-
     const isLoading = assetQueries.some(query => query.isLoading);
+    const handleRetryFailed = useCallback(() => {
+        const failedQueries = assetQueries.filter(query => query.isError);
+        void Promise.all(failedQueries.map(query => query.refetch()));
+    }, [assetQueries]);
+
     const handleRefresh = useCallback(async () => {
         if (selectedTickers.length === 0) return;
         toast.info('Actualizando datos...', { duration: 1500 });
@@ -180,17 +173,17 @@ function DashboardPageContent() {
             initial="hidden"
             animate="show"
         >
-            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b">
+            <motion.div variants={itemVariants} className="flex flex-col gap-4 rounded-2xl border bg-gradient-to-br from-card via-card to-primary/5 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
                 <PageHeader
                     icon={<ChartCandlestick className="w-8 h-8 text-primary" />}
                     title="Dashboard de Análisis"
-                    description="Monitorea y analiza tus activos financieros."
-                    className="mb-0 border-b-0 pb-0"
+                    description="Monitoreá y analizá tus activos financieros."
+                    className="mb-0 min-w-0 flex-1 border-b-0 pb-0 sm:pb-0"
                 />
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <div className="hidden sm:flex items-center text-sm text-muted-foreground mr-2">
-                        <Layers className="w-4 h-4 mr-1.5" />
-                        <span>Viendo:</span>
+                <div className="flex w-full items-center gap-2 sm:w-auto">
+                    <div className="hidden items-center text-sm text-muted-foreground sm:flex">
+                        <Layers className="mr-1.5 h-4 w-4" />
+                        <span>Cartera activa:</span>
                     </div>
                     <PortfolioSelector />
                     <Button
@@ -207,15 +200,42 @@ function DashboardPageContent() {
             </motion.div>
 
             <motion.div variants={itemVariants}>
-                <div id="ticker-search-container" className="relative p-[1.5px] rounded-2xl bg-gradient-to-br from-primary/30 via-blue-500/10 to-cyan-400/30 overflow-hidden group hover:from-primary/50 hover:to-cyan-400/50 transition-all duration-500">
-                    <Card className="bg-background/95 border-0 rounded-2xl shadow-inner h-full">
-                        <CardHeader className="relative z-10">
+                <div id="ticker-search-container" className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+                    <Card className="h-full rounded-2xl border-0 bg-transparent shadow-none">
+                        <CardHeader className="gap-4 p-4 sm:p-6">
+                            <div>
+                                <h2 className="text-base font-semibold tracking-tight sm:text-lg">Activos del análisis</h2>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Buscá por símbolo o empresa y elegí qué activos querés comparar.
+                                </p>
+                            </div>
                             <TickerAddForm onAddTicker={addTicker} />
                             <SelectedTickersList tickers={selectedTickers} onRemoveTicker={removeTicker} />
                         </CardHeader>
                     </Card>
                 </div>
             </motion.div>
+
+            {failedTickers.length > 0 && (
+                <motion.div variants={itemVariants}>
+                    <Card className="border-destructive/40">
+                        <CardHeader className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                            <div>
+                                <p className="font-medium text-destructive">
+                                    Hay activos cuyos datos no se pudieron cargar
+                                </p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Símbolos: {failedTickers.join(', ')}. Podés reintentar sin perder tu selección.
+                                </p>
+                            </div>
+                            <Button onClick={handleRetryFailed} disabled={isLoading} variant="outline" size="sm" className="gap-2">
+                                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                Reintentar
+                            </Button>
+                        </CardHeader>
+                    </Card>
+                </motion.div>
+            )}
 
             {!tickersRestored ? (
                 <Skeleton className="h-48 w-full rounded-2xl" />

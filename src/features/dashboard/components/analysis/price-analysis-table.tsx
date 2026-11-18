@@ -13,13 +13,13 @@ import { computeSharpe, computeStdDevPct } from "../../../../utils/financial-for
 import { useTheme } from "../../../../components/ui/theme-provider";
 import { Link } from "react-router-dom";
 import { AddTransactionModal } from "../../../portfolio/components";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../../components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../../components/ui/tooltip";
 import { usePrefetchAsset } from "../../../../hooks/use-prefetch-asset";
 import { usePlanFeature } from "../../../../hooks/use-plan-feature";
 import { mapYahooPeriodChange } from "../../../../services/api/yahoo-finance-mappers";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
 
 // --- Tipos Auxiliares ---
 interface PreparedAssetRow {
@@ -32,7 +32,6 @@ interface PreparedAssetRow {
     yearChange: number | null;
     stdDev: number | null;
     sharpeRatio: number | null;
-    lastMonthAvgPriceTarget: number | null;
     targetConsensus: number | null;
     original: AssetData;
 }
@@ -41,50 +40,41 @@ interface PriceAnalysisTableProps {
     assets: AssetData[];
 }
 
-// --- Helpers de Formato ---
-const formatCurrency = (v: number | null) => (typeof v === "number" && Number.isFinite(v) ? `$${v.toFixed(2)}` : "");
-const formatNumber = (v: number | null) => (typeof v === "number" && Number.isFinite(v) ? v.toFixed(2) : "");
-const pctNode = (v: number | null) => {
-    if (typeof v !== "number" || !Number.isFinite(v)) return null;
-    const color = v >= 0 ? "text-green-500" : "text-red-500";
-    const Icon = v >= 0 ? ArrowUp : ArrowDown;
-    return (
-        <span className={`flex items-center justify-center gap-1 font-medium ${color}`}>
-            <Icon className="w-3 h-3" />
-            {v.toFixed(2)}%
-        </span>
-    );
-};
+type SortKey = 'symbol' | 'currentPrice' | 'dayChange' | 'monthChange' | 'yearChange' | 'stdDev' | 'sharpeRatio' | 'targetConsensus';
 
-// --- Componente de Cabecera Ordenable ---
-const SortableTableHeader = ({
-    children,
-    align = 'left',
-    sortKey,
-    currentSort,
-    onSort
-}: {
-    children: React.ReactNode;
-    align?: 'left' | 'right' | 'center';
-    sortKey: keyof PreparedAssetRow;
-    currentSort: { key: string; dir: 'asc' | 'desc' };
-    onSort: (key: string) => void;
-}) => {
-    const isActive = currentSort.key === sortKey;
-    const Icon = currentSort.dir === 'asc' ? ArrowUp : ArrowDown;
-    return (
-        <TableHead className={`text-${align} w-[150px]`}>
-            <Button variant="ghost" onClick={() => onSort(sortKey)} className={`w-full justify-${sortKey === 'symbol' ? 'start' : 'center'} h-8`}>
-                {children}
-                <Icon className={`w-4 h-4 ml-2 transition-opacity ${isActive ? 'opacity-100' : 'opacity-30'}`} />
-            </Button>
-        </TableHead>
-    );
-};
+const sortOptions: { value: SortKey; label: string }[] = [
+    { value: 'symbol', label: 'Activo' },
+    { value: 'currentPrice', label: 'Precio' },
+    { value: 'dayChange', label: 'Variación diaria' },
+    { value: 'monthChange', label: 'Variación mensual' },
+    { value: 'yearChange', label: 'Variación anual' },
+    { value: 'stdDev', label: 'Volatilidad' },
+    { value: 'sharpeRatio', label: 'Ratio Sharpe' },
+    { value: 'targetConsensus', label: 'Precio objetivo' },
+];
+
+// --- Helpers de Formato ---
+const formatCurrency = (v: number | null) => (typeof v === "number" && Number.isFinite(v) && v > 0 ? `$${v.toFixed(2)}` : "—");
+const formatNumber = (v: number | null) => (typeof v === "number" && Number.isFinite(v) ? v.toFixed(2) : "—");
+const formatPercent = (value: number | null) =>
+    typeof value === 'number' && Number.isFinite(value)
+        ? `${value > 0 ? '+' : ''}${value.toFixed(2)}%`
+        : '—';
+const formatMagnitudePercent = (value: number | null) =>
+    typeof value === 'number' && Number.isFinite(value)
+        ? `${value.toFixed(2)}%`
+        : '—';
+
+const getReturnColor = (value: number | null) =>
+    typeof value !== 'number' || !Number.isFinite(value)
+        ? 'text-muted-foreground'
+        : value >= 0
+            ? 'text-emerald-600 dark:text-emerald-400'
+            : 'text-rose-600 dark:text-rose-400';
 
 // --- Componente Principal ---
 export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ assets }: PriceAnalysisTableProps) {
-    const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: "symbol", dir: "asc" });
+    const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: "symbol", dir: "asc" });
     const { theme } = useTheme();
     const [buyModalInfo, setBuyModalInfo] = useState({ isOpen: false, ticker: null as string | null, price: null as number | null });
 
@@ -124,7 +114,6 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
                     : asset.stockPriceChange["1Y"] ?? null,
                 stdDev,
                 sharpeRatio,
-                lastMonthAvgPriceTarget: asset.priceTarget?.lastMonthAvgPriceTarget ?? null,
                 targetConsensus: asset.priceTargetConsensus?.targetConsensus ?? null,
                 original: asset
             };
@@ -134,8 +123,8 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
     // Lógica de Ordenamiento
     const sortedAssets = useMemo(() => {
         return [...preparedAssets].sort((a, b) => {
-            const valA = a[sort.key as keyof PreparedAssetRow] ?? (sort.dir === 'asc' ? Infinity : -Infinity);
-            const valB = b[sort.key as keyof PreparedAssetRow] ?? (sort.dir === 'asc' ? Infinity : -Infinity);
+            const valA = a[sort.key] ?? (sort.dir === 'asc' ? Infinity : -Infinity);
+            const valB = b[sort.key] ?? (sort.dir === 'asc' ? Infinity : -Infinity);
 
             if (sort.key === 'symbol') {
                 return sort.dir === 'asc' ? a.symbol.localeCompare(b.symbol) : b.symbol.localeCompare(a.symbol);
@@ -147,11 +136,9 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
         });
     }, [preparedAssets, sort]);
 
-    const handleSort = (key: string) => {
-        setSort(prev => ({
-            key,
-            dir: prev.key === key && prev.dir === "asc" ? "desc" : "asc"
-        }));
+    const handleSortChange = (key: string) => {
+        const option = sortOptions.find(item => item.value === key);
+        if (option) setSort(prev => ({ ...prev, key: option.value }));
     };
 
     const handlePdfExport = () => {
@@ -196,137 +183,142 @@ export const PriceAnalysisTable = React.memo(function PriceAnalysisTable({ asset
 
     return (
         <>
-            <Card>
-                <CardHeader className="p-4 sm:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                            <BarChart2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-                            <div>
-                                <CardTitle className="text-lg sm:text-xl">Precios y Volatilidad</CardTitle>
-                                <CardDescription className="text-xs sm:text-sm">Análisis de rendimiento y riesgo de los activos.</CardDescription>
+            <Card className="overflow-hidden border-border/70 bg-card/95 shadow-sm">
+                <div className="h-1 bg-gradient-to-r from-cyan-400 via-primary to-violet-500" aria-hidden="true" />
+                <CardHeader className="gap-4 p-4 sm:p-6">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex min-w-0 items-center gap-3">
+                            <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-primary/15 to-cyan-500/10 p-2.5 text-primary shadow-sm">
+                                <BarChart2 className="h-5 w-5 sm:h-6 sm:w-6" />
+                            </div>
+                            <div className="min-w-0">
+                                <CardTitle className="text-lg sm:text-xl">Precios y volatilidad</CardTitle>
+                                <CardDescription className="mt-1 text-xs sm:text-sm">
+                                    Rendimiento, riesgo y cotización en una vista compacta.
+                                </CardDescription>
                             </div>
                         </div>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <div>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" size="sm" className="w-full sm:w-auto text-xs sm:text-sm" disabled={!canExportPdf}>
-                                                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" /> Exportar
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                            <DropdownMenuItem onClick={handlePdfExport}>Exportar a PDF</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                            </TooltipTrigger>
-                            {!canExportPdf && <TooltipContent><p className="text-xs">{upgradeMessage}</p></TooltipContent>}
-                        </Tooltip>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6">
-                    {/* --- VISTA ESCRITORIO --- */}
-                    <div className="hidden sm:block">
-                        <div className="border rounded-lg overflow-hidden">
-                            <Table>
-                                <TableHeader className="bg-muted/50">
-                                    <TableRow>
-                                        <SortableTableHeader sortKey="symbol" currentSort={sort} onSort={handleSort}>Activo</SortableTableHeader>
-                                        <SortableTableHeader sortKey="currentPrice" currentSort={sort} onSort={handleSort} align="center">Precio</SortableTableHeader>
-                                        <SortableTableHeader sortKey="dayChange" currentSort={sort} onSort={handleSort} align="center">Var. Diaria</SortableTableHeader>
-                                        <SortableTableHeader sortKey="monthChange" currentSort={sort} onSort={handleSort} align="center">Var. Mensual</SortableTableHeader>
-                                        <SortableTableHeader sortKey="yearChange" currentSort={sort} onSort={handleSort} align="center">Var. Anual</SortableTableHeader>
-                                        <SortableTableHeader sortKey="stdDev" currentSort={sort} onSort={handleSort} align="center">Volatilidad</SortableTableHeader>
-                                        <SortableTableHeader sortKey="sharpeRatio" currentSort={sort} onSort={handleSort} align="center">Ratio Sharpe</SortableTableHeader>
-                                        <SortableTableHeader sortKey="lastMonthAvgPriceTarget" currentSort={sort} onSort={handleSort} align="center">Precio Objetivo</SortableTableHeader>
-                                        <TableHead className="text-center w-[100px]">Comprar</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {sortedAssets.map((asset) => (
-                                        <TableRow key={asset.symbol}>
-                                            <TableCell className="font-medium">
-                                                <Link
-                                                    to={`/asset/${asset.symbol}`}
-                                                    className="flex items-center gap-3 group"
-                                                    onMouseEnter={() => prefetchAssetIfNotCached(asset.symbol)}
-                                                    onFocus={() => prefetchAssetIfNotCached(asset.symbol)}
-                                                >
-                                                    <AssetLogo morph src={asset.image} name={asset.companyName} symbol={asset.symbol} className="size-8" />
-                                                    <div>
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="font-bold group-hover:text-primary transition-colors">{asset.symbol}</div>
-                                                                <div className="caption text-muted-foreground truncate max-w-[180px]">{asset.companyName}</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </Link>
-                                            </TableCell>
-                                            <TableCell className="text-center font-semibold"><LiveValue value={asset.currentPrice}>{formatCurrency(asset.currentPrice)}</LiveValue></TableCell>
-                                            <TableCell className="text-center">{pctNode(asset.dayChange)}</TableCell>
-                                            <TableCell className="text-center">{pctNode(asset.monthChange)}</TableCell>
-                                            <TableCell className="text-center">{pctNode(asset.yearChange)}</TableCell>
-                                            <TableCell className="text-center">{pctNode(asset.stdDev)}</TableCell>
-                                            <TableCell className="text-center font-semibold">{formatNumber(asset.sharpeRatio)}</TableCell>
-                                            <TableCell className="text-center font-semibold">
-                                                {typeof asset.targetConsensus === 'number' && Number.isFinite(asset.targetConsensus) && asset.targetConsensus > 0
-                                                    ? formatCurrency(asset.targetConsensus)
-                                                    : ''}
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <Button variant="ghost" size="icon" onClick={() => setBuyModalInfo({ isOpen: true, ticker: asset.symbol, price: asset.currentPrice })}>
-                                                    <ShoppingCart className="w-5 h-5 text-primary" />
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <div className="flex items-center gap-2">
+                                <span className="hidden text-xs font-medium text-muted-foreground sm:inline">Ordenar</span>
+                                <Select value={sort.key} onValueChange={handleSortChange}>
+                                    <SelectTrigger aria-label="Ordenar activos por" className="h-9 w-full rounded-lg bg-background sm:w-[170px]">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {sortOptions.map(option => (
+                                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-9 w-9 shrink-0"
+                                    aria-label={sort.dir === 'asc' ? 'Orden ascendente' : 'Orden descendente'}
+                                    title={sort.dir === 'asc' ? 'Orden ascendente' : 'Orden descendente'}
+                                    onClick={() => setSort(prev => ({ ...prev, dir: prev.dir === 'asc' ? 'desc' : 'asc' }))}
+                                >
+                                    {sort.dir === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+                                </Button>
+                            </div>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="outline" size="sm" className="w-full gap-2 sm:w-auto" disabled={!canExportPdf}>
+                                                    <Download className="h-4 w-4" />
+                                                    Exportar
                                                 </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem onClick={handlePdfExport}>Exportar a PDF</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
+                                </TooltipTrigger>
+                                {!canExportPdf && <TooltipContent><p className="text-xs">{upgradeMessage}</p></TooltipContent>}
+                            </Tooltip>
                         </div>
                     </div>
+                </CardHeader>
+                <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
+                        {sortedAssets.map(asset => {
+                            const metrics = [
+                                { label: 'Cambio diario', value: formatPercent(asset.dayChange), className: getReturnColor(asset.dayChange) },
+                                { label: 'Cambio mensual', value: formatPercent(asset.monthChange), className: getReturnColor(asset.monthChange) },
+                                { label: 'Cambio anual', value: formatPercent(asset.yearChange), className: getReturnColor(asset.yearChange) },
+                                { label: 'Volatilidad', value: formatMagnitudePercent(asset.stdDev), className: 'text-foreground' },
+                                { label: 'Ratio Sharpe', value: formatNumber(asset.sharpeRatio), className: 'text-foreground' },
+                                { label: 'Precio objetivo', value: formatCurrency(asset.targetConsensus), className: 'text-foreground' },
+                            ];
 
-                    {/* --- VISTA MÓVIL --- */}
-                    <div className="sm:hidden grid grid-cols-1 gap-3">
-                        {sortedAssets.map(asset => (
-                            <Card key={asset.symbol} className="p-3">
-                                <div className="flex items-start justify-between mb-3">
-                                    <Link
-                                        to={`/asset/${asset.symbol}`}
-                                        className="flex items-center gap-2 font-bold flex-1 min-w-0"
-                                        onMouseEnter={() => prefetchAssetIfNotCached(asset.symbol)}
-                                        onFocus={() => prefetchAssetIfNotCached(asset.symbol)}
-                                    >
-                                        <AssetLogo src={asset.image} name={asset.companyName} symbol={asset.symbol} className="size-7" />
-                                        <div className="min-w-0 flex-1">
-                                            <div className="text-sm flex items-center gap-1.5">
-                                                {asset.symbol}
+                            return (
+                                <Card
+                                    key={asset.symbol}
+                                    className="group relative overflow-hidden border-border/70 bg-gradient-to-br from-card via-card to-primary/[0.03] transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg"
+                                >
+                                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-cyan-400/70 via-primary/50 to-transparent opacity-70 transition-opacity group-hover:opacity-100" />
+                                    <CardContent className="p-4 sm:p-5">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <Link
+                                                to={`/asset/${asset.symbol}`}
+                                                className="flex min-w-0 items-center gap-3"
+                                                onMouseEnter={() => prefetchAssetIfNotCached(asset.symbol)}
+                                                onFocus={() => prefetchAssetIfNotCached(asset.symbol)}
+                                            >
+                                                <AssetLogo
+                                                    morph
+                                                    src={asset.image}
+                                                    name={asset.companyName}
+                                                    symbol={asset.symbol}
+                                                    className="size-10 shrink-0"
+                                                />
+                                                <div className="min-w-0">
+                                                    <p className="font-bold tracking-tight transition-colors group-hover:text-primary">{asset.symbol}</p>
+                                                    <p className="truncate text-xs text-muted-foreground">
+                                                        {asset.companyName || 'Empresa sin nombre disponible'}
+                                                    </p>
+                                                </div>
+                                            </Link>
+                                            <div className="shrink-0 text-right">
+                                                <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Cotización</p>
+                                                <LiveValue value={asset.currentPrice}>
+                                                    <p className="mt-0.5 text-lg font-bold tabular-nums">{formatCurrency(asset.currentPrice)}</p>
+                                                </LiveValue>
                                             </div>
-                                            <div className="text-xs text-muted-foreground font-normal truncate">{asset.companyName}</div>
                                         </div>
-                                    </Link>
-                                    <span className="font-semibold text-base flex-shrink-0 ml-2">{formatCurrency(asset.currentPrice)}</span>
-                                </div>
-                                <div className="space-y-1.5 text-xs border-t pt-2.5 mt-2.5">
-                                    <div className="flex justify-between"><span className="text-muted-foreground">Var. Diaria</span>{pctNode(asset.dayChange)}</div>
-                                    <div className="flex justify-between"><span className="text-muted-foreground">Var. Mensual</span>{pctNode(asset.monthChange)}</div>
-                                    <div className="flex justify-between"><span className="text-muted-foreground">Var. Anual</span>{pctNode(asset.yearChange)}</div>
-                                    <div className="flex justify-between"><span className="text-muted-foreground">Ratio Sharpe</span>{formatNumber(asset.sharpeRatio)}</div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Precio Objetivo</span>
-                                        <span className="font-semibold">
-                                            {typeof asset.targetConsensus === 'number' && Number.isFinite(asset.targetConsensus) && asset.targetConsensus > 0
-                                                ? formatCurrency(asset.targetConsensus)
-                                                : ''}
-                                        </span>
-                                    </div>
-                                </div>
-                                <Button variant="outline" size="sm" className="w-full mt-2.5" onClick={() => setBuyModalInfo({ isOpen: true, ticker: asset.symbol, price: asset.currentPrice })}>
-                                    <ShoppingCart className="w-3.5 h-3.5 mr-1.5" /> Comprar
-                                </Button>
-                            </Card>
-                        ))}
+
+                                        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                            {metrics.map(metric => (
+                                                <div key={metric.label} className="min-w-0 rounded-xl border border-border/60 bg-background/70 px-2.5 py-2">
+                                                    <p className="truncate text-[10px] font-medium text-muted-foreground">{metric.label}</p>
+                                                    <p className={`mt-1 truncate text-sm font-semibold tabular-nums ${metric.className}`}>
+                                                        {metric.value}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="mt-3 flex items-center justify-between gap-3 border-t border-dashed pt-3">
+                                            <span className="text-[10px] text-muted-foreground">Datos de mercado</span>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 gap-1.5 border-primary/20 px-3 hover:border-primary/40 hover:bg-primary/5"
+                                                aria-label={`Comprar ${asset.symbol}`}
+                                                onClick={() => setBuyModalInfo({ isOpen: true, ticker: asset.symbol, price: asset.currentPrice })}
+                                            >
+                                                <ShoppingCart className="h-3.5 w-3.5 text-primary" />
+                                                Comprar
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
                     </div>
                 </CardContent>
             </Card>

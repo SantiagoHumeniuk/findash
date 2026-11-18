@@ -11,7 +11,7 @@ type Category = 'valuation' | 'profitability' | 'financial_health' | 'momentum';
 export interface SummaryScore {
   score: number;
   coverage: number;
-  categoryScores: Record<Category, number>;
+  categoryScores: Record<Category, number | null>;
   strengths: string[];
   weaknesses: string[];
   reasons: string[];
@@ -90,9 +90,9 @@ export function scoreAssetSummary(asset: SummaryAssetInput): SummaryScore {
     : null;
   const operatingMargin = ratios?.operatingProfitMargin;
   const netMargin = ratios?.netProfitMargin;
-  const roe = asset.keyMetrics?.returnOnEquityTTM || null;
+  const roe = asset.keyMetrics?.returnOnEquityTTM ?? null;
   const debtToEquity = ratios?.debtToEquityRatio;
-  const netDebtToEbitda = asset.keyMetrics?.netDebtToEBITDATTM || null;
+  const netDebtToEbitda = asset.keyMetrics?.netDebtToEBITDATTM ?? null;
   const currentRatio = ratios?.currentRatio;
   const interestCoverage = ratios?.interestCoverageRatio;
   const beta = asset.profile?.beta;
@@ -230,17 +230,18 @@ export function scoreAssetSummary(asset: SummaryAssetInput): SummaryScore {
   const categoryScores = Object.fromEntries(
     Object.entries(categoryPoints).map(([category, points]) => [
       category,
-      points.length > 0 ? points.reduce((sum, point) => sum + point, 0) / points.length : 50,
+      points.length > 0 ? points.reduce((sum, point) => sum + point, 0) / points.length : null,
     ]),
-  ) as Record<Category, number>;
+  ) as Record<Category, number | null>;
   const presentCategories = Object.entries(categoryPoints)
     .filter(([, points]) => points.length > 0)
     .map(([category]) => category as Category);
   const totalWeight = presentCategories.reduce((sum, category) => sum + categoryWeights[category], 0);
   const score = totalWeight > 0
-    ? presentCategories.reduce((sum, category) => sum + categoryScores[category] * categoryWeights[category], 0) / totalWeight
+    ? presentCategories.reduce((sum, category) => sum + (categoryScores[category] ?? 0) * categoryWeights[category], 0) / totalWeight
     : 50;
-  const coverage = Math.round((totalSignals / 14) * 100);
+  const expectedSignals = isFinancialCompany ? 10 : 14;
+  const coverage = Math.round((totalSignals / expectedSignals) * 100);
   const hasHighRisk = weaknesses.some((reason) =>
     /negativo|elevado|ajustada|baja|exigente/i.test(reason),
   );

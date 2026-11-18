@@ -7,10 +7,10 @@ interface WinnerCardProps {
     symbol: string;
     companyName: string;
     score: number;
+    coverage: number;
     recommendation: string;
     riskLevel: 'low' | 'medium' | 'high';
     strengths: string[];
-    totalMetrics: number;
 }
 
 const getRiskBadge = (risk: 'low' | 'medium' | 'high') => {
@@ -22,7 +22,7 @@ const getRiskBadge = (risk: 'low' | 'medium' | 'high') => {
     return styles[risk];
 };
 
-export default function WinnerCard({ symbol, companyName, score, recommendation, riskLevel, strengths, totalMetrics }: WinnerCardProps) {
+export default function WinnerCard({ symbol, companyName, score, coverage, recommendation, riskLevel, strengths }: WinnerCardProps) {
     const riskConfig = getRiskBadge(riskLevel);
 
     return (
@@ -41,7 +41,7 @@ export default function WinnerCard({ symbol, companyName, score, recommendation,
                         <div>
                             <CardTitle className="text-lg sm:text-xl">Activo Destacado</CardTitle>
                             <CardDescription className="text-xs sm:text-sm">
-                                Análisis integral sobre {totalMetrics} métricas clave
+                                Mayor puntaje entre los activos analizados; cobertura de datos: {coverage}%.
                             </CardDescription>
                         </div>
                     </div>
@@ -82,6 +82,9 @@ export default function WinnerCard({ symbol, companyName, score, recommendation,
 
                     <p className="text-sm text-foreground/80 italic mb-4 leading-relaxed border-l-2 border-primary/30 pl-3">
                         "{recommendation}"
+                    </p>
+                    <p className="mb-3 text-xs text-muted-foreground">
+                        El puntaje resume señales disponibles y no debe interpretarse como recomendación de compra o venta.
                     </p>
 
                     {strengths && strengths.length > 0 && (

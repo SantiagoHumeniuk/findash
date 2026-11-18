@@ -21,6 +21,7 @@ import { Skeleton } from "../../../../components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useState } from "react";
+import { Card, CardContent } from "../../../../components/ui/card";
 
 interface DashboardTabsProps {
     assets: AssetData[];
@@ -61,15 +62,27 @@ export function DashboardTabs({ assets, isLoading }: DashboardTabsProps) {
     if (isLoading && assets.length === 0) {
         return <Skeleton className="h-96 w-full rounded-xl" />;
     }
+    if (assets.length === 0) {
+        return (
+            <Card className="flex min-h-64 items-center justify-center">
+                <CardContent className="p-6 text-center">
+                    <p className="font-medium">Todavía no hay datos para analizar</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Reintentá la carga o verificá los símbolos seleccionados.
+                    </p>
+                </CardContent>
+            </Card>
+        );
+    }
 
     // Definición de las pestañas para mantener el código limpio y mantenible
     const tabs = [
-        { value: "prices", label: "Precios", icon: BarChart2, mobile: "Precios" },
-        { value: "fundamentals", label: "Fundamentales", icon: LayoutGrid, mobile: "Fundamentales" },
-        { value: "correlation", label: "Correlación", icon: GitCompareArrows, mobile: "Correlación" },
-        { value: "radar", label: "Radar", icon: Zap, mobile: "Radar" },
-        { value: "charts", label: "Gráficos", icon: AreaChart, mobile: "Gráficos" },
-        { value: "summary", label: "Resumen IA", icon: BrainCircuit, mobile: "IA" },
+        { value: "prices", label: "Precios", icon: BarChart2 },
+        { value: "fundamentals", label: "Fundamentales", icon: LayoutGrid },
+        { value: "correlation", label: "Correlación", icon: GitCompareArrows },
+        { value: "radar", label: "Perfiles", icon: Zap },
+        { value: "charts", label: "Evolución", icon: AreaChart },
+        { value: "summary", label: "Resumen", icon: BrainCircuit },
     ];
 
     const renderTabContent = () => {
@@ -92,10 +105,18 @@ export function DashboardTabs({ assets, isLoading }: DashboardTabsProps) {
     };
 
     return (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-3">
+            <div className="flex items-center justify-between gap-3 px-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    Panel de análisis
+                </p>
+                <p className="text-xs text-muted-foreground">
+                    {assets.length} activo{assets.length === 1 ? '' : 's'}
+                </p>
+            </div>
             <div className="sm:hidden">
                 <Select value={activeTab} onValueChange={setActiveTab}>
-                    <SelectTrigger className="h-11 w-full">
+                    <SelectTrigger aria-label="Tipo de análisis" className="h-11 w-full rounded-xl bg-card shadow-sm">
                         <SelectValue placeholder="Elegí un análisis" />
                     </SelectTrigger>
                     <SelectContent>
@@ -105,8 +126,8 @@ export function DashboardTabs({ assets, isLoading }: DashboardTabsProps) {
                     </SelectContent>
                 </Select>
             </div>
-            <div className="hidden sm:block overflow-x-auto pb-1 w-full">
-                <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 h-auto">
+            <div className="hidden w-full overflow-x-auto pb-2 sm:block">
+                <TabsList className="flex h-auto min-w-max items-center justify-start gap-1 rounded-xl border bg-muted/40 p-1 sm:w-fit">
                     {tabs.map((tab, index) => (
                         <motion.div
                             key={tab.value}
@@ -121,21 +142,18 @@ export function DashboardTabs({ assets, isLoading }: DashboardTabsProps) {
                         >
                             <TabsTrigger
                                 value={tab.value}
-                                className="min-h-11 w-full inline-flex items-center justify-center whitespace-nowrap rounded-sm px-2 py-1.5 text-xs font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm sm:px-3 sm:text-sm"
+                                className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border"
                             >
-                                <tab.icon className="w-4 h-4 mr-2 hidden sm:block" />
-                                <span className="hidden sm:inline">{tab.label}</span>
-                                <span className="sm:hidden">{tab.mobile}</span>
+                                <tab.icon className="h-4 w-4" />
+                                <span>{tab.label}</span>
                             </TabsTrigger>
                         </motion.div>
                     ))}
                 </TabsList>
             </div>
 
-            {/* Contenedor con min-height para evitar colapso visual al cambiar tabs.
-               Esto estabiliza el layout si el contenido tarda unos ms en renderizarse.
-            */}
-            <div className="min-h-[400px]">
+            {/* Mantiene estable el layout al cambiar análisis sin agregar demasiado espacio vacío. */}
+            <div className="min-h-[320px]">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={activeTab}

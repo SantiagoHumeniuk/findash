@@ -71,12 +71,9 @@ export default function CategoryLeaders({ categoryWinners, categories, assets, i
         const config = indicatorConfig[metric];
         if (!config) return value.toFixed(2);
 
-        // Si es porcentaje, multiplicar por 100 si el valor es pequeño (< 5 suele indicar decimal)
         if (config.asPercent) {
-            // Lógica heurística: si es un ratio tipo 0.05, lo mostramos como 5.00%
-            // Si ya viene como 5.0, lo mostramos como 5.00%
-            const valToFormat = (Math.abs(value) <= 1.5 && value !== 0) ? value * 100 : value;
-            return `${valToFormat.toFixed(2)}%`;
+            const percentValue = Math.abs(value) <= 1.5 && value !== 0 ? value * 100 : value;
+            return `${percentValue.toFixed(2)}%`;
         }
 
         if (config.isLargeNumber) {
@@ -107,6 +104,13 @@ export default function CategoryLeaders({ categoryWinners, categories, assets, i
                 {Object.entries(categoryWinners).map(([catKey, winner], index) => {
                     const category = categories[catKey];
                     const winnerAsset = assets.find(a => a.profile.symbol === winner.symbol);
+                    if (!category) return null;
+                    const availableMetrics = winner.metrics
+                        .map(metric => ({ metric, value: resolveLocalValue(winnerAsset, metric) }))
+                        .filter((item): item is { metric: string; value: number } =>
+                            item.value !== null && Number.isFinite(item.value)
+                        )
+                        .slice(0, 2);
 
                     return (
                         <motion.div
@@ -127,7 +131,7 @@ export default function CategoryLeaders({ categoryWinners, categories, assets, i
                                     <div className="p-1.5 bg-muted rounded-md text-primary">{category.icon}</div>
                                     <div>
                                         <span className="block font-semibold text-sm leading-none">{category.label}</span>
-                                        <span className="text-[10px] text-muted-foreground">Ganador</span>
+                                        <span className="text-[10px] text-muted-foreground">Puntaje {winner.score}/100</span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 text-right">
@@ -137,25 +141,24 @@ export default function CategoryLeaders({ categoryWinners, categories, assets, i
                             </div>
 
                             {/* Métricas principales destacadas */}
-                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-dashed">
-                                {winner.metrics.slice(0, 2).map(metric => {
-                                    const value = resolveLocalValue(winnerAsset, metric);
-                                    const displayValue = (value !== null && Number.isFinite(value))
-                                        ? formatMetricValue(value, metric)
-                                        : '';
-
-                                    return (
+                            {availableMetrics.length > 0 ? (
+                                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-dashed">
+                                    {availableMetrics.map(({ metric, value }) => (
                                         <div key={metric} className="flex flex-col">
                                             <span className="text-[10px] text-muted-foreground truncate">
                                                 {getMetricLabel(metric)}
                                             </span>
                                             <span className="font-semibold text-xs">
-                                                {displayValue}
+                                                {formatMetricValue(value, metric)}
                                             </span>
                                         </div>
-                                    );
-                                })}
-                            </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="border-t border-dashed pt-2 text-xs text-muted-foreground">
+                                    No hay valores individuales disponibles para mostrar en esta categoría.
+                                </p>
+                            )}
                         </motion.div>
                     );
                 })}

@@ -74,12 +74,33 @@ describe('scoreAssetSummary', () => {
       profile: { ...healthyAsset.profile, beta: 0 },
       quote: { ...healthyAsset.quote, pe: undefined, forwardPE: undefined, forwardEPS: undefined, trailingEPS: undefined, priceAvg50: 0, priceAvg200: 0 },
       ratios: [],
-      keyMetrics: { returnOnEquityTTM: 0, netDebtToEBITDATTM: 0 },
+      keyMetrics: { returnOnEquityTTM: null, netDebtToEBITDATTM: null },
       priceTargetConsensus: { targetConsensus: 0 },
     });
 
     expect(result.verdict).toBe('neutral');
     expect(result.coverage).toBe(0);
+    expect(Object.values(result.categoryScores).every(score => score === null)).toBe(true);
     expect(result.verdictText).toContain('Cobertura limitada');
+  });
+
+  it('counts valid zero-valued profitability and leverage metrics', () => {
+    const result = scoreAssetSummary({
+      ...healthyAsset,
+      keyMetrics: { returnOnEquityTTM: 0, netDebtToEBITDATTM: 0 },
+    });
+
+    expect(result.reasons).toContain('ROE de 0.0%; rentabilidad aún moderada.');
+    expect(result.reasons).toContain('Deuda neta/EBITDA de 0.00x.');
+  });
+
+  it('measures financial companies against only applicable indicators', () => {
+    const result = scoreAssetSummary({
+      ...healthyAsset,
+      profile: { ...healthyAsset.profile, sector: 'Financial Services' },
+    });
+
+    expect(result.coverage).toBe(100);
+    expect(result.categoryScores.financial_health).toBeNull();
   });
 });

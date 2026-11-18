@@ -210,7 +210,7 @@ function resolveIndicatorValue(asset: AssetData, key: string): number | null {
 
 // --- Funciones de Formato y Estilo ---
 const formatValue = (config: Indicator, value: number | null, currency?: string) => {
-    if (value === null || value === undefined) return "";
+    if (value === null || value === undefined) return "—";
     if (config.unit === 'currency') {
         const amount = value.toLocaleString('es-AR', { maximumFractionDigits: 2 });
         return currency ? `${currency} ${amount}` : amount;
@@ -378,6 +378,11 @@ export const FundamentalsTable = React.memo(function FundamentalsTable({ assets 
                 </div>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
+                {!indicatorSections.some(section => visibleKeysBySection[section.id].length > 0) && (
+                    <p className="mb-4 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                        No hay métricas fundamentales disponibles para estos activos. Desactivá “Ocultar métricas sin valor” para ver qué indicadores se consultan.
+                    </p>
+                )}
                 <Accordion type="multiple" value={openSections} onValueChange={setOpenSections}>
                     {indicatorSections.map(section => (
                         visibleKeysBySection[section.id].length > 0 && (

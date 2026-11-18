@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { ChartContainer, ChartTooltip, ChartLegend, ChartLegendContent } from "../../../../components/ui/chart"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select"
 import { Checkbox } from "../../../../components/ui/checkbox"
+import { Button } from "../../../../components/ui/button"
 import { AreaChartIcon } from "lucide-react"
 import { useAuth } from "../../../../hooks/use-auth"
 import { useConfig } from "../../../../hooks/use-config"
@@ -228,6 +229,10 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
     const padding = Math.max((maxVal - minVal) * 0.1, 0.5);
     return [Math.floor(minVal - padding), Math.ceil(maxVal + padding)];
   }, [chartData, visibleAssets]);
+  const assetsWithoutHistory = assets.filter(asset =>
+    !asset.historicalReturns?.some(point => Number.isFinite(point.close) && point.close > 0)
+  );
+  const hasVisibleSeries = Object.values(visibleAssets).some(Boolean);
 
   if (assets.length === 0) {
     return (
@@ -317,6 +322,32 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
         )}
       </CardHeader>
       <CardContent className="px-2 pt-3 sm:px-6 sm:pt-6">
+        {assetsWithoutHistory.length > 0 && (
+          <p className="mb-3 px-2 text-xs text-muted-foreground">
+            Sin historial disponible: {assetsWithoutHistory.map(asset => asset.profile.symbol).join(', ')}.
+          </p>
+        )}
+        {chartData.length < 2 ? (
+          <div className="flex min-h-64 flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 text-center">
+            <p className="text-sm font-medium">
+              {benchmarkQuery.isLoading
+                ? `Consultando el historial de ${selectedBenchmark}...`
+                : benchmarkQuery.isError
+                  ? `No se pudo cargar ${selectedBenchmark}: ${benchmarkQuery.error.message}`
+                  : 'No hay suficiente historial coincidente para mostrar este período.'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Probá con un rango más amplio o quitá de la comparación activos sin fechas coincidentes.
+            </p>
+          </div>
+        ) : !hasVisibleSeries ? (
+          <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-4 text-center">
+            <p className="text-sm text-muted-foreground">Ocultaste todas las series del gráfico.</p>
+            <Button variant="outline" size="sm" onClick={() => setVisibleAssets(previous => Object.fromEntries(Object.keys(previous).map(symbol => [symbol, true])))}>
+              Mostrar todas las series
+            </Button>
+          </div>
+        ) : (
         <ChartContainer config={chartConfig} className="w-full h-[280px] sm:h-[350px] lg:h-[400px]">
           <AreaChart data={chartData}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.5} />
@@ -374,7 +405,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
                               <span className="text-xs font-medium text-muted-foreground">{displayName}:</span>
                             </div>
                             <span className="font-bold text-xs">
-                              {value !== null ? `${value.toFixed(2)}%` : ''}
+                              {value !== null ? `${value.toFixed(2)}%` : '—'}
                             </span>
                           </div>
                         );
@@ -417,6 +448,7 @@ export const HistoricalPerformanceChart = React.memo(function HistoricalPerforma
             </defs>
           </AreaChart>
         </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );

@@ -15,6 +15,7 @@ import { indicatorConfig } from "../../../../utils/financial";
 import { useTheme } from "../../../../components/ui/theme-provider";
 import { usePlanFeature } from "../../../../hooks/use-plan-feature";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
+import { getCorrelationCellColors } from "../../lib/correlation-colors";
 
 // --- Props del Componente ---
 interface CorrelationMatrixProps {
@@ -64,36 +65,6 @@ function alignAndCalculateReturns(
 }
 
 // --- Lógica de Estilo para Celdas ---
-const getCellStyle = (value: number | null): React.CSSProperties => {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-        return {
-            backgroundColor: "var(--muted)",
-            color: "var(--muted-foreground)",
-        };
-    }
-
-    const v = (Math.min(1, Math.max(-1, value)) + 1) / 2;
-
-    // Rojo (-1) -> amarillo (0) -> verde (1).
-    let hue: number;
-    if (v <= 0.5) {
-        // De rojo (0) a amarillo (60)
-        hue = 0 + (v / 0.5) * 60;
-    } else {
-        // De amarillo (60) a verde (120)
-        hue = 60 + ((v - 0.5) / 0.5) * 60;
-    }
-
-    const saturation = 90;
-    const lightness = 55; // Un poco más claro para ser legible con texto oscuro
-
-    return {
-        backgroundColor: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
-        color: `hsl(${hue}, 100%, 15%)`, // Texto oscuro para contraste
-        fontWeight: 'bold'
-    };
-};
-
 // --- Componente Principal ---
 export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets }: CorrelationMatrixProps) {
     const { theme } = useTheme();
@@ -142,7 +113,7 @@ export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets 
             rowAsset.profile.symbol,
             ...assets.map((_, j) => {
                 const value = correlationMatrix[i]?.[j];
-                return typeof value === 'number' ? value.toFixed(2) : '';
+                return typeof value === 'number' ? value.toFixed(2) : 'N/D';
             })
         ]);
 
@@ -185,7 +156,7 @@ export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets 
                         <div>
                             <CardTitle className="text-lg sm:text-xl">Matriz de Correlación</CardTitle>
                             <CardDescription className="text-xs sm:text-sm">
-                                Cómo se mueven los precios entre sí (1: juntos, -1: opuestos).
+                                Verde: relación lineal débil. Rojo: correlación intensa; el signo indica si se mueven en la misma dirección (+) o en direcciones opuestas (−).
                             </CardDescription>
                         </div>
                     </div>
@@ -219,6 +190,13 @@ export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets 
                 </div>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
+                <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
+                    <span className="font-medium">Intensidad:</span>
+                    <span>Débil</span>
+                    <div className="h-2 w-24 rounded-full bg-gradient-to-r from-emerald-500 via-yellow-400 to-red-600" aria-hidden="true" />
+                    <span>Fuerte</span>
+                    <span className="basis-full sm:basis-auto">Un rojo intenso puede ser correlación positiva o inversa; mirá el valor para distinguirlas.</span>
+                </div>
                 <div className="space-y-3 sm:hidden">
                     <Select value={selectedMobileAsset?.profile.symbol ?? ""} onValueChange={setMobileSymbol}>
                         <SelectTrigger aria-label="Activo para consultar correlaciones" className="h-11 w-full">
@@ -238,7 +216,7 @@ export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets 
                                 <div
                                     key={asset.profile.symbol}
                                     className="flex min-h-14 items-center justify-between gap-3 rounded-lg border px-3 py-2"
-                                    style={getCellStyle(value)}
+                                    style={getCorrelationCellColors(value)}
                                 >
                                     <span className="min-w-0 break-words text-sm font-medium">
                                         {selectedMobileAsset?.profile.symbol} vs {asset.profile.symbol}
@@ -274,15 +252,20 @@ export const CorrelationMatrix = React.memo(function CorrelationMatrix({ assets 
                                                         <TooltipTrigger asChild>
                                                             <div
                                                                 className="w-full h-10 flex items-center justify-center rounded-md text-sm transition-colors hover:opacity-80 cursor-default"
-                                                                style={getCellStyle(value)}
+                                                                style={getCorrelationCellColors(value ?? null)}
                                                             >
-                                                                {typeof value === 'number' ? value.toFixed(2) : ''}
+                                                                {typeof value === 'number' ? value.toFixed(2) : '—'}
                                                             </div>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
-                                                            <p className="font-semibold mb-1">{value != null ? `Correlación: ${value.toFixed(3)}` : ''}</p>
+                                                            <p className="font-semibold mb-1">
+                                                                {i === j
+                                                                    ? 'Correlación del activo consigo mismo: 1.000'
+                                                                    : value != null ? `Correlación: ${value.toFixed(3)}` : 'Sin datos suficientes'}
+                                                            </p>
                                                             <p className="text-xs text-muted-foreground">
                                                                 {rowAsset.profile.symbol} vs {colAsset.profile.symbol}
+                                                                {(value === null || value === undefined) && ' · Se necesitan al menos 10 retornos diarios coincidentes.'}
                                                             </p>
                                                         </TooltipContent>
                                                     </Tooltip>
